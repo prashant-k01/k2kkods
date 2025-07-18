@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/list_helper/action_button.dart';
+import 'package:k2k/common/list_helper/add_button.dart';
+import 'package:k2k/common/list_helper/container.dart';
+import 'package:k2k/common/list_helper/info_card.dart';
+import 'package:k2k/common/list_helper/refresh.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/provider/plants_provider.dart';
-import 'package:k2k/konkrete_klinkers/master_data/plants/view/shimmer.dart';
+import 'package:k2k/konkrete_klinkers/master_data/plants/view/plant_delete_screen.dart';
+import 'package:k2k/common/list_helper/shimmer.dart';
 import 'package:k2k/utils/sreen_util.dart';
-import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart' hide ScreenUtil;
@@ -45,100 +50,190 @@ class _PlantsListViewState extends State<PlantsListView> {
     }
   }
 
-  void _viewPlant(String? plantId) {
+  void _viewPlant(String? plantId, Map<String, dynamic> plantData) {
     if (plantId != null) {
-      context.go('/plants/view/$plantId');
+      showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (context) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.r),
+          ),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: Container(
+            constraints: BoxConstraints(maxWidth: 420.w, maxHeight: 650.h),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20.r),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header Section
+                GradientContainer(
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(20.r),
+                    topRight: Radius.circular(20.r),
+                  ),
+                  padding: EdgeInsets.fromLTRB(24.w, 20.h, 16.w, 20.h),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.local_florist_outlined,
+                        color: Colors.white,
+                        size: 28.sp,
+                      ),
+                      SizedBox(width: 12.w),
+                      Expanded(
+                        child: Text(
+                          'Plant Information',
+                          style: TextStyle(
+                            fontSize: 22.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8.r),
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 20.sp,
+                          ),
+                          onPressed: () => Navigator.of(context).pop(),
+                          padding: EdgeInsets.all(8.w),
+                          constraints: BoxConstraints(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Content Section
+                Flexible(
+                  child: Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(24.w),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: plantData.entries
+                            .where(
+                              (entry) =>
+                                  entry.key != '_id' &&
+                                  entry.value is! Map &&
+                                  entry.value is! List,
+                            )
+                            .map((entry) {
+                              return InfoCard(
+                                title: _formatKey(entry.key),
+                                value: _formatValue(entry.value),
+                              );
+                            })
+                            .toList(),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Footer Section
+                Container(
+                  padding: EdgeInsets.fromLTRB(24.w, 16.h, 24.w, 24.h),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      GradientContainer(
+                        borderRadius: BorderRadius.circular(10.r),
+                        padding: EdgeInsets.zero,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(10.r),
+                            onTap: () => Navigator.of(context).pop(),
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 24.w,
+                                vertical: 12.h,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.check_circle_outline,
+                                    color: Colors.white,
+                                    size: 18.sp,
+                                  ),
+                                  SizedBox(width: 8.w),
+                                  Text(
+                                    'Got it',
+                                    style: TextStyle(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     }
+  }
+
+  String _formatKey(String key) {
+    return key
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map(
+          (word) => word.isNotEmpty
+              ? '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}'
+              : '',
+        )
+        .join(' ');
+  }
+
+  String _formatValue(dynamic value) {
+    if (value == null) return 'N/A';
+    if (value is DateTime) {
+      return _formatDateTime(value);
+    }
+    if (value is Map<String, dynamic>) {
+      return value['username']?.toString() ?? 'Unknown';
+    }
+    return value.toString();
   }
 
   void _editPlant(String? plantId) {
     if (plantId != null) {
-      context.go('/plants/edit/$plantId');
+      context.goNamed(
+        RouteNames.plantsedit,
+        pathParameters: {'plantId': plantId},
+      );
     }
-  }
-
-  void _deletePlant(String? plantId, String? plantName) {
-    if (plantId == null || plantName == null) return;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16.r),
-        ),
-        backgroundColor: Colors.white,
-        title: Row(
-          children: [
-            Icon(
-              Icons.warning_amber_rounded,
-              color: const Color(0xFFF59E0B),
-              size: 24.sp,
-            ),
-            SizedBox(width: 8.w),
-            Text(
-              'Confirm Delete',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 18.sp,
-                color: const Color(0xFF334155),
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          'Are you sure you want to delete "$plantName"?',
-          style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(
-              'Cancel',
-              style: TextStyle(fontSize: 14.sp, color: const Color(0xFF3B82F6)),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              // Close the dialog first
-              Navigator.pop(dialogContext);
-
-              // Store the context for snackbar
-              final scaffoldContext = context;
-
-              if (!mounted) return; // Ensure widget is still mounted
-
-              final provider = Provider.of<PlantProvider>(
-                scaffoldContext,
-                listen: false,
-              );
-              final success = await provider.deletePlant(plantId);
-
-              if (!mounted)
-                return; // Double-check mounted after async operation
-
-              // Show snackbar with the stored context
-              context.showSuccessSnackbar(
-                success
-                    ? 'Plant deleted successfully!'
-                    : 'Failed to delete plant.',
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFF43F5E),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-            ),
-            child: Text(
-              'Delete',
-              style: TextStyle(color: Colors.white, fontSize: 14.sp),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   String _formatDateTime(DateTime dateTime) {
@@ -293,22 +388,26 @@ class _PlantsListViewState extends State<PlantsListView> {
                     ),
                     Row(
                       children: [
-                        _buildActionButton(
+                        ActionButton(
                           icon: Icons.visibility_outlined,
                           color: const Color(0xFF3B82F6),
-                          onPressed: () => _viewPlant(plantId),
+                          onPressed: () => _viewPlant(plantId, plantData),
                         ),
                         SizedBox(width: 16.w),
-                        _buildActionButton(
+                        ActionButton(
                           icon: Icons.edit_outlined,
                           color: const Color(0xFFF59E0B),
                           onPressed: () => _editPlant(plantId),
                         ),
                         SizedBox(width: 16.w),
-                        _buildActionButton(
+                        ActionButton(
                           icon: Icons.delete_outline,
                           color: const Color(0xFFF43F5E),
-                          onPressed: () => _deletePlant(plantId, plantName),
+                          onPressed: () => PlantDeleteHandler.deletePlant(
+                            context,
+                            plantId,
+                            plantName,
+                          ),
                         ),
                       ],
                     ),
@@ -358,29 +457,6 @@ class _PlantsListViewState extends State<PlantsListView> {
     );
   }
 
-  Widget _buildActionButton({
-    required IconData icon,
-    required Color color,
-    required VoidCallback onPressed,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(12.r),
-        child: Container(
-          padding: EdgeInsets.all(12.w),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: color.withOpacity(0.3)),
-          ),
-          child: Icon(icon, color: color, size: 24.sp),
-        ),
-      ),
-    );
-  }
-
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -406,50 +482,10 @@ class _PlantsListViewState extends State<PlantsListView> {
             style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
           ),
           SizedBox(height: 16.h),
-          Container(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
-              ),
-              borderRadius: BorderRadius.circular(12.r),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF3B82F6).withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () => context.go(RouteNames.plantsadd),
-                borderRadius: BorderRadius.circular(12.r),
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 16.w,
-                    vertical: 12.h,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.add, color: Colors.white, size: 20.sp),
-                      SizedBox(width: 8.w),
-                      Text(
-                        'Add Plant',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+          AddButton(
+            text: 'Add Plant',
+            icon: Icons.add,
+            route: RouteNames.plantsadd,
           ),
         ],
       ),
@@ -542,57 +578,13 @@ class _PlantsListViewState extends State<PlantsListView> {
                     ),
                   ),
                   SizedBox(height: 16.h),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
-                      ),
-                      borderRadius: BorderRadius.circular(12.r),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF3B82F6).withOpacity(0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {
-                          provider.clearError();
-                          provider.loadAllPlants(refresh: true);
-                        },
-                        borderRadius: BorderRadius.circular(12.r),
-                        child: Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16.w,
-                            vertical: 12.h,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.refresh,
-                                color: Colors.white,
-                                size: 20.sp,
-                              ),
-                              SizedBox(width: 8.w),
-                              Text(
-                                'Retry',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16.sp,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
+                  RefreshButton(
+                    text: 'Retry',
+                    icon: Icons.refresh,
+                    onTap: () {
+                      provider.clearError();
+                      provider.loadAllPlants(refresh: true);
+                    },
                   ),
                 ],
               ),
@@ -633,47 +625,10 @@ class _PlantsListViewState extends State<PlantsListView> {
           );
         },
       ),
-      floatingActionButton: Container(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
-          ),
-          borderRadius: BorderRadius.circular(12.r),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF3B82F6).withOpacity(0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () => context.go(RouteNames.plantsadd),
-            borderRadius: BorderRadius.circular(12.r),
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.add, color: Colors.white, size: 24.sp),
-                  SizedBox(width: 8.w),
-                  Text(
-                    'Add Plant',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+      floatingActionButton: AddButton(
+        text: 'Add Plant',
+        icon: Icons.add,
+        route: RouteNames.plantsadd,
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );

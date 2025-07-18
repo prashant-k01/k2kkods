@@ -197,7 +197,6 @@ class PlantProvider with ChangeNotifier {
       );
 
       if (success) {
-        // Refresh current page to show updated data
         await loadAllPlants();
         return true;
       } else {
@@ -251,19 +250,16 @@ Future<bool> deletePlant(String plantId) async {
     notifyListeners();
   }
 }
-  Future<PlantModel?> getPlant(String plantId) async {
-    try {
-      _error = null;
-      notifyListeners();
-
-      final plant = await _repository.getPlant(plantId);
-      return plant;
-    } catch (e) {
-      _error = _getErrorMessage(e);
-      notifyListeners();
-      return null;
-    }
+Future<PlantModel?> getPlant(String plantId) async {
+  try {
+    _error = null; // Clear error locally, no need to notify
+    final plant = await _repository.getPlant(plantId);
+    return plant;
+  } catch (e) {
+    _error = _getErrorMessage(e); // Set error locally, no need to notify
+    return null;
   }
+}
 
   PlantModel? getPlantByIndex(int index) {
     if (index >= 0 && index < _plants.length) {

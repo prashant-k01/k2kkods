@@ -1,19 +1,19 @@
 class AppUrl {
   //   static const String baseUrl = 'https://k2k_new-iot-backend-2.onrender.com';
   //   static const String baseUrl = 'https://k2k-iot-backend-2.onrender.com/api/';
-static const String baseUrl = 'http://3.6.6.231/api';
+  static const String baseUrl = 'http://3.6.6.231/api';
 
   static const String loginUrl = '$baseUrl/users/login';
   //Plants Urls
   static const String allPlantsUrl = '$baseUrl/konkreteKlinkers/helpers/plants';
   static const String addPlantUrl = '$baseUrl/konkreteKlinkers/helpers/plant';
-  
+
   static const String updatePlanturl =
       '$baseUrl/konkreteKlinkers/helpers/plants';
   static const String deletePlantUrl =
       '$baseUrl/konkreteKlinkers/helpers/plants/delete';
 
-static const String addMachineUrl =
+  static const String addMachineUrl =
       '$baseUrl/konkreteKlinkers/helpers/machine';
   static const String fetchMachineUrl =
       '$baseUrl/konkreteKlinkers/helpers/machines';
@@ -98,25 +98,30 @@ static const String addMachineUrl =
   //Packing
   static const String kkpacking = "$baseUrl/konkreteKlinkers/packing";
   static const String kkpackingByID = "$baseUrl/konkreteKlinkers/packing/get";
-  static const String createPacking = "$baseUrl/konkreteKlinkers/packing/create";
-  static const String getpackingbundlesizeurl = "$baseUrl/konkreteKlinkers/packing/bundlesize";
-
+  static const String createPacking =
+      "$baseUrl/konkreteKlinkers/packing/create";
+  static const String getpackingbundlesizeurl =
+      "$baseUrl/konkreteKlinkers/packing/bundlesize";
 
   //Dispatch
   static const String kkdispatch = "$baseUrl/konkreteKlinkers/dispatch";
-  static const String createdispatch = "$baseUrl/konkreteKlinkers/dispatch/create";
-  static const String getdispatchbundlesizeurl = "$baseUrl/konkreteKlinkers/dispatch/bundlesize";
+  static const String createdispatch =
+      "$baseUrl/konkreteKlinkers/dispatch/create";
+  static const String getdispatchbundlesizeurl =
+      "$baseUrl/konkreteKlinkers/dispatch/bundlesize";
 
   //Inventory
   static const String kkinventories = "$baseUrl/konkreteKlinkers/inventories";
-  static const String createinventories = "$baseUrl/konkreteKlinkers/inventories/create";
-  static const String getinventoriesbyid = "$baseUrl/konkreteKlinkers/inventory";
-  
+  static const String createinventories =
+      "$baseUrl/konkreteKlinkers/inventories/create";
+  static const String getinventoriesbyid =
+      "$baseUrl/konkreteKlinkers/inventory";
+
   //Stock Managment
   static const String kkStockManagement = "$baseUrl/konkreteKlinkers/transfer";
-  static const String createStockManagement = "$baseUrl/konkreteKlinkers/transfer/create";
+  static const String createStockManagement =
+      "$baseUrl/konkreteKlinkers/transfer/create";
   // static const String getStockManagementbyid = "$baseUrl/konkreteKlinkers/inventory";
-  static const String getwobyproduct = "$baseUrl/konkreteKlinkers/transfer-getworkorder?prId=";
-
-
+  static const String getwobyproduct =
+      "$baseUrl/konkreteKlinkers/transfer-getworkorder?prId=";
 }

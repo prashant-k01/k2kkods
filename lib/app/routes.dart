@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/dashboard/view/dashboard_screen.dart';
+import 'package:k2k/konkrete_klinkers/master_data/plants/view/plant_edit_screen.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/view/plant_add.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/view/plants_screen_list.dart';
 import 'package:k2k/login/view/login_screen.dart';
@@ -29,7 +30,7 @@ class AppRoutes {
         path: RouteNames.plantsadd,
         name: RouteNames.plantsadd,
         builder: (BuildContext context, GoRouterState state) {
-          return PlantFormScreen();
+          return AddPlantFormScreen();
         },
       ),
       GoRoute(
@@ -39,6 +40,18 @@ class AppRoutes {
           return const LoginScreen();
         },
       ),
+      GoRoute(
+      path: RouteNames.plantsedit, // '/plants/edit/:plantId'
+      name: RouteNames.plantsedit,
+      builder: (context, state) {
+        final plantId = state.pathParameters['plantId'];
+        if (plantId == null) {
+          // Handle missing plantId gracefully
+          return const PlantsListView(); // Redirect to plants list
+        }
+        return EditPlantFormScreen(plantId: plantId);
+      },
+    ),
       GoRoute(
         path: RouteNames.homeScreen,
         name: RouteNames.homeScreen,

@@ -3,7 +3,7 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 
-class ReusableDropdownFormField<T> extends StatelessWidget {
+class CustomDropdownFormField<T> extends StatelessWidget {
   final String name;
   final String? labelText;
   final String? hintText;
@@ -37,7 +37,7 @@ class ReusableDropdownFormField<T> extends StatelessWidget {
   final bool allowClear;
   final Widget? clearIcon;
 
-  const ReusableDropdownFormField({
+  const CustomDropdownFormField({
     super.key,
     required this.name,
     this.labelText,
