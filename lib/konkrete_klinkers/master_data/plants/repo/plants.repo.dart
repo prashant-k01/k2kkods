@@ -57,7 +57,6 @@ class PlantRepository {
   PlantModel? _lastCreatedPlant;
   PlantModel? get lastCreatedPlant => _lastCreatedPlant;
 
-  // Updated method to support pagination
   Future<PaginatedPlantsResponse> getAllPlants({
     int page = 1,
     int limit = 10,
@@ -65,8 +64,6 @@ class PlantRepository {
   }) async {
     try {
       final authHeaders = await headers;
-
-      // Build URL with pagination parameters
       final uri = Uri.parse(AppUrl.allPlantsUrl).replace(
         queryParameters: {
           'page': page.toString(),
@@ -80,99 +77,22 @@ class PlantRepository {
           .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
-        if (response.body.isEmpty) {
-          return PaginatedPlantsResponse(
-            plants: [],
-            pagination: PaginationInfo(
-              total: 0,
-              page: 1,
-              limit: limit,
-              totalPages: 1,
-              hasNextPage: false,
-              hasPreviousPage: false,
-            ),
-          );
-        }
-
         final jsonData = json.decode(response.body);
         List<dynamic> plantsJson = [];
         PaginationInfo paginationInfo;
 
-        if (jsonData is Map<String, dynamic>) {
-          // Handle pagination info
-          if (jsonData.containsKey('pagination')) {
-            paginationInfo = PaginationInfo.fromJson(jsonData['pagination']);
-          } else {
-            // Fallback pagination if not provided
-            paginationInfo = PaginationInfo(
-              total: 0,
-              page: page,
-              limit: limit,
-              totalPages: 1,
-              hasNextPage: false,
-              hasPreviousPage: false,
-            );
-          }
-
-          // Extract plants data
-          if (jsonData.containsKey('data')) {
-            final data = jsonData['data'];
-            if (data is List) {
-              plantsJson = data;
-            } else if (data is Map && data.containsKey('plants')) {
-              plantsJson = data['plants'] is List ? data['plants'] : [];
-            } else if (data is Map) {
-              plantsJson = [data];
-            }
-          } else if (jsonData.containsKey('plants')) {
-            final plants = jsonData['plants'];
-            plantsJson = plants is List ? plants : [plants];
-          } else if (jsonData.containsKey('result')) {
-            final result = jsonData['result'];
-            plantsJson = result is List ? result : [result];
-          } else if (jsonData.containsKey('items')) {
-            final items = jsonData['items'];
-            plantsJson = items is List ? items : [items];
-          } else {
-            // Check if it's a single plant object
-            if (jsonData.containsKey('plant_code') ||
-                jsonData.containsKey('plantCode') ||
-                jsonData.containsKey('plant_name') ||
-                jsonData.containsKey('plantName') ||
-                jsonData.containsKey('_id') ||
-                jsonData.containsKey('id')) {
-              plantsJson = [jsonData];
-            }
-          }
-        } else if (jsonData is List) {
-          plantsJson = jsonData;
-          paginationInfo = PaginationInfo(
-            total: plantsJson.length,
-            page: page,
-            limit: limit,
-            totalPages: 1,
-            hasNextPage: false,
-            hasPreviousPage: false,
-          );
+        if (jsonData is Map<String, dynamic> && jsonData.containsKey('data')) {
+          final data = jsonData['data'];
+          paginationInfo = PaginationInfo.fromJson(data['pagination'] ?? {});
+          plantsJson = (data['plants'] as List?) ?? [];
         } else {
-          throw Exception(
-            'Unexpected response structure: ${jsonData.runtimeType}',
-          );
+          throw Exception('Unexpected response structure: ${jsonData.runtimeType}');
         }
 
-        // Parse plants
-        final List<PlantModel> plants = [];
-        for (final plantJson in plantsJson) {
-          try {
-            if (plantJson is Map<String, dynamic>) {
-              final plant = PlantModel.fromJson(plantJson);
-              plants.add(plant);
-            }
-          } catch (e) {
-            print('Error parsing plant: $e');
-            // Skip malformed entry
-          }
-        }
+        final plants = plantsJson
+            .whereType<Map<String, dynamic>>()
+            .map((plantJson) => PlantModel.fromJson(plantJson))
+            .toList();
 
         return PaginatedPlantsResponse(
           plants: plants,
@@ -180,7 +100,7 @@ class PlantRepository {
         );
       } else {
         throw Exception(
-          'Failed to Load Plants: ${response.statusCode} - ${response.body}',
+          'Failed to load plants: ${response.statusCode} - ${response.body}',
         );
       }
     } on SocketException catch (e) {
@@ -212,8 +132,6 @@ class PlantRepository {
         return PlantModel.fromJson(plantData);
       } else if (response.statusCode == 404) {
         return null;
-      } else if (response.statusCode == 401) {
-        throw Exception('Unauthorized access: ${response.body}');
       } else {
         throw Exception(
           'Failed to load plant: ${response.statusCode} - ${response.body}',
@@ -229,7 +147,7 @@ class PlantRepository {
   Future<PlantModel> createPlant(String plantCode, String plantName) async {
     isAddPlantsLoading = true;
     try {
-      final token = await fetchAccessToken();
+      final authHeaders = await headers;
       final url = AppUrl.addPlantUrl;
       final Map<String, dynamic> body = {
         "plant_code": plantCode,
@@ -239,10 +157,7 @@ class PlantRepository {
       final response = await http
           .post(
             Uri.parse(url),
-            headers: {
-              'Authorization': 'Bearer $token',
-              'Content-Type': 'application/json',
-            },
+            headers: authHeaders,
             body: json.encode(body),
           )
           .timeout(const Duration(seconds: 30));
@@ -258,7 +173,7 @@ class PlantRepository {
         return createdPlant;
       } else {
         throw Exception(
-          'Failed to Send Plant Data: ${response.statusCode} - ${response.body}',
+          'Failed to create plant: ${response.statusCode} - ${response.body}',
         );
       }
     } on SocketException catch (e) {
@@ -328,7 +243,9 @@ class PlantRepository {
       if (response.statusCode == 200) {
         return true;
       } else {
-        throw Exception('Failed to Delete Id: ${response.statusCode}');
+        throw Exception(
+          'Failed to delete plant: ${response.statusCode} - ${response.body}',
+        );
       }
     } on SocketException catch (e) {
       throw Exception('No internet connection: $e');

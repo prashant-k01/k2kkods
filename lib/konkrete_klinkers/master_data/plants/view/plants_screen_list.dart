@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart' hide ScreenUtil;
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/list_helper/add_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
+import 'package:k2k/common/list_helper/shimmer.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/provider/plants_provider.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/view/plant_delete_screen.dart';
-import 'package:k2k/common/list_helper/shimmer.dart';
 import 'package:k2k/utils/sreen_util.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart' hide ScreenUtil;
 
 class PlantsListView extends StatefulWidget {
   const PlantsListView({super.key});
@@ -70,20 +70,8 @@ class _PlantsListViewState extends State<PlantsListView> {
   Widget _buildPaginationInfo() {
     return Consumer<PlantProvider>(
       builder: (context, provider, child) {
-        if (provider.totalItems == 0) return SizedBox.shrink();
-
-        if (provider.showAll) {
-          return Container(
-            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-            child: Text(
-              'Showing all ${provider.totalItems} plants',
-              style: TextStyle(
-                fontSize: 14.sp,
-                color: const Color(0xFF64748B),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          );
+        if (provider.totalItems == 0 || provider.totalPages == 1) {
+          return const SizedBox.shrink();
         }
 
         final startItem = ((provider.currentPage - 1) * provider.limit) + 1;
@@ -92,36 +80,80 @@ class _PlantsListViewState extends State<PlantsListView> {
           provider.totalItems,
         );
 
-        return Container(
-          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12.r),
-            boxShadow: [],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Showing $startItem-$endItem of ${provider.totalItems} plants',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  color: const Color(0xFF64748B),
-                  fontWeight: FontWeight.w500,
-                ),
+        return Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(16.r),
+                topRight: Radius.circular(16.r),
               ),
-              Text(
-                'Page ${provider.currentPage} of ${provider.totalPages}',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  color: const Color(0xFF64748B),
-                  fontWeight: FontWeight.w500,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 12.r,
+                  offset: const Offset(0, -2),
                 ),
-              ),
-            ],
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildNavButton(
+                  icon: Icons.arrow_back_ios,
+                  onPressed: provider.hasPreviousPage
+                      ? () => provider.previousPage()
+                      : null,
+                  tooltip: 'Previous Page',
+                ),
+                Text(
+                  '${provider.currentPage}/${provider.totalPages}',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF334155),
+                  ),
+                ),
+                _buildNavButton(
+                  icon: Icons.arrow_forward_ios,
+                  onPressed: provider.hasNextPage
+                      ? () => provider.nextPage()
+                      : null,
+                  tooltip: 'Next Page',
+                ),
+              ],
+            ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildNavButton({
+    required IconData icon,
+    required VoidCallback? onPressed,
+    required String tooltip,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(12.r),
+        child: Container(
+          padding: EdgeInsets.all(12.w),
+          decoration: BoxDecoration(
+            color: onPressed != null
+                ? const Color(0xFF3B82F6)
+                : const Color(0xFFCBD5E1),
+            borderRadius: BorderRadius.circular(12.r),
+          ),
+          child: Icon(icon, size: 24.sp, color: Colors.white),
+        ),
+      ),
     );
   }
 
@@ -327,7 +359,7 @@ class _PlantsListViewState extends State<PlantsListView> {
           ),
           SizedBox(height: 8.h),
           Text(
-            'Start by adding a new plant!',
+            'Tap the button below to add your first plant!',
             style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
           ),
           SizedBox(height: 16.h),
@@ -356,122 +388,128 @@ class _PlantsListViewState extends State<PlantsListView> {
           style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w600),
         ),
         actions: [
-          Consumer<PlantProvider>(
-            builder: (context, provider, child) => Row(
-              children: [
-                Switch(
-                  value: provider.showAll,
-                  onChanged: (value) {
-                    provider.toggleShowAll(value);
-                  },
-                  activeColor: const Color(0xFF3B82F6),
-                  activeTrackColor: const Color(0xFF3B82F6).withOpacity(0.5),
-                  inactiveThumbColor: const Color(0xFF64748B),
-                  inactiveTrackColor: const Color(0xFFCBD5E1),
-                ),
-                Padding(
-                  padding: EdgeInsets.only(right: 16.w),
-                  child: Text(
-                    'Show All',
+          Padding(
+            padding: EdgeInsets.only(right: 16.w),
+            child: TextButton(
+              onPressed: () {
+                context.goNamed(RouteNames.plantsadd);
+              },
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.add,
+                    size: 20.sp,
+                    color: const Color(0xFF3B82F6),
+                  ),
+                  SizedBox(width: 4.w),
+                  Text(
+                    'Add Plant',
                     style: TextStyle(
-                      color: const Color(0xFF334155),
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF3B82F6),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
       ),
-      body: Consumer<PlantProvider>(
-        builder: (context, provider, child) {
-          if (provider.error != null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64.sp,
-                    color: const Color(0xFFF43F5E),
+      body: Stack(
+        children: [
+          Consumer<PlantProvider>(
+            builder: (context, provider, child) {
+              if (provider.error != null) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 64.sp,
+                        color: const Color(0xFFF43F5E),
+                      ),
+                      SizedBox(height: 16.h),
+                      Text(
+                        'Error Loading Plants',
+                        style: TextStyle(
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF334155),
+                        ),
+                      ),
+                      SizedBox(height: 8.h),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 24.w),
+                        child: Text(
+                          provider.error!,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 16.h),
+                      RefreshButton(
+                        text: 'Retry',
+                        icon: Icons.refresh,
+                        onTap: () {
+                          provider.clearError();
+                          provider.loadAllPlants(refresh: true);
+                        },
+                      ),
+                    ],
                   ),
-                  SizedBox(height: 16.h),
-                  Text(
-                    'Error Loading Plants',
-                    style: TextStyle(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF334155),
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24.w),
-                    child: Text(
-                      provider.error!,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
+                );
+              }
+
+              return GestureDetector(
+                onHorizontalDragEnd: (details) {
+                  if (details.primaryVelocity! > 0 && provider.hasPreviousPage) {
+                    provider.previousPage();
+                  } else if (details.primaryVelocity! < 0 && provider.hasNextPage) {
+                    provider.nextPage();
+                  }
+                },
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: RefreshIndicator(
+                        onRefresh: () async {
+                          await provider.loadAllPlants(refresh: true);
+                        },
+                        color: const Color(0xFF3B82F6),
+                        backgroundColor: Colors.white,
+                        child: provider.isLoading && provider.plants.isEmpty
+                            ? ListView.builder(
+                                itemCount: 5,
+                                itemBuilder: (context, index) =>
+                                    buildShimmerCard(),
+                              )
+                            : provider.plants.isEmpty
+                                ? _buildEmptyState()
+                                : ListView.builder(
+                                    controller: _scrollController,
+                                    padding: EdgeInsets.only(bottom: 80.h),
+                                    itemCount: provider.plants.length,
+                                    itemBuilder: (context, index) {
+                                      return _buildPlantCard(
+                                        provider.plants[index],
+                                      );
+                                    },
+                                  ),
                       ),
                     ),
-                  ),
-                  SizedBox(height: 16.h),
-                  RefreshButton(
-                    text: 'Retry',
-                    icon: Icons.refresh,
-                    onTap: () {
-                      provider.clearError();
-                      provider.loadAllPlants(refresh: true);
-                    },
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return Column(
-            children: [
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: 8.h),
-                child: _buildPaginationInfo(),
-              ),
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: () async {
-                    await provider.loadAllPlants(refresh: true);
-                  },
-                  color: const Color(0xFF3B82F6),
-                  backgroundColor: Colors.white,
-                  child: provider.isLoading && provider.plants.isEmpty
-                      ? ListView.builder(
-                          itemCount: 5,
-                          itemBuilder: (context, index) => buildShimmerCard(),
-                        )
-                      : provider.plants.isEmpty
-                      ? _buildEmptyState()
-                      : ListView.builder(
-                          controller: _scrollController,
-                          padding: EdgeInsets.symmetric(vertical: 8.h),
-                          itemCount: provider.plants.length,
-                          itemBuilder: (context, index) {
-                            return _buildPlantCard(provider.plants[index]);
-                          },
-                        ),
+                  ],
                 ),
-              ),
-            ],
-          );
-        },
+              );
+            },
+          ),
+          _buildPaginationInfo(),
+        ],
       ),
-      floatingActionButton: AddButton(
-        text: 'Add Plant',
-        icon: Icons.add,
-        route: RouteNames.plantsadd,
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }
