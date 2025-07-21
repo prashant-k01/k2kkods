@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:k2k/common/widgets/app_bar.dart';
+import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/common/widgets/menu_drawer.dart';
 
 class DashboardPage extends StatefulWidget {

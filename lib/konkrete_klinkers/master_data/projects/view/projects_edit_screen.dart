@@ -3,70 +3,119 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
-import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/provider/plants_provider.dart';
+import 'package:k2k/konkrete_klinkers/master_data/plants/model/plants_model.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class AddPlantFormScreen extends StatelessWidget {
-  AddPlantFormScreen({super.key});
+class EditPlantFormScreen extends StatefulWidget {
+  final String plantId;
 
+  const EditPlantFormScreen({super.key, required this.plantId});
+
+  @override
+  State<EditPlantFormScreen> createState() => _EditPlantFormScreenState();
+}
+
+class _EditPlantFormScreenState extends State<EditPlantFormScreen> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
+  bool _isLoading = true;
+  PlantModel? _plant;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlantData();
+  }
+
+  Future<void> _loadPlantData() async {
+    final provider = Provider.of<PlantProvider>(context, listen: false);
+    try {
+      final plant = await provider.getPlant(widget.plantId);
+      if (plant == null) {
+        setState(() {
+          _error = 'Plant not found';
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _plant = plant;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to load plant data: $e';
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final plantProvider = Provider.of<PlantProvider>(context, listen: false);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBars(
-        title: _buildLogoAndTitle(),
-        leading: _buildBackButton(),
-        action: [],
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(24.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [_buildFormCard(context, plantProvider)],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLogoAndTitle() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'Add Plant',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF334155),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBackButton() {
-    return Builder(
-      builder: (BuildContext context) {
-        return IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios,
-            size: 24.sp,
-            color: const Color(0xFF334155),
-          ),
-          onPressed: () {
-            context.go(RouteNames.plants);
-          },
-          tooltip: 'Back',
-        );
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          context.go(RouteNames.plants);
+        }
       },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBar(
+          title: const Text('Edit Plant'),
+          backgroundColor: Colors.white,
+          foregroundColor: const Color(0xFF334155),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios),
+            onPressed: () => context.go(RouteNames.plants),
+          ),
+        ),
+        body: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(color: Color(0xFF3B82F6)),
+              )
+            : _error != null
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 64.sp,
+                      color: const Color(0xFFF43F5E),
+                    ),
+                    SizedBox(height: 16.h),
+                    Text(
+                      _error!,
+                      style: TextStyle(
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF334155),
+                      ),
+                    ),
+                    SizedBox(height: 16.h),
+                    ElevatedButton(
+                      onPressed: () => context.go(RouteNames.plants),
+                      child: const Text('Back to Plants'),
+                    ),
+                  ],
+                ),
+              )
+            : SingleChildScrollView(
+                padding: EdgeInsets.all(24.w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [_buildFormCard(context, plantProvider)],
+                ),
+              ),
+      ),
     );
   }
 
@@ -86,11 +135,15 @@ class AddPlantFormScreen extends StatelessWidget {
       ),
       child: FormBuilder(
         key: _formKey,
+        initialValue: {
+          'plant_code': _plant!.plantCode,
+          'plant_name': _plant!.plantName,
+        },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Plant Details',
+              'Edit Plant Details',
               style: TextStyle(
                 fontSize: 18.sp,
                 fontWeight: FontWeight.w600,
@@ -99,7 +152,7 @@ class AddPlantFormScreen extends StatelessWidget {
             ),
             SizedBox(height: 8.h),
             Text(
-              'Enter the required information below',
+              'Update the plant information below',
               style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
             ),
             SizedBox(height: 24.h),
@@ -135,7 +188,7 @@ class AddPlantFormScreen extends StatelessWidget {
               ],
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
-              focusedBorderColor: const Color(0xFF3B82F6),
+              focusedBorderColor: const Color(0xFF8B5CF6),
               borderRadius: 12.r,
             ),
             SizedBox(height: 40.h),
@@ -163,23 +216,17 @@ class AddPlantFormScreen extends StatelessWidget {
           colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
         ),
         borderRadius: BorderRadius.circular(12.r),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF3B82F6).withOpacity(0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: [],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: provider.isAddPlantLoading
+          onTap: provider.isUpdatePlantLoading
               ? null
               : () => _submitForm(context, provider),
           borderRadius: BorderRadius.circular(12.r),
           child: Center(
-            child: provider.isAddPlantLoading
+            child: provider.isUpdatePlantLoading
                 ? Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -189,7 +236,7 @@ class AddPlantFormScreen extends StatelessWidget {
                       ),
                       SizedBox(width: 12.w),
                       Text(
-                        'Creating Plant...',
+                        'Updating Plant...',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16.sp,
@@ -201,10 +248,10 @@ class AddPlantFormScreen extends StatelessWidget {
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.add_circle, color: Colors.white, size: 20.sp),
+                      Icon(Icons.save, color: Colors.white, size: 20.sp),
                       SizedBox(width: 8.w),
                       Text(
-                        'Create Plant',
+                        'Update Plant',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16.sp,
@@ -246,7 +293,7 @@ class AddPlantFormScreen extends StatelessWidget {
                 const CircularProgressIndicator(color: Color(0xFF3B82F6)),
                 SizedBox(height: 16.h),
                 Text(
-                  'Creating Plant...',
+                  'Updating Plant...',
                   style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w500,
@@ -259,7 +306,8 @@ class AddPlantFormScreen extends StatelessWidget {
         ),
       );
 
-      final success = await provider.createPlant(
+      final success = await provider.updatePlant(
+        widget.plantId,
         formData['plant_code'],
         formData['plant_name'],
       );
@@ -267,10 +315,12 @@ class AddPlantFormScreen extends StatelessWidget {
       Navigator.of(context).pop();
 
       if (success && context.mounted) {
-        context.showSuccessSnackbar("Plant created successfully!");
+        context.showSuccessSnackbar("Plant updated successfully!");
         context.go(RouteNames.plants);
       } else {
-        context.showErrorSnackbar("Failed to create plant. Please try again.");
+        context.showErrorSnackbar(
+          provider.error ?? "Failed to update plant. Please try again.",
+        );
       }
     } else {
       context.showWarningSnackbar(

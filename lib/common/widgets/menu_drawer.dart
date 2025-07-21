@@ -188,7 +188,7 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
                 SubMenuItem(
                   title: 'Plants',
                   icon: Icons.add_business,
-                  route: '/plants',
+                  route: RouteNames.plants,
                   isExpanded: false,
                 ),
                 SubMenuItem(
