@@ -1,20 +1,18 @@
-// models/plant_model.dart
-import 'dart:convert';
 
-class PlantModel {
+class ClientsModel {
   final String id;
-  final String plantCode;
-  final String plantName;
+  final String name;
+  final String address;
   final CreatedBy createdBy;
   final bool isDeleted;
   final DateTime createdAt;
   final DateTime updatedAt;
   final int version;
 
-  PlantModel({
+  ClientsModel({
     required this.id,
-    required this.plantCode,
-    required this.plantName,
+    required this.name,
+    required this.address,
     required this.createdBy,
     required this.isDeleted,
     required this.createdAt,
@@ -22,14 +20,11 @@ class PlantModel {
     required this.version,
   });
 
-  factory PlantModel.fromJson(Map<String, dynamic> json) {
+  factory ClientsModel.fromJson(Map<String, dynamic> json) {
     try {
       final id = json['_id'] ?? json['id'] ?? '';
-
-      final plantCode = json['plant_code'] ?? '';
-
-      final plantName = json['plant_name'] ?? '';
-
+      final name = json['name'] ?? '';
+      final address = json['address'] ?? '';
       CreatedBy createdBy;
       final createdByData = json['created_by'];
       if (createdByData is Map<String, dynamic>) {
@@ -66,10 +61,10 @@ class PlantModel {
       }
       final version = json['__v'] ?? json['v'] ?? 0;
 
-      return PlantModel(
+      return ClientsModel(
         id: id,
-        plantCode: plantCode,
-        plantName: plantName,
+        name: name,
+        address: address,
         createdBy: createdBy,
         isDeleted: isDeleted,
         createdAt: createdAt,
@@ -84,36 +79,14 @@ class PlantModel {
   Map<String, dynamic> toJson() {
     return {
       '_id': id,
-      'plant_code': plantCode,
-      'plant_name': plantName,
+      'name': name,
+      'address': address,
       'created_by': createdBy.toJson(),
       'isDeleted': isDeleted,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       '__v': version,
     };
-  }
-
-  PlantModel copyWith({
-    String? id,
-    String? plantCode,
-    String? plantName,
-    CreatedBy? createdBy,
-    bool? isDeleted,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-    int? version,
-  }) {
-    return PlantModel(
-      id: id ?? this.id,
-      plantCode: plantCode ?? this.plantCode,
-      plantName: plantName ?? this.plantName,
-      createdBy: createdBy ?? this.createdBy,
-      isDeleted: isDeleted ?? this.isDeleted,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-      version: version ?? this.version,
-    );
   }
 }
 
@@ -129,7 +102,6 @@ class CreatedBy {
       final id = json['_id'] ?? json['id'] ?? '';
       final email = json['email'] ?? '';
       final username = json['username'] ?? '';
-
       return CreatedBy(id: id, email: email, username: username);
     } catch (e) {
       return CreatedBy(id: '', email: '', username: 'Unknown');
@@ -140,27 +112,3 @@ class CreatedBy {
     return {'_id': id, 'email': email, 'username': username};
   }
 }
-
-// Response wrapper for API responses
-class PlantResponse {
-  final PlantModel data;
-  final String message;
-  final bool success;
-
-  PlantResponse({
-    required this.data,
-    required this.message,
-    required this.success,
-  });
-
-  factory PlantResponse.fromJson(Map<String, dynamic> json) {
-    return PlantResponse(
-      data: PlantModel.fromJson(json['data']),
-      message: json['message'] ?? '',
-      success: json['success'] ?? true,
-    );
-  }
-}
-
-PlantResponse plantResponseFromJson(String str) =>
-    PlantResponse.fromJson(json.decode(str));

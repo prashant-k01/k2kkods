@@ -2,22 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/list_helper/add_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
-import 'package:k2k/konkrete_klinkers/master_data/plants/provider/plants_provider.dart';
-import 'package:k2k/konkrete_klinkers/master_data/plants/view/plant_delete_screen.dart';
 import 'package:k2k/common/list_helper/shimmer.dart';
+import 'package:k2k/konkrete_klinkers/master_data/clients/provider/clients_provider.dart';
+import 'package:k2k/konkrete_klinkers/master_data/clients/view/clients_delete_screen.dart';
 import 'package:k2k/utils/sreen_util.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart' hide ScreenUtil;
 
-class PlantsListView extends StatefulWidget {
-  const PlantsListView({super.key});
+class ClientsListView extends StatefulWidget {
+  const ClientsListView({super.key});
 
   @override
-  State<PlantsListView> createState() => _PlantsListViewState();
+  State<ClientsListView> createState() => _ClientsListViewState();
 }
 
-class _PlantsListViewState extends State<PlantsListView> {
+class _ClientsListViewState extends State<ClientsListView> {
   bool _isInitialized = false;
   final ScrollController _scrollController = ScrollController();
 
@@ -38,20 +38,20 @@ class _PlantsListViewState extends State<PlantsListView> {
       _isInitialized = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          final provider = context.read<PlantProvider>();
-          if (provider.plants.isEmpty && provider.error == null) {
-            provider.loadAllPlants();
+          final provider = context.read<ClientsProvider>();
+          if (provider.clients.isEmpty && provider.error == null) {
+            provider.loadAllClients();
           }
         }
       });
     }
   }
 
-  void _editPlant(String? plantId) {
-    if (plantId != null) {
+  void _editClient(String? clientId) {
+    if (clientId != null) {
       context.goNamed(
-        RouteNames.plantsedit,
-        pathParameters: {'plantId': plantId},
+        RouteNames.clientsedit,
+        pathParameters: {'clientId': clientId},
       );
     }
   }
@@ -68,7 +68,7 @@ class _PlantsListViewState extends State<PlantsListView> {
   }
 
   Widget _buildPaginationInfo() {
-    return Consumer<PlantProvider>(
+    return Consumer<ClientsProvider>(
       builder: (context, provider, child) {
         if (provider.totalItems == 0) return SizedBox.shrink();
 
@@ -76,7 +76,7 @@ class _PlantsListViewState extends State<PlantsListView> {
           return Container(
             padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
             child: Text(
-              'Showing all ${provider.totalItems} plants',
+              'Showing all ${provider.totalItems} clients',
               style: TextStyle(
                 fontSize: 14.sp,
                 color: const Color(0xFF64748B),
@@ -87,7 +87,7 @@ class _PlantsListViewState extends State<PlantsListView> {
         }
 
         final startItem = ((provider.currentPage - 1) * provider.limit) + 1;
-        final endItem = (startItem + provider.plants.length - 1).clamp(
+        final endItem = (startItem + provider.clients.length - 1).clamp(
           1,
           provider.totalItems,
         );
@@ -103,7 +103,7 @@ class _PlantsListViewState extends State<PlantsListView> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Showing $startItem-$endItem of ${provider.totalItems} plants',
+                'Showing $startItem-$endItem of ${provider.totalItems} clients',
                 style: TextStyle(
                   fontSize: 14.sp,
                   color: const Color(0xFF64748B),
@@ -125,18 +125,19 @@ class _PlantsListViewState extends State<PlantsListView> {
     );
   }
 
-  Widget _buildPlantCard(dynamic plant) {
-    final plantData = plant is Map<String, dynamic> ? plant : plant.toJson();
-    final plantId = plantData['_id'] ?? plantData['id'] ?? '';
-    final plantName =
-        plantData['plant_name'] ?? plantData['plantName'] ?? 'Unknown Plant';
-    final plantCode =
-        plantData['plant_code'] ?? plantData['plantCode'] ?? 'N/A';
+  Widget _buildClientCard(dynamic Client) {
+    final clientData = Client is Map<String, dynamic>
+        ? Client
+        : Client.toJson();
+    final clientId = clientData['_id'] ?? clientData['id'] ?? '';
+    final name = clientData['name'] ?? clientData['name'] ?? 'Unknown Client';
+    final address = clientData['address'] ?? clientData['address'] ?? 'N/A';
     final createdBy = _getCreatedBy(
-      plantData['created_by'] ?? plantData['createdBy'],
+      clientData['created_by'] ?? clientData['createdBy'],
     );
-    final createdAt = plantData['createdAt'] != null
-        ? DateTime.tryParse(plantData['createdAt'].toString()) ?? DateTime.now()
+    final createdAt = clientData['createdAt'] != null
+        ? DateTime.tryParse(clientData['createdAt'].toString()) ??
+              DateTime.now()
         : DateTime.now();
 
     return Container(
@@ -171,7 +172,7 @@ class _PlantsListViewState extends State<PlantsListView> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            plantName,
+                            name,
                             style: TextStyle(
                               fontSize: 18.sp,
                               fontWeight: FontWeight.w600,
@@ -189,7 +190,7 @@ class _PlantsListViewState extends State<PlantsListView> {
                               borderRadius: BorderRadius.circular(12.r),
                             ),
                             child: Text(
-                              plantCode,
+                              address,
                               style: TextStyle(
                                 fontSize: 14.sp,
                                 fontWeight: FontWeight.w600,
@@ -208,12 +209,12 @@ class _PlantsListViewState extends State<PlantsListView> {
                       ),
                       onSelected: (value) {
                         if (value == 'edit') {
-                          _editPlant(plantId);
+                          _editClient(clientId);
                         } else if (value == 'delete') {
-                          PlantDeleteHandler.deletePlant(
+                          ClientDeleteHandler.deleteClient(
                             context,
-                            plantId,
-                            plantName,
+                            clientId,
+                            name,
                           );
                         }
                       },
@@ -318,7 +319,7 @@ class _PlantsListViewState extends State<PlantsListView> {
           ),
           SizedBox(height: 16.h),
           Text(
-            'No Plants Found',
+            'No clients Found',
             style: TextStyle(
               fontSize: 18.sp,
               fontWeight: FontWeight.w600,
@@ -327,14 +328,14 @@ class _PlantsListViewState extends State<PlantsListView> {
           ),
           SizedBox(height: 8.h),
           Text(
-            'Start by adding a new plant!',
+            'Start by adding a new Client!',
             style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
           ),
           SizedBox(height: 16.h),
           AddButton(
-            text: 'Add Plant',
+            text: 'Add Client',
             icon: Icons.add,
-            route: RouteNames.plantsadd,
+            route: RouteNames.clientsadd,
           ),
         ],
       ),
@@ -352,11 +353,11 @@ class _PlantsListViewState extends State<PlantsListView> {
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF334155),
         title: Text(
-          'Plants Management',
+          'Machine Creation',
           style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w600),
         ),
         actions: [
-          Consumer<PlantProvider>(
+          Consumer<ClientsProvider>(
             builder: (context, provider, child) => Row(
               children: [
                 Switch(
@@ -385,7 +386,7 @@ class _PlantsListViewState extends State<PlantsListView> {
           ),
         ],
       ),
-      body: Consumer<PlantProvider>(
+      body: Consumer<ClientsProvider>(
         builder: (context, provider, child) {
           if (provider.error != null) {
             return Center(
@@ -399,7 +400,7 @@ class _PlantsListViewState extends State<PlantsListView> {
                   ),
                   SizedBox(height: 16.h),
                   Text(
-                    'Error Loading Plants',
+                    'Error Loading clients',
                     style: TextStyle(
                       fontSize: 18.sp,
                       fontWeight: FontWeight.w600,
@@ -424,7 +425,7 @@ class _PlantsListViewState extends State<PlantsListView> {
                     icon: Icons.refresh,
                     onTap: () {
                       provider.clearError();
-                      provider.loadAllPlants(refresh: true);
+                      provider.loadAllClients(refresh: true);
                     },
                   ),
                 ],
@@ -441,23 +442,23 @@ class _PlantsListViewState extends State<PlantsListView> {
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: () async {
-                    await provider.loadAllPlants(refresh: true);
+                    await provider.loadAllClients(refresh: true);
                   },
                   color: const Color(0xFF3B82F6),
                   backgroundColor: Colors.white,
-                  child: provider.isLoading && provider.plants.isEmpty
+                  child: provider.isLoading && provider.clients.isEmpty
                       ? ListView.builder(
                           itemCount: 5,
                           itemBuilder: (context, index) => buildShimmerCard(),
                         )
-                      : provider.plants.isEmpty
+                      : provider.clients.isEmpty
                       ? _buildEmptyState()
                       : ListView.builder(
                           controller: _scrollController,
                           padding: EdgeInsets.symmetric(vertical: 8.h),
-                          itemCount: provider.plants.length,
+                          itemCount: provider.clients.length,
                           itemBuilder: (context, index) {
-                            return _buildPlantCard(provider.plants[index]);
+                            return _buildClientCard(provider.clients[index]);
                           },
                         ),
                 ),
@@ -467,9 +468,9 @@ class _PlantsListViewState extends State<PlantsListView> {
         },
       ),
       floatingActionButton: AddButton(
-        text: 'Add Plant',
+        text: 'Add Client',
         icon: Icons.add,
-        route: RouteNames.plantsadd,
+        route: RouteNames.clientsadd,
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );

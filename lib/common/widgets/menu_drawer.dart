@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:k2k/app/routes_name.dart';
 
 class MenuItem {
   final String title;
@@ -201,7 +202,7 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
             SubMenuItem(
               title: 'Clients',
               icon: Icons.person_outline_rounded,
-              route: '/settings/users',
+              route: RouteNames.clients,
               isExpanded: false,
             ),
             SubMenuItem(

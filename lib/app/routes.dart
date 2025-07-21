@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/dashboard/view/dashboard_screen.dart';
+import 'package:k2k/konkrete_klinkers/master_data/clients/view/clients_add.dart';
+import 'package:k2k/konkrete_klinkers/master_data/clients/view/clients_edit_screen.dart';
+import 'package:k2k/konkrete_klinkers/master_data/clients/view/clients_screen_list.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/view/plant_edit_screen.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/view/plant_add.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/view/plants_screen_list.dart';
@@ -27,10 +30,24 @@ class AppRoutes {
         },
       ),
       GoRoute(
+        path: RouteNames.clients,
+        name: RouteNames.clients,
+        builder: (BuildContext context, GoRouterState state) {
+          return ClientsListView();
+        },
+      ),
+      GoRoute(
         path: RouteNames.plantsadd,
         name: RouteNames.plantsadd,
         builder: (BuildContext context, GoRouterState state) {
           return AddPlantFormScreen();
+        },
+      ),
+      GoRoute(
+        path: RouteNames.clientsadd,
+        name: RouteNames.clientsadd,
+        builder: (BuildContext context, GoRouterState state) {
+          return AddClientFormScreen();
         },
       ),
       GoRoute(
@@ -41,17 +58,29 @@ class AppRoutes {
         },
       ),
       GoRoute(
-      path: RouteNames.plantsedit, // '/plants/edit/:plantId'
-      name: RouteNames.plantsedit,
-      builder: (context, state) {
-        final plantId = state.pathParameters['plantId'];
-        if (plantId == null) {
-          // Handle missing plantId gracefully
-          return const PlantsListView(); // Redirect to plants list
-        }
-        return EditPlantFormScreen(plantId: plantId);
-      },
-    ),
+        path: RouteNames.plantsedit, // '/plants/edit/:plantId'
+        name: RouteNames.plantsedit,
+        builder: (context, state) {
+          final plantId = state.pathParameters['plantId'];
+          if (plantId == null) {
+            // Handle missing plantId gracefully
+            return const PlantsListView(); // Redirect to plants list
+          }
+          return EditPlantFormScreen(plantId: plantId);
+        },
+      ),
+      GoRoute(
+        path: RouteNames.clientsedit, // '/plants/edit/:plantId'
+        name: RouteNames.clientsedit,
+        builder: (context, state) {
+          final clientId = state.pathParameters['clientId'];
+          if (clientId == null) {
+            // Handle missing plantId gracefully
+            return const ClientsListView(); // Redirect to plants list
+          }
+          return EditClientFormScreen(clientId: clientId);
+        },
+      ),
       GoRoute(
         path: RouteNames.homeScreen,
         name: RouteNames.homeScreen,

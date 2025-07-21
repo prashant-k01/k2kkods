@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:k2k/konkrete_klinkers/master_data/plants/model/plants_model.dart';
-import 'package:k2k/konkrete_klinkers/master_data/plants/repo/plants.repo.dart';
+import 'package:k2k/konkrete_klinkers/master_data/clients/model/clients_model.dart';
+import 'package:k2k/konkrete_klinkers/master_data/clients/repo/cleints.dart';
 
-class PlantProvider with ChangeNotifier {
-  final PlantRepository _repository = PlantRepository();
+class ClientsProvider with ChangeNotifier {
+  final ClientRepository _repository = ClientRepository();
 
-  List<PlantModel> _plants = [];
+  List<ClientsModel> _clients = [];
   bool _isLoading = false;
   String? _error;
-  bool _showAll = false; // Flag to indicate if all data should be shown
+  bool _showAll = false;
 
-  // Pagination properties
   int _currentPage = 1;
   int _totalPages = 1;
   int _totalItems = 0;
@@ -19,18 +18,16 @@ class PlantProvider with ChangeNotifier {
   final int _limit = 10;
   String _searchQuery = '';
 
-  // Loading states for specific operations
-  bool _isAddPlantLoading = false;
-  bool _isUpdatePlantLoading = false;
-  bool _isDeletePlantLoading = false;
+  bool _isAddClientLoading = false;
+  bool _isupdateClientsLoading = false;
+  bool _isdeleteClientsLoading = false;
 
-  // Getters
-  List<PlantModel> get plants => _plants;
+  List<ClientsModel> get clients => _clients;
   bool get isLoading => _isLoading;
   String? get error => _error;
-  bool get isAddPlantLoading => _isAddPlantLoading;
-  bool get isUpdatePlantLoading => _isUpdatePlantLoading;
-  bool get isDeletePlantLoading => _isDeletePlantLoading;
+  bool get isAddclientsLoading => _isAddClientLoading;
+  bool get isupdateClientsLoading => _isupdateClientsLoading;
+  bool get isdeleteClientsLoading => _isdeleteClientsLoading;
   bool get showAll => _showAll;
 
   // Pagination getters
@@ -47,14 +44,14 @@ class PlantProvider with ChangeNotifier {
     _showAll = value;
     _currentPage = 1;
     notifyListeners();
-    loadAllPlants(refresh: true);
+    loadAllClients(refresh: true);
   }
 
-  // Load plants for current page or all plants
-  Future<void> loadAllPlants({bool refresh = false}) async {
+  // Load  for current page or all
+  Future<void> loadAllClients({bool refresh = false}) async {
     if (refresh) {
       _currentPage = 1;
-      _plants = []; // Clear existing plants for refresh
+      _clients = []; // Clear existing  for refresh
     }
 
     _isLoading = true;
@@ -63,34 +60,34 @@ class PlantProvider with ChangeNotifier {
 
     try {
       print(
-        'Loading plants - Page: $_currentPage, Limit: ${_showAll ? "all" : _limit}, ShowAll: $_showAll',
+        'Loading Clients - Page: $_currentPage, Limit: ${_showAll ? "all" : _limit}, ShowAll: $_showAll',
       ); // Debug print
 
-      final response = await _repository.getAllPlants(
+      final response = await _repository.getAllClients(
         page: _showAll ? 1 : _currentPage, // Use page 1 for show all
         limit: _showAll ? 1000 : _limit, // Use high limit for show all
         search: _searchQuery.isNotEmpty ? _searchQuery : null,
       );
 
       if (_showAll) {
-        _plants = response.plants; // Replace all plants
+        _clients = response.clients; // Replace all clientss
         _totalPages = 1; // Single page for all data
-        _totalItems = response.plants.length;
+        _totalItems = response.clients.length;
         _hasNextPage = false;
         _hasPreviousPage = false;
       } else {
-        _plants = response.plants;
+        _clients = response.clients;
         _updatePaginationInfo(response.pagination);
       }
       _error = null;
 
       print(
-        'Loaded ${_plants.length} plants, Total: $_totalItems, Pages: $_totalPages',
+        'Loaded ${_clients.length} clients, Total: $_totalItems, Pages: $_totalPages',
       ); // Debug print
     } catch (e) {
       _error = _getErrorMessage(e);
-      _plants = [];
-      print('Error loading plants: $e'); // Debug print
+      _clients = [];
+      print('Error loading clients: $e'); // Debug print
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -104,7 +101,7 @@ class PlantProvider with ChangeNotifier {
 
     print('Loading page: $page'); // Debug print
     _currentPage = page;
-    await loadAllPlants();
+    await loadAllClients();
   }
 
   // Go to next page
@@ -131,18 +128,17 @@ class PlantProvider with ChangeNotifier {
     await loadPage(_totalPages);
   }
 
-  // Search plants
-  Future<void> searchPlants(String query) async {
+  Future<void> searchClients(String query) async {
     _searchQuery = query;
     _currentPage = 1;
-    await loadAllPlants();
+    await loadAllClients();
   }
 
   // Clear search
   Future<void> clearSearch() async {
     _searchQuery = '';
     _currentPage = 1;
-    await loadAllPlants();
+    await loadAllClients();
   }
 
   // Update pagination info
@@ -153,21 +149,22 @@ class PlantProvider with ChangeNotifier {
     _hasPreviousPage = pagination.hasPreviousPage;
   }
 
-  Future<bool> createPlant(String plantCode, String plantName) async {
-    _isAddPlantLoading = true;
+
+  Future<bool> createClient(String address, String name) async {
+    _isAddClientLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final newPlant = await _repository.createPlant(plantCode, plantName);
+      final newPlant = await _repository.createClient(address, name);
 
       if (newPlant.id.isNotEmpty) {
         // After creating, go to first page to show the new plant
         _currentPage = 1;
-        await loadAllPlants();
+        await loadAllClients();
         return true;
       } else {
-        _error = 'Failed to create plant - no ID returned';
+        _error = 'Failed to create client - no ID returned';
         notifyListeners();
         return false;
       }
@@ -176,32 +173,28 @@ class PlantProvider with ChangeNotifier {
       notifyListeners();
       return false;
     } finally {
-      _isAddPlantLoading = false;
+      _isAddClientLoading = false;
       notifyListeners();
     }
   }
 
-  Future<bool> updatePlant(
-    String plantId,
-    String plantCode,
-    String plantName,
+  Future<bool> updateClients(
+    String clientsId,
+    String address,
+    String name,
   ) async {
-    _isUpdatePlantLoading = true;
+    _isupdateClientsLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final success = await _repository.updatePlant(
-        plantId,
-        plantCode,
-        plantName,
-      );
+      final success = await _repository.updateClient(clientsId, address, name);
 
       if (success) {
-        await loadAllPlants();
+        await loadAllClients();
         return true;
       } else {
-        _error = 'Failed to update plant';
+        _error = 'Failed to update clients';
         notifyListeners();
         return false;
       }
@@ -210,22 +203,22 @@ class PlantProvider with ChangeNotifier {
       notifyListeners();
       return false;
     } finally {
-      _isUpdatePlantLoading = false;
+      _isupdateClientsLoading = false;
       notifyListeners();
     }
   }
 
-  Future<bool> deletePlant(String plantId) async {
-    _isDeletePlantLoading = true;
+  Future<bool> deleteClients(String clientsId) async {
+    _isdeleteClientsLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final success = await _repository.deletePlant(plantId);
+      final success = await _repository.deleteClient(clientsId);
 
       if (success) {
         // Only adjust pagination if deletion was successful
-        final currentPageItemCount = _plants.length;
+        final currentPageItemCount = _clients.length;
         final isLastItemOnPage = currentPageItemCount == 1;
         final isNotFirstPage = _currentPage > 1;
 
@@ -235,10 +228,10 @@ class PlantProvider with ChangeNotifier {
         }
 
         // Refresh current page
-        await loadAllPlants();
+        await loadAllClients();
         return true;
       } else {
-        _error = 'Failed to delete plant';
+        _error = 'Failed to delete clients';
         notifyListeners();
         return false;
       }
@@ -247,25 +240,25 @@ class PlantProvider with ChangeNotifier {
       notifyListeners();
       return false;
     } finally {
-      _isDeletePlantLoading = false;
+      _isdeleteClientsLoading = false;
       notifyListeners();
     }
   }
 
-  Future<PlantModel?> getPlant(String plantId) async {
+  Future<ClientsModel?> getClients(String clientsId) async {
     try {
       _error = null; // Clear error locally, no need to notify
-      final plant = await _repository.getPlant(plantId);
-      return plant;
+      final clients = await _repository.getClients(clientsId);
+      return clients;
     } catch (e) {
       _error = _getErrorMessage(e); // Set error locally, no need to notify
       return null;
     }
   }
 
-  PlantModel? getPlantByIndex(int index) {
-    if (index >= 0 && index < _plants.length) {
-      return _plants[index];
+  ClientsModel? getClientsByIndex(int index) {
+    if (index >= 0 && index < _clients.length) {
+      return _clients[index];
     }
     return null;
   }
