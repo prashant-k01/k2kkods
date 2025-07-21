@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart' hide ScreenUtil;
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/list_helper/add_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
@@ -8,7 +9,6 @@ import 'package:k2k/konkrete_klinkers/master_data/clients/view/clients_delete_sc
 import 'package:k2k/utils/sreen_util.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart' hide ScreenUtil;
 
 class ClientsListView extends StatefulWidget {
   const ClientsListView({super.key});
@@ -70,20 +70,8 @@ class _ClientsListViewState extends State<ClientsListView> {
   Widget _buildPaginationInfo() {
     return Consumer<ClientsProvider>(
       builder: (context, provider, child) {
-        if (provider.totalItems == 0) return SizedBox.shrink();
-
-        if (provider.showAll) {
-          return Container(
-            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-            child: Text(
-              'Showing all ${provider.totalItems} clients',
-              style: TextStyle(
-                fontSize: 14.sp,
-                color: const Color(0xFF64748B),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          );
+        if (provider.totalItems == 0 || provider.totalPages == 1) {
+          return const SizedBox.shrink();
         }
 
         final startItem = ((provider.currentPage - 1) * provider.limit) + 1;
@@ -92,52 +80,91 @@ class _ClientsListViewState extends State<ClientsListView> {
           provider.totalItems,
         );
 
-        return Container(
-          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12.r),
-            boxShadow: [],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Showing $startItem-$endItem of ${provider.totalItems} clients',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  color: const Color(0xFF64748B),
-                  fontWeight: FontWeight.w500,
-                ),
+        return Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(16.r),
+                topRight: Radius.circular(16.r),
               ),
-              Text(
-                'Page ${provider.currentPage} of ${provider.totalPages}',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  color: const Color(0xFF64748B),
-                  fontWeight: FontWeight.w500,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 12.r,
+                  offset: const Offset(0, -2),
                 ),
-              ),
-            ],
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildNavButton(
+                  icon: Icons.arrow_back_ios,
+                  onPressed: provider.hasPreviousPage
+                      ? () => provider.previousPage()
+                      : null,
+                  tooltip: 'Previous Page',
+                ),
+                Text(
+                  '${provider.currentPage}/${provider.totalPages}',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF334155),
+                  ),
+                ),
+                _buildNavButton(
+                  icon: Icons.arrow_forward_ios,
+                  onPressed: provider.hasNextPage
+                      ? () => provider.nextPage()
+                      : null,
+                  tooltip: 'Next Page',
+                ),
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _buildClientCard(dynamic Client) {
-    final clientData = Client is Map<String, dynamic>
-        ? Client
-        : Client.toJson();
-    final clientId = clientData['_id'] ?? clientData['id'] ?? '';
-    final name = clientData['name'] ?? clientData['name'] ?? 'Unknown Client';
-    final address = clientData['address'] ?? clientData['address'] ?? 'N/A';
-    final createdBy = _getCreatedBy(
-      clientData['created_by'] ?? clientData['createdBy'],
+  Widget _buildNavButton({
+    required IconData icon,
+    required VoidCallback? onPressed,
+    required String tooltip,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(12.r),
+        child: Container(
+          padding: EdgeInsets.all(12.w),
+          decoration: BoxDecoration(
+            color: onPressed != null
+                ? const Color(0xFF3B82F6)
+                : const Color(0xFFCBD5E1),
+            borderRadius: BorderRadius.circular(12.r),
+          ),
+          child: Icon(icon, size: 24.sp, color: Colors.white),
+        ),
+      ),
     );
+  }
+
+  Widget _buildClientCard(dynamic client) {
+    final clientData = client is Map<String, dynamic> ? client : client.toJson();
+    final clientId = clientData['_id'] ?? clientData['id'] ?? '';
+    final name = clientData['name'] ?? 'Unknown Client';
+    final address = clientData['address'] ?? 'N/A';
+    final createdBy = _getCreatedBy(clientData['created_by'] ?? clientData['createdBy']);
     final createdAt = clientData['createdAt'] != null
-        ? DateTime.tryParse(clientData['createdAt'].toString()) ??
-              DateTime.now()
+        ? DateTime.tryParse(clientData['createdAt'].toString()) ?? DateTime.now()
         : DateTime.now();
 
     return Container(
@@ -313,13 +340,13 @@ class _ClientsListViewState extends State<ClientsListView> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.local_florist_outlined,
+            Icons.person_outline,
             size: 64.sp,
             color: const Color(0xFF3B82F6),
           ),
           SizedBox(height: 16.h),
           Text(
-            'No clients Found',
+            'No Clients Found',
             style: TextStyle(
               fontSize: 18.sp,
               fontWeight: FontWeight.w600,
@@ -328,7 +355,7 @@ class _ClientsListViewState extends State<ClientsListView> {
           ),
           SizedBox(height: 8.h),
           Text(
-            'Start by adding a new Client!',
+            'Tap the button below to add your first client!',
             style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
           ),
           SizedBox(height: 16.h),
@@ -353,126 +380,129 @@ class _ClientsListViewState extends State<ClientsListView> {
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF334155),
         title: Text(
-          'Machine Creation',
+          'Clients Management',
           style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w600),
         ),
         actions: [
-          Consumer<ClientsProvider>(
-            builder: (context, provider, child) => Row(
-              children: [
-                Switch(
-                  value: provider.showAll,
-                  onChanged: (value) {
-                    provider.toggleShowAll(value);
-                  },
-                  activeColor: const Color(0xFF3B82F6),
-                  activeTrackColor: const Color(0xFF3B82F6).withOpacity(0.5),
-                  inactiveThumbColor: const Color(0xFF64748B),
-                  inactiveTrackColor: const Color(0xFFCBD5E1),
-                ),
-                Padding(
-                  padding: EdgeInsets.only(right: 16.w),
-                  child: Text(
-                    'Show All',
+          Padding(
+            padding: EdgeInsets.only(right: 16.w),
+            child: TextButton(
+              onPressed: () {
+                context.goNamed(RouteNames.clientsadd);
+              },
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.add,
+                    size: 20.sp,
+                    color: const Color(0xFF3B82F6),
+                  ),
+                  SizedBox(width: 4.w),
+                  Text(
+                    'Add Client',
                     style: TextStyle(
-                      color: const Color(0xFF334155),
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF3B82F6),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
       ),
-      body: Consumer<ClientsProvider>(
-        builder: (context, provider, child) {
-          if (provider.error != null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64.sp,
-                    color: const Color(0xFFF43F5E),
+      body: Stack(
+        children: [
+          Consumer<ClientsProvider>(
+            builder: (context, provider, child) {
+              if (provider.error != null) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 64.sp,
+                        color: const Color(0xFFF43F5E),
+                      ),
+                      SizedBox(height: 16.h),
+                      Text(
+                        'Error Loading Clients',
+                        style: TextStyle(
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF334155),
+                        ),
+                      ),
+                      SizedBox(height: 8.h),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 24.w),
+                        child: Text(
+                          provider.error!,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 16.h),
+                      RefreshButton(
+                        text: 'Retry',
+                        icon: Icons.refresh,
+                        onTap: () {
+                          provider.clearError();
+                          provider.loadAllClients(refresh: true);
+                        },
+                      ),
+                    ],
                   ),
-                  SizedBox(height: 16.h),
-                  Text(
-                    'Error Loading clients',
-                    style: TextStyle(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF334155),
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24.w),
-                    child: Text(
-                      provider.error!,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
+                );
+              }
+
+              return GestureDetector(
+                onHorizontalDragEnd: (details) {
+                  if (details.primaryVelocity! > 0 && provider.hasPreviousPage) {
+                    provider.previousPage();
+                  } else if (details.primaryVelocity! < 0 && provider.hasNextPage) {
+                    provider.nextPage();
+                  }
+                },
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: RefreshIndicator(
+                        onRefresh: () async {
+                          await provider.loadAllClients(refresh: true);
+                        },
+                        color: const Color(0xFF3B82F6),
+                        backgroundColor: Colors.white,
+                        child: provider.isLoading && provider.clients.isEmpty
+                            ? ListView.builder(
+                                itemCount: 5,
+                                itemBuilder: (context, index) => buildShimmerCard(),
+                              )
+                            : provider.clients.isEmpty
+                                ? _buildEmptyState()
+                                : ListView.builder(
+                                    controller: _scrollController,
+                                    padding: EdgeInsets.only(bottom: 80.h),
+                                    itemCount: provider.clients.length,
+                                    itemBuilder: (context, index) {
+                                      return _buildClientCard(provider.clients[index]);
+                                    },
+                                  ),
                       ),
                     ),
-                  ),
-                  SizedBox(height: 16.h),
-                  RefreshButton(
-                    text: 'Retry',
-                    icon: Icons.refresh,
-                    onTap: () {
-                      provider.clearError();
-                      provider.loadAllClients(refresh: true);
-                    },
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return Column(
-            children: [
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: 8.h),
-                child: _buildPaginationInfo(),
-              ),
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: () async {
-                    await provider.loadAllClients(refresh: true);
-                  },
-                  color: const Color(0xFF3B82F6),
-                  backgroundColor: Colors.white,
-                  child: provider.isLoading && provider.clients.isEmpty
-                      ? ListView.builder(
-                          itemCount: 5,
-                          itemBuilder: (context, index) => buildShimmerCard(),
-                        )
-                      : provider.clients.isEmpty
-                      ? _buildEmptyState()
-                      : ListView.builder(
-                          controller: _scrollController,
-                          padding: EdgeInsets.symmetric(vertical: 8.h),
-                          itemCount: provider.clients.length,
-                          itemBuilder: (context, index) {
-                            return _buildClientCard(provider.clients[index]);
-                          },
-                        ),
+                  ],
                 ),
-              ),
-            ],
-          );
-        },
+              );
+            },
+          ),
+          _buildPaginationInfo(),
+        ],
       ),
-      floatingActionButton: AddButton(
-        text: 'Add Client',
-        icon: Icons.add,
-        route: RouteNames.clientsadd,
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }

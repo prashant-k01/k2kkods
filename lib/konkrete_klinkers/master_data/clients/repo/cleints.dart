@@ -57,7 +57,6 @@ class ClientRepository {
   ClientsModel? _lastCreatedClient;
   ClientsModel? get lastCreatedClient => _lastCreatedClient;
 
-  // Updated method to support pagination
   Future<PaginatedClientsResponse> getAllClients({
     int page = 1,
     int limit = 10,
@@ -65,8 +64,6 @@ class ClientRepository {
   }) async {
     try {
       final authHeaders = await headers;
-
-      // Build URL with pagination parameters
       final uri = Uri.parse(AppUrl.fetchClientDetailsUrl).replace(
         queryParameters: {
           'page': page.toString(),
@@ -80,97 +77,22 @@ class ClientRepository {
           .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
-        if (response.body.isEmpty) {
-          return PaginatedClientsResponse(
-            clients: [],
-            pagination: PaginationInfo(
-              total: 0,
-              page: 1,
-              limit: limit,
-              totalPages: 1,
-              hasNextPage: false,
-              hasPreviousPage: false,
-            ),
-          );
-        }
-
         final jsonData = json.decode(response.body);
         List<dynamic> clientsJson = [];
         PaginationInfo paginationInfo;
 
-        if (jsonData is Map<String, dynamic>) {
-          // Handle pagination info
-          if (jsonData.containsKey('pagination')) {
-            paginationInfo = PaginationInfo.fromJson(jsonData['pagination']);
-          } else {
-            // Fallback pagination if not provided
-            paginationInfo = PaginationInfo(
-              total: 0,
-              page: page,
-              limit: limit,
-              totalPages: 1,
-              hasNextPage: false,
-              hasPreviousPage: false,
-            );
-          }
-
-          // Extract clients data
-          if (jsonData.containsKey('data')) {
-            final data = jsonData['data'];
-            if (data is List) {
-              clientsJson = data;
-            } else if (data is Map && data.containsKey('clients')) {
-              clientsJson = data['clients'] is List ? data['clients'] : [];
-            } else if (data is Map) {
-              clientsJson = [data];
-            }
-          } else if (jsonData.containsKey('clients')) {
-            final clients = jsonData['clients'];
-            clientsJson = clients is List ? clients : [clients];
-          } else if (jsonData.containsKey('result')) {
-            final result = jsonData['result'];
-            clientsJson = result is List ? result : [result];
-          } else if (jsonData.containsKey('items')) {
-            final items = jsonData['items'];
-            clientsJson = items is List ? items : [items];
-          } else {
-            // Check if it's a single client object
-            if (jsonData.containsKey('address') ||
-                jsonData.containsKey('name') ||
-                jsonData.containsKey('_id') ||
-                jsonData.containsKey('id')) {
-              clientsJson = [jsonData];
-            }
-          }
-        } else if (jsonData is List) {
-          clientsJson = jsonData;
-          paginationInfo = PaginationInfo(
-            total: clientsJson.length,
-            page: page,
-            limit: limit,
-            totalPages: 1,
-            hasNextPage: false,
-            hasPreviousPage: false,
-          );
+        if (jsonData is Map<String, dynamic> && jsonData.containsKey('data')) {
+          final data = jsonData['data'];
+          paginationInfo = PaginationInfo.fromJson(data['pagination'] ?? {});
+          clientsJson = (data['clients'] as List?) ?? [];
         } else {
-          throw Exception(
-            'Unexpected response structure: ${jsonData.runtimeType}',
-          );
+          throw Exception('Unexpected response structure: ${jsonData.runtimeType}');
         }
 
-        // Parse clients
-        final List<ClientsModel> clients = [];
-        for (final clientJson in clientsJson) {
-          try {
-            if (clientJson is Map<String, dynamic>) {
-              final client = ClientsModel.fromJson(clientJson);
-              clients.add(client);
-            }
-          } catch (e) {
-            print('Error parsing client: $e');
-            // Skip malformed entry
-          }
-        }
+        final clients = clientsJson
+            .whereType<Map<String, dynamic>>()
+            .map((clientJson) => ClientsModel.fromJson(clientJson))
+            .toList();
 
         return PaginatedClientsResponse(
           clients: clients,
@@ -178,7 +100,7 @@ class ClientRepository {
         );
       } else {
         throw Exception(
-          'Failed to Load clients: ${response.statusCode} - ${response.body}',
+          'Failed to load clients: ${response.statusCode} - ${response.body}',
         );
       }
     } on SocketException catch (e) {
@@ -203,15 +125,13 @@ class ClientRepository {
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-        final clientsData = (jsonData is Map<String, dynamic>)
+        final clientData = (jsonData is Map<String, dynamic>)
             ? jsonData['data'] ?? jsonData
             : jsonData;
 
-        return ClientsModel.fromJson(clientsData);
+        return ClientsModel.fromJson(clientData);
       } else if (response.statusCode == 404) {
         return null;
-      } else if (response.statusCode == 401) {
-        throw Exception('Unauthorized access: ${response.body}');
       } else {
         throw Exception(
           'Failed to load client: ${response.statusCode} - ${response.body}',
@@ -227,33 +147,30 @@ class ClientRepository {
   Future<ClientsModel> createClient(String name, String address) async {
     isAddClientsLoading = true;
     try {
-      final token = await fetchAccessToken();
+      final authHeaders = await headers;
       final url = AppUrl.createClientUrl;
       final Map<String, dynamic> body = {"name": name, "address": address};
 
       final response = await http
           .post(
             Uri.parse(url),
-            headers: {
-              'Authorization': 'Bearer $token',
-              'Content-Type': 'application/json',
-            },
+            headers: authHeaders,
             body: json.encode(body),
           )
           .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 201) {
         final responseData = json.decode(response.body);
-        final clientsData = (responseData is Map<String, dynamic>)
+        final clientData = (responseData is Map<String, dynamic>)
             ? responseData['data'] ?? responseData
             : responseData;
 
-        final createdClient = ClientsModel.fromJson(clientsData);
+        final createdClient = ClientsModel.fromJson(clientData);
         _lastCreatedClient = createdClient;
         return createdClient;
       } else {
         throw Exception(
-          'Failed to send client data: ${response.statusCode} - ${response.body}',
+          'Failed to create client: ${response.statusCode} - ${response.body}',
         );
       }
     } on SocketException catch (e) {
@@ -271,14 +188,14 @@ class ClientRepository {
 
   Future<bool> updateClient(
     String clientsId,
-    String address,
     String name,
+    String address,
   ) async {
     try {
       final authHeaders = await headers;
       final updateUrl = '${AppUrl.updateClientDetailsUrl}/$clientsId';
 
-      final Map<String, dynamic> body = {"address": address, "name": name};
+      final Map<String, dynamic> body = {"name": name, "address": address};
 
       final response = await http
           .put(
@@ -320,7 +237,9 @@ class ClientRepository {
       if (response.statusCode == 200) {
         return true;
       } else {
-        throw Exception('Failed to delete Id: ${response.statusCode}');
+        throw Exception(
+          'Failed to delete client: ${response.statusCode} - ${response.body}',
+        );
       }
     } on SocketException catch (e) {
       throw Exception('No internet connection: $e');

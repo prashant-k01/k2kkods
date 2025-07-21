@@ -8,8 +8,6 @@ class ClientsProvider with ChangeNotifier {
   List<ClientsModel> _clients = [];
   bool _isLoading = false;
   String? _error;
-  bool _showAll = false;
-
   int _currentPage = 1;
   int _totalPages = 1;
   int _totalItems = 0;
@@ -19,18 +17,15 @@ class ClientsProvider with ChangeNotifier {
   String _searchQuery = '';
 
   bool _isAddClientLoading = false;
-  bool _isupdateClientsLoading = false;
-  bool _isdeleteClientsLoading = false;
+  bool _isUpdateClientsLoading = false;
+  bool _isDeleteClientsLoading = false;
 
   List<ClientsModel> get clients => _clients;
   bool get isLoading => _isLoading;
   String? get error => _error;
-  bool get isAddclientsLoading => _isAddClientLoading;
-  bool get isupdateClientsLoading => _isupdateClientsLoading;
-  bool get isdeleteClientsLoading => _isdeleteClientsLoading;
-  bool get showAll => _showAll;
-
-  // Pagination getters
+  bool get isAddClientsLoading => _isAddClientLoading;
+  bool get isUpdateClientsLoading => _isUpdateClientsLoading;
+  bool get isDeleteClientsLoading => _isDeleteClientsLoading;
   int get currentPage => _currentPage;
   int get totalPages => _totalPages;
   int get totalItems => _totalItems;
@@ -39,19 +34,10 @@ class ClientsProvider with ChangeNotifier {
   int get limit => _limit;
   String get searchQuery => _searchQuery;
 
-  // Toggle between paginated and show all modes
-  void toggleShowAll(bool value) {
-    _showAll = value;
-    _currentPage = 1;
-    notifyListeners();
-    loadAllClients(refresh: true);
-  }
-
-  // Load  for current page or all
   Future<void> loadAllClients({bool refresh = false}) async {
     if (refresh) {
       _currentPage = 1;
-      _clients = []; // Clear existing  for refresh
+      _clients.clear();
     }
 
     _isLoading = true;
@@ -59,72 +45,51 @@ class ClientsProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      print(
-        'Loading Clients - Page: $_currentPage, Limit: ${_showAll ? "all" : _limit}, ShowAll: $_showAll',
-      ); // Debug print
+      print('Loading clients - Page: $_currentPage, Limit: $_limit, Search: $_searchQuery');
 
       final response = await _repository.getAllClients(
-        page: _showAll ? 1 : _currentPage, // Use page 1 for show all
-        limit: _showAll ? 1000 : _limit, // Use high limit for show all
+        page: _currentPage,
+        limit: _limit,
         search: _searchQuery.isNotEmpty ? _searchQuery : null,
       );
 
-      if (_showAll) {
-        _clients = response.clients; // Replace all clientss
-        _totalPages = 1; // Single page for all data
-        _totalItems = response.clients.length;
-        _hasNextPage = false;
-        _hasPreviousPage = false;
-      } else {
-        _clients = response.clients;
-        _updatePaginationInfo(response.pagination);
-      }
+      _clients = response.clients;
+      _updatePaginationInfo(response.pagination);
       _error = null;
 
-      print(
-        'Loaded ${_clients.length} clients, Total: $_totalItems, Pages: $_totalPages',
-      ); // Debug print
+      print('Loaded ${_clients.length} clients, Total: $_totalItems, Pages: $_totalPages');
     } catch (e) {
       _error = _getErrorMessage(e);
-      _clients = [];
-      print('Error loading clients: $e'); // Debug print
+      _clients.clear();
+      print('Error loading clients: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // Load specific page
   Future<void> loadPage(int page) async {
-    if (_showAll || page < 1 || page > _totalPages || page == _currentPage)
-      return;
+    if (page < 1 || page > _totalPages || page == _currentPage) return;
 
-    print('Loading page: $page'); // Debug print
     _currentPage = page;
     await loadAllClients();
   }
 
-  // Go to next page
   Future<void> nextPage() async {
-    if (_showAll || !_hasNextPage) return;
+    if (!_hasNextPage) return;
     await loadPage(_currentPage + 1);
   }
 
-  // Go to previous page
   Future<void> previousPage() async {
-    if (_showAll || !_hasPreviousPage) return;
+    if (!_hasPreviousPage) return;
     await loadPage(_currentPage - 1);
   }
 
-  // Go to first page
   Future<void> firstPage() async {
-    if (_showAll) return;
     await loadPage(1);
   }
 
-  // Go to last page
   Future<void> lastPage() async {
-    if (_showAll) return;
     await loadPage(_totalPages);
   }
 
@@ -134,43 +99,39 @@ class ClientsProvider with ChangeNotifier {
     await loadAllClients();
   }
 
-  // Clear search
   Future<void> clearSearch() async {
     _searchQuery = '';
     _currentPage = 1;
     await loadAllClients();
   }
 
-  // Update pagination info
   void _updatePaginationInfo(PaginationInfo pagination) {
     _totalPages = pagination.totalPages;
     _totalItems = pagination.total;
+    _currentPage = pagination.page;
     _hasNextPage = pagination.hasNextPage;
     _hasPreviousPage = pagination.hasPreviousPage;
+    notifyListeners();
   }
 
-
-  Future<bool> createClient(String address, String name) async {
+  Future<bool> createClient(String name, String address) async {
     _isAddClientLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final newPlant = await _repository.createClient(address, name);
+      final newClient = await _repository.createClient(name, address);
 
-      if (newPlant.id.isNotEmpty) {
-        // After creating, go to first page to show the new plant
+      if (newClient.id.isNotEmpty) {
         _currentPage = 1;
         await loadAllClients();
         return true;
       } else {
         _error = 'Failed to create client - no ID returned';
-        notifyListeners();
         return false;
       }
     } catch (e) {
       _error = _getErrorMessage(e);
-      notifyListeners();
       return false;
     } finally {
       _isAddClientLoading = false;
@@ -180,36 +141,34 @@ class ClientsProvider with ChangeNotifier {
 
   Future<bool> updateClients(
     String clientsId,
-    String address,
     String name,
+    String address,
   ) async {
-    _isupdateClientsLoading = true;
+    _isUpdateClientsLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final success = await _repository.updateClient(clientsId, address, name);
+      final success = await _repository.updateClient(clientsId, name, address);
 
       if (success) {
         await loadAllClients();
         return true;
       } else {
-        _error = 'Failed to update clients';
-        notifyListeners();
+        _error = 'Failed to update client';
         return false;
       }
     } catch (e) {
       _error = _getErrorMessage(e);
-      notifyListeners();
       return false;
     } finally {
-      _isupdateClientsLoading = false;
+      _isUpdateClientsLoading = false;
       notifyListeners();
     }
   }
 
   Future<bool> deleteClients(String clientsId) async {
-    _isdeleteClientsLoading = true;
+    _isDeleteClientsLoading = true;
     _error = null;
     notifyListeners();
 
@@ -217,41 +176,31 @@ class ClientsProvider with ChangeNotifier {
       final success = await _repository.deleteClient(clientsId);
 
       if (success) {
-        // Only adjust pagination if deletion was successful
-        final currentPageItemCount = _clients.length;
-        final isLastItemOnPage = currentPageItemCount == 1;
-        final isNotFirstPage = _currentPage > 1;
-
-        if (isLastItemOnPage && isNotFirstPage && !_showAll) {
-          // Go to previous page if current page will be empty
+        if (_clients.length == 1 && _currentPage > 1) {
           _currentPage--;
         }
-
-        // Refresh current page
         await loadAllClients();
         return true;
       } else {
-        _error = 'Failed to delete clients';
-        notifyListeners();
+        _error = 'Failed to delete client';
         return false;
       }
     } catch (e) {
       _error = _getErrorMessage(e);
-      notifyListeners();
       return false;
     } finally {
-      _isdeleteClientsLoading = false;
+      _isDeleteClientsLoading = false;
       notifyListeners();
     }
   }
 
   Future<ClientsModel?> getClients(String clientsId) async {
     try {
-      _error = null; // Clear error locally, no need to notify
-      final clients = await _repository.getClients(clientsId);
-      return clients;
+      _error = null;
+      final client = await _repository.getClients(clientsId);
+      return client;
     } catch (e) {
-      _error = _getErrorMessage(e); // Set error locally, no need to notify
+      _error = _getErrorMessage(e);
       return null;
     }
   }

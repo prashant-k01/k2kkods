@@ -145,12 +145,12 @@ class AddClientFormScreen extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: provider.isAddclientsLoading
+          onTap: provider.isAddClientsLoading
               ? null
               : () => _submitForm(context, provider),
           borderRadius: BorderRadius.circular(12.r),
           child: Center(
-            child: provider.isAddclientsLoading
+            child: provider.isAddClientsLoading
                 ? Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
