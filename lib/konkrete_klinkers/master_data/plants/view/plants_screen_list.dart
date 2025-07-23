@@ -376,7 +376,7 @@ class _PlantsListViewState extends State<PlantsListView> {
                 style: TextStyle(
                   fontSize: 16.sp,
                   fontWeight: FontWeight.w600,
-                color: Colors.blue
+                  color: Colors.blue,
                 ),
               ),
             ),

@@ -1,4 +1,3 @@
-// models/plant_model.dart
 import 'dart:convert';
 
 class PlantModel {

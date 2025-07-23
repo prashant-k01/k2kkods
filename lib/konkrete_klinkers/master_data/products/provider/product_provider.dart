@@ -124,19 +124,36 @@ class ProductProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> createProduct(String productCode, String productName) async {
+  Future<bool> createProduct({
+    required String plantId,
+    required String materialCode,
+    required String description,
+    required List<String> uom,
+    required Map<String, double> areas,
+    required int noOfPiecesPerPunch,
+    required int qtyInBundle,
+  }) async {
     _isAddProductLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final newProduct = await _repository.createProduct(productCode, productName);
+      final newProduct = await _repository.createProduct(
+        plantId: plantId,
+        materialCode: materialCode,
+        description: description,
+        uom: uom,
+        areas: areas,
+        noOfPiecesPerPunch: noOfPiecesPerPunch,
+        qtyInBundle: qtyInBundle,
+      );
 
       if (newProduct.id.isNotEmpty) {
         _currentPage = 1;
         await loadAllProducts();
         return true;
       } else {
+        _error = 'Failed to create product: Invalid response';
         return false;
       }
     } catch (e) {

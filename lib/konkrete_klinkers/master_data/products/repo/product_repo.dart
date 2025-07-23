@@ -37,14 +37,16 @@ class ProductRepository {
           .get(uri, headers: authHeaders)
           .timeout(const Duration(seconds: 30));
 
-      print('Raw API Response: ${response.body}'); // Debug log
+      print('Raw API Response: ${response.body}');
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         if (jsonData is Map<String, dynamic>) {
           return ProductResponse.fromJson(jsonData);
         } else {
-          throw Exception('Unexpected response structure: ${jsonData.runtimeType}');
+          throw Exception(
+            'Unexpected response structure: ${jsonData.runtimeType}',
+          );
         }
       } else {
         throw Exception(
@@ -58,7 +60,7 @@ class ProductRepository {
     } on FormatException catch (e) {
       throw Exception('Invalid response format: $e');
     } catch (e) {
-      throw Exception('Error loading Product: $e');
+      throw Exception('Unexpected error loading Product: $e');
     }
   }
 
@@ -71,7 +73,7 @@ class ProductRepository {
           .get(uri, headers: authHeaders)
           .timeout(const Duration(seconds: 30));
 
-      print('Raw Product Response: ${response.body}'); // Debug log
+      print('Raw Product Response: ${response.body}');
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
@@ -90,27 +92,38 @@ class ProductRepository {
     } on SocketException catch (e) {
       throw Exception('No internet connection: $e');
     } catch (e) {
-      throw Exception('Error loading Product: $e');
+      throw Exception('Unexpected error loading Product: $e');
     }
   }
 
-  Future<ProductModel> createProduct(String productCode, String productName) async {
+  Future<ProductModel> createProduct({
+    required String plantId,
+    required String materialCode,
+    required String description,
+    required List<String> uom,
+    required Map<String, double> areas,
+    required int noOfPiecesPerPunch,
+    required int qtyInBundle,
+  }) async {
     isAddProductLoading = true;
     try {
       final authHeaders = await headers;
-      final url = AppUrl.fetchProjectDetailsUrl;
+      final url = AppUrl.createproductUrl;
       final Map<String, dynamic> body = {
-        "product_code": productCode,
-        "product_name": productName,
+        "plant": plantId,
+        "material_code": materialCode,
+        "description": description,
+        "uom": uom,
+        "areas": areas,
+        "no_of_pieces_per_punch": noOfPiecesPerPunch,
+        "qty_in_bundle": qtyInBundle,
       };
 
       final response = await http
-          .post(
-            Uri.parse(url),
-            headers: authHeaders,
-            body: json.encode(body),
-          )
+          .post(Uri.parse(url), headers: authHeaders, body: json.encode(body))
           .timeout(const Duration(seconds: 30));
+
+      print('Create Product Response: ${response.body}');
 
       if (response.statusCode == 201) {
         final responseData = json.decode(response.body);
@@ -133,7 +146,7 @@ class ProductRepository {
     } on FormatException catch (e) {
       throw Exception('Invalid response format: $e');
     } catch (e) {
-      throw Exception('Error creating Product: $e');
+      throw Exception('Unexpected error creating Product: $e');
     } finally {
       isAddProductLoading = false;
     }
@@ -171,7 +184,7 @@ class ProductRepository {
     } on SocketException catch (e) {
       throw Exception('No internet connection: $e');
     } catch (e) {
-      throw Exception('Error updating Product: $e');
+      throw Exception('Unexpected error updating Product: $e');
     }
   }
 
@@ -200,7 +213,7 @@ class ProductRepository {
     } on SocketException catch (e) {
       throw Exception('No internet connection: $e');
     } catch (e) {
-      throw Exception('Error deleting Product: $e');
+      throw Exception('Unexpected error deleting Product: $e');
     }
   }
 }

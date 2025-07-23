@@ -58,62 +58,65 @@ class PlantRepository {
   PlantModel? get lastCreatedPlant => _lastCreatedPlant;
 
   Future<PaginatedPlantsResponse> getAllPlants({
-    int page = 1,
-    int limit = 10,
-    String? search,
-  }) async {
-    try {
-      final authHeaders = await headers;
-      final uri = Uri.parse(AppUrl.allPlantsUrl).replace(
-        queryParameters: {
-          'page': page.toString(),
-          'limit': limit.toString(),
-          if (search != null && search.isNotEmpty) 'search': search,
-        },
-      );
+  int page = 1,
+  int limit = 10,
+  String? search,
+}) async {
+  try {
+    final authHeaders = await headers;
+    print('Headers: $authHeaders'); // Debug
+    final uri = Uri.parse(AppUrl.allPlantsUrl).replace(
+      queryParameters: {
+        'page': page.toString(),
+        'limit': limit.toString(),
+        if (search != null && search.isNotEmpty) 'search': search,
+      },
+    );
+    print('Request URL: $uri'); // Debug
 
-      final response = await http
-          .get(uri, headers: authHeaders)
-          .timeout(const Duration(seconds: 30));
+    final response = await http
+        .get(uri, headers: authHeaders)
+        .timeout(const Duration(seconds: 30));
+    print('Response status: ${response.statusCode}, body: ${response.body}'); // Debug
 
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        List<dynamic> plantsJson = [];
-        PaginationInfo paginationInfo;
+    if (response.statusCode == 200) {
+      final jsonData = json.decode(response.body);
+      print('Decoded JSON: $jsonData'); 
+      List<dynamic> plantsJson = [];
+      PaginationInfo paginationInfo;
 
-        if (jsonData is Map<String, dynamic> && jsonData.containsKey('data')) {
-          final data = jsonData['data'];
-          paginationInfo = PaginationInfo.fromJson(data['pagination'] ?? {});
-          plantsJson = (data['plants'] as List?) ?? [];
-        } else {
-          throw Exception('Unexpected response structure: ${jsonData.runtimeType}');
-        }
-
-        final plants = plantsJson
-            .whereType<Map<String, dynamic>>()
-            .map((plantJson) => PlantModel.fromJson(plantJson))
-            .toList();
-
-        return PaginatedPlantsResponse(
-          plants: plants,
-          pagination: paginationInfo,
-        );
+      if (jsonData is Map<String, dynamic> && jsonData.containsKey('data')) {
+        final data = jsonData['data'];
+        print('Data: $data'); 
+        paginationInfo = PaginationInfo.fromJson(data['pagination'] ?? {});
+        plantsJson = (data['plants'] as List?) ?? [];
+        print('Plants JSON: $plantsJson'); // Debug
       } else {
-        throw Exception(
-          'Failed to load plants: ${response.statusCode} - ${response.body}',
-        );
+        throw Exception('Unexpected response structure: ${jsonData.runtimeType}');
       }
-    } on SocketException catch (e) {
-      throw Exception('No internet connection: $e');
-    } on HttpException catch (e) {
-      throw Exception('Network error occurred: $e');
-    } on FormatException catch (e) {
-      throw Exception('Invalid response format: $e');
-    } catch (e) {
-      throw Exception('Error loading plants: $e');
-    }
-  }
 
+      final plants = plantsJson
+          .where((item) => item is Map<String, dynamic>)
+          .cast<Map<String, dynamic>>()
+          .map((plantJson) {
+            print('Parsing plant: $plantJson'); // Debug
+            return PlantModel.fromJson(plantJson);
+          })
+          .toList();
+
+      print('Parsed plants: ${plants.length}'); // Debug
+      return PaginatedPlantsResponse(
+        plants: plants,
+        pagination: paginationInfo,
+      );
+    } else {
+      throw Exception('Failed to load plants: ${response.statusCode} - ${response.body}');
+    }
+  } catch (e) {
+    print('Error in getAllPlants: $e'); // Debug
+    rethrow;
+  }
+}
   Future<PlantModel?> getPlant(String plantId) async {
     try {
       final authHeaders = await headers;
@@ -155,11 +158,7 @@ class PlantRepository {
       };
 
       final response = await http
-          .post(
-            Uri.parse(url),
-            headers: authHeaders,
-            body: json.encode(body),
-          )
+          .post(Uri.parse(url), headers: authHeaders, body: json.encode(body))
           .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 201) {

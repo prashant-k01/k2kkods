@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_debouncer/flutter_debouncer.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/common/widgets/dropdown.dart';
-import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/provider/plants_provider.dart';
@@ -23,7 +23,27 @@ class AddProductFormScreen extends StatefulWidget {
 class _AddProductFormScreenState extends State<AddProductFormScreen> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
   final ScrollController _scrollController = ScrollController();
+  final Map<String, FocusNode> _focusNodes = {
+    'plant': FocusNode(),
+    'material_code': FocusNode(),
+    'description': FocusNode(),
+    'no_of_pieces_per_punch': FocusNode(),
+    'uom': FocusNode(),
+    'area_per_unit': FocusNode(),
+    'qty_in_bundle': FocusNode(),
+  };
   bool _showAreaPerUnit = true; // Set default to true for Square Meter/No
+  final Debouncer _scrollDebouncer = Debouncer();
+
+  @override
+  void initState() {
+    super.initState();
+    // Load plants for dropdown when the screen initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final plantProvider = Provider.of<PlantProvider>(context, listen: false);
+      plantProvider.loadAllPlantsForDropdown();
+    });
+  }
 
   // Function to parse dimensions and calculate area in square meters
   double? _calculateArea(String description) {
@@ -50,23 +70,14 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
   // Function to scroll to the focused text field
   void _scrollToFocusedField(BuildContext context, FocusNode focusNode) {
     if (focusNode.hasFocus) {
-      Future.delayed(const Duration(milliseconds: 300), () {
-        final RenderObject? object = context.findRenderObject();
-        if (object is RenderBox) {
-          final position = object.localToGlobal(Offset.zero);
-          _scrollController.animateTo(
-            position.dy - 100, // Adjust offset to keep field above keyboard
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          );
-        }
-      });
+      _scrollDebouncer;
     }
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _focusNodes.forEach((_, node) => node.dispose());
     super.dispose();
   }
 
@@ -90,25 +101,15 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
         onTap: () {
           FocusScope.of(context).unfocus(); // Dismiss keyboard on tap outside
         },
-        behavior: HitTestBehavior.opaque, // Capture taps everywhere
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              controller: _scrollController,
-              padding: EdgeInsets.all(24.w).copyWith(
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
-              ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildFormCard(context, productProvider, plantProvider),
-                  ],
-                ),
-              ),
-            );
-          },
+        behavior: HitTestBehavior.opaque,
+        child: ListView.builder(
+          controller: _scrollController,
+          padding: EdgeInsets.all(
+            24.w,
+          ).copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 24.h),
+          itemCount: 1,
+          itemBuilder: (context, index) =>
+              _buildFormCard(context, productProvider, plantProvider),
         ),
       ),
     );
@@ -184,27 +185,31 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
               style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
             ),
             SizedBox(height: 24.h),
-            CustomSearchableDropdownFormField(
+            CustomDropdownFormField<String>(
               name: 'plant',
-              labelText: 'Plant Name',
-              hintText: 'Select Plant Name',
-              prefixIcon: Icons.person,
-              options: ['Plant A', 'Plant B', 'Plant C'],
+              labelText: 'Plant',
+              hintText: 'Select Plant',
+              prefixIcon: Icons.factory,
+              items: plantProvider.allPlants
+                  .map(
+                    (plant) => DropdownMenuItem<String>(
+                      value: plant.id,
+                      child: Text(plant.plantName),
+                    ),
+                  )
+                  .toList(),
+              validators: [FormBuilderValidators.required()],
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
               focusedBorderColor: const Color(0xFF3B82F6),
               borderRadius: 12.r,
-              validators: [
-                FormBuilderValidators.required(
-                  errorText: 'Please select a plant',
-                ),
-              ],
             ),
             SizedBox(height: 18.h),
             CustomTextFormField(
               name: 'material_code',
               labelText: 'Material Code',
               hintText: 'Enter Material Code',
+              focusNode: _focusNodes['material_code'],
               prefixIcon: Icons.business,
               validators: [
                 FormBuilderValidators.required(),
@@ -214,21 +219,21 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
               borderColor: Colors.grey.shade300,
               focusedBorderColor: const Color(0xFF3B82F6),
               borderRadius: 12.r,
-              focusNode: FocusNode(),
-              onTap: () => _scrollToFocusedField(context, FocusNode()),
+              onTap: () =>
+                  _scrollToFocusedField(context, _focusNodes['material_code']!),
             ),
             SizedBox(height: 18.h),
             CustomTextFormField(
               name: 'description',
               labelText: 'Description (e.g. 600X300X100MM)',
               hintText: 'Enter description (e.g. 600X300X100MM)',
+              focusNode: _focusNodes['description'],
               prefixIcon: Icons.description,
               validators: [FormBuilderValidators.required()],
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
               focusedBorderColor: const Color(0xFF3B82F6),
               borderRadius: 12.r,
-              focusNode: FocusNode(),
               onChanged: (value) {
                 if (value != null && _showAreaPerUnit) {
                   final area = _calculateArea(value);
@@ -239,7 +244,8 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
                   }
                 }
               },
-              onTap: () => _scrollToFocusedField(context, FocusNode()),
+              onTap: () =>
+                  _scrollToFocusedField(context, _focusNodes['description']!),
             ),
             SizedBox(height: 18.h),
             CustomTextFormField(
@@ -247,6 +253,7 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
               keyboardType: TextInputType.number,
               labelText: 'No Of Pieces Per Punch',
               hintText: 'Enter No Of Pieces Per Punch',
+              focusNode: _focusNodes['no_of_pieces_per_punch'],
               prefixIcon: Icons.numbers,
               validators: [
                 FormBuilderValidators.required(),
@@ -260,14 +267,16 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
               borderColor: Colors.grey.shade300,
               focusedBorderColor: const Color(0xFF3B82F6),
               borderRadius: 12.r,
-              focusNode: FocusNode(),
-              onTap: () => _scrollToFocusedField(context, FocusNode()),
+              onTap: () => _scrollToFocusedField(
+                context,
+                _focusNodes['no_of_pieces_per_punch']!,
+              ),
             ),
             SizedBox(height: 18.h),
             CustomDropdownFormField<String>(
               name: 'uom',
               labelText: 'UOM',
-              initialValue: 'Square Meter/No', // Set default to Square Meter/No
+              initialValue: 'Square Meter/No',
               items: ["Square Meter/No", "Meter/No"]
                   .map(
                     (item) => DropdownMenuItem<String>(
@@ -310,6 +319,7 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
                 name: 'area_per_unit',
                 labelText: 'Area per unit (Sqmt)',
                 hintText: 'Enter or adjust area per unit',
+                focusNode: _focusNodes['area_per_unit'],
                 prefixIcon: Icons.area_chart,
                 keyboardType: TextInputType.number,
                 validators: [
@@ -324,8 +334,10 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
                 borderColor: Colors.grey.shade300,
                 focusedBorderColor: const Color(0xFF3B82F6),
                 borderRadius: 12.r,
-                focusNode: FocusNode(),
-                onTap: () => _scrollToFocusedField(context, FocusNode()),
+                onTap: () => _scrollToFocusedField(
+                  context,
+                  _focusNodes['area_per_unit']!,
+                ),
               ),
             SizedBox(height: 18.h),
             CustomTextFormField(
@@ -333,6 +345,7 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
               keyboardType: TextInputType.number,
               labelText: 'Quantity in bundle',
               hintText: 'Enter quantity in bundle',
+              focusNode: _focusNodes['qty_in_bundle'],
               prefixIcon: Icons.inventory,
               validators: [
                 FormBuilderValidators.required(),
@@ -346,8 +359,8 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
               borderColor: Colors.grey.shade300,
               focusedBorderColor: const Color(0xFF3B82F6),
               borderRadius: 12.r,
-              focusNode: FocusNode(),
-              onTap: () => _scrollToFocusedField(context, FocusNode()),
+              onTap: () =>
+                  _scrollToFocusedField(context, _focusNodes['qty_in_bundle']!),
             ),
             SizedBox(height: 40.h),
             Consumer<ProductProvider>(
@@ -483,8 +496,17 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
       );
 
       final success = await provider.createProduct(
-        formData['material_code'], // Use material_code
-        formData['description'], // Use description
+        plantId: formData['plant'],
+        materialCode: formData['material_code'],
+        description: formData['description'],
+        uom: [formData['uom']],
+        areas: {
+          formData['uom']:
+              double.tryParse(formData['area_per_unit'] ?? '0') ?? 0.0,
+        },
+        noOfPiecesPerPunch:
+            int.tryParse(formData['no_of_pieces_per_punch'] ?? '0') ?? 0,
+        qtyInBundle: int.tryParse(formData['qty_in_bundle'] ?? '0') ?? 0,
       );
 
       Navigator.of(context).pop();
@@ -493,6 +515,9 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
         context.showSuccessSnackbar("Product successfully created");
         context.go(RouteNames.products);
       } else {
+        print(
+          "Failed to create Product: ${provider.error?.replaceFirst('Exception: ', '') ?? 'Unknown error. Please try again.'}",
+        );
         context.showErrorSnackbar(
           "Failed to create Product: ${provider.error?.replaceFirst('Exception: ', '') ?? 'Unknown error. Please try again.'}",
         );
