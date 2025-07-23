@@ -61,6 +61,7 @@ class ProductDeleteHandler {
                 listen: false,
               );
               final success = await provider.deleteProduct(productId);
+              
 
               context.showSuccessSnackbar(
                 success

@@ -191,7 +191,7 @@ class ProductRepository {
   Future<bool> deleteProduct(String productId) async {
     try {
       final authHeaders = await headers;
-      final deleteUrl = AppUrl.deleteProjectDetailsUrl;
+      final deleteUrl = AppUrl.deleteproductDetailsUrl;
 
       final response = await http
           .delete(
