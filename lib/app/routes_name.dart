@@ -4,9 +4,13 @@ class RouteNames {
   static const String homeScreen = '/homescreen';
   static const String plants = '/plants';
   static const String clients = '/clients';
+  static const String machines = '/machines';
+
   static const String plantsadd = '/plantsadd';
   static const String clientsadd = '/clientsadd';
+  static const String machinesadd = '/machinesadd';
+
   static const String plantsedit = '/plants/edit/:plantId';
   static const String clientsedit = '/clients/edit/:clientId';
-
+  static const String machinesedit = '/machines/edit/:machineId';
 }

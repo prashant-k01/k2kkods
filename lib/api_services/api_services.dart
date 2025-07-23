@@ -32,6 +32,16 @@ class AppUrl {
   static const String deleteClientDetailsUrl =
       '$baseUrl/konkreteKlinkers/helpers/clients/delete';
 
+  //Machine's Urls
+  static const String createMachineUrl =
+      '$baseUrl/konkreteKlinkers/helpers/machine';
+  static const String fetchMachineDetailsUrl =
+      '$baseUrl/konkreteKlinkers/helpers/machines';
+  static const String updateMachineDetailsUrl =
+      '$baseUrl/konkreteKlinkers/helpers/machines';
+  static const String deleteMachineDetailsUrl =
+      '$baseUrl/konkreteKlinkers/helpers/machines/delete';
+
   //projects's Urls
   static const String createProjectUrl =
       '$baseUrl/konkreteKlinkers/helpers/projects';
