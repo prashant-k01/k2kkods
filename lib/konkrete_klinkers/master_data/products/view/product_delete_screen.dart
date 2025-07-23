@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
-import 'package:k2k/konkrete_klinkers/master_data/projects/provider/projects_provider.dart';
+import 'package:k2k/konkrete_klinkers/master_data/products/provider/product_provider.dart';
 import 'package:provider/provider.dart';
 
-class ProjectDeleteHandler {
-  static void deleteProject(
+class ProductDeleteHandler {
+  static void deleteProduct(
     BuildContext context,
-    String? projectId,
-    String? projectName,
+    String? productId,
+    String? productName,
   ) {
-    if (projectId == null || projectName == null) return;
+    if (productId == null || productName == null) return;
 
     showDialog(
       context: context,
@@ -39,7 +39,7 @@ class ProjectDeleteHandler {
           ],
         ),
         content: Text(
-          'Are you sure you want to delete "$projectName"?',
+          'Are you sure you want to delete "$productName"?',
           style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
         ),
         actions: [
@@ -56,16 +56,16 @@ class ProjectDeleteHandler {
 
               final scaffoldContext = context;
 
-              final provider = Provider.of<ProjectProvider>(
+              final provider = Provider.of<ProductProvider>(
                 scaffoldContext,
                 listen: false,
               );
-              final success = await provider.deleteProject(projectId);
+              final success = await provider.deleteProduct(productId);
 
               context.showSuccessSnackbar(
                 success
-                    ? 'Project deleted successfully!'
-                    : 'Failed to delete Project.',
+                    ? 'Product deleted successfully!'
+                    : 'Failed to delete Product.',
               );
             },
             style: ElevatedButton.styleFrom(

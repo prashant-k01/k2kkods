@@ -1,23 +1,23 @@
 import 'dart:convert';
 
-class ProjectResponse {
-  final List<Project> projects;
+class ProjectModelResponse {
+  final List<ProjectModel> projectModels;
   final Pagination pagination;
   final String message;
   final bool success;
 
-  ProjectResponse({
-    required this.projects,
+  ProjectModelResponse({
+    required this.projectModels,
     required this.pagination,
     required this.message,
     required this.success,
   });
 
-  factory ProjectResponse.fromJson(Map<String, dynamic> json) {
-    var projectsList = json['data']['projects'] as List<dynamic>? ?? [];
-    return ProjectResponse(
-      projects: projectsList
-          .map((projectJson) => Project.fromJson(projectJson))
+  factory ProjectModelResponse.fromJson(Map<String, dynamic> json) {
+    var projectModelsList = json['data']['projects'] as List<dynamic>? ?? [];
+    return ProjectModelResponse(
+      projectModels: projectModelsList
+          .map((projectModelJson) => ProjectModel.fromJson(projectModelJson))
           .toList(),
       pagination: Pagination.fromJson(json['data']['pagination'] ?? {}),
       message: json['message'] ?? '',
@@ -26,7 +26,7 @@ class ProjectResponse {
   }
 }
 
-class Project {
+class ProjectModel {
   final String id;
   final String name;
   final String address;
@@ -37,7 +37,7 @@ class Project {
   final DateTime updatedAt;
   final int version;
 
-  Project({
+  ProjectModel({
     required this.id,
     required this.name,
     required this.address,
@@ -49,38 +49,55 @@ class Project {
     required this.version,
   });
 
-  factory Project.fromJson(Map<String, dynamic> json) {
+  factory ProjectModel.fromJson(Map<String, dynamic> json) {
     try {
-      final id = json['_id'] ?? json['id'] ?? '';
-      final name = json['name'] ?? '';
-      final address = json['address'] ?? '';
-      final client = Client.fromJson(json['client'] ?? {});
-      final createdBy = CreatedBy.fromJson(json['created_by'] ?? {});
-      final isDeleted = json['isDeleted'] ?? false;
+      final id = json['_id']?.toString() ?? json['id']?.toString() ?? '';
+      final name = json['name']?.toString() ?? '';
+      final address = json['address']?.toString() ?? '';
+
+      // Handle client field: string (ID) or map (Client object)
+      Client client;
+      final clientData = json['client'];
+      if (clientData is String) {
+        client = Client(id: clientData, name: '', address: '');
+      } else if (clientData is Map<String, dynamic>) {
+        client = Client.fromJson(clientData);
+      } else {
+        client = Client(id: '', name: '', address: '');
+      }
+
+      // Handle created_by field: string (ID) or map (CreatedBy object)
+      CreatedBy createdBy;
+      final createdByData = json['created_by'];
+      if (createdByData is String) {
+        createdBy = CreatedBy(id: createdByData, email: '', username: '');
+      } else if (createdByData is Map<String, dynamic>) {
+        createdBy = CreatedBy.fromJson(createdByData);
+      } else {
+        createdBy = CreatedBy(id: '', email: '', username: 'Unknown');
+      }
+
+      final isDeleted = json['isDeleted'] as bool? ?? false;
 
       DateTime createdAt;
       try {
-        final createdAtStr = json['createdAt'];
-        createdAt = createdAtStr != null
-            ? DateTime.parse(createdAtStr)
-            : DateTime.now();
+        final createdAtStr = json['createdAt']?.toString();
+        createdAt = createdAtStr != null ? DateTime.parse(createdAtStr) : DateTime.now();
       } catch (e) {
         createdAt = DateTime.now();
       }
 
       DateTime updatedAt;
       try {
-        final updatedAtStr = json['updatedAt'];
-        updatedAt = updatedAtStr != null
-            ? DateTime.parse(updatedAtStr)
-            : DateTime.now();
+        final updatedAtStr = json['updatedAt']?.toString();
+        updatedAt = updatedAtStr != null ? DateTime.parse(updatedAtStr) : DateTime.now();
       } catch (e) {
         updatedAt = DateTime.now();
       }
 
-      final version = json['__v'] ?? json['v'] ?? 0;
+      final version = (json['__v'] ?? json['v'] ?? 0) as int;
 
-      return Project(
+      return ProjectModel(
         id: id,
         name: name,
         address: address,
@@ -92,6 +109,7 @@ class Project {
         version: version,
       );
     } catch (e) {
+      print('Error parsing ProjectModel: $e');
       rethrow;
     }
   }
@@ -110,7 +128,7 @@ class Project {
     };
   }
 
-  Project copyWith({
+  ProjectModel copyWith({
     String? id,
     String? name,
     String? address,
@@ -121,7 +139,7 @@ class Project {
     DateTime? updatedAt,
     int? version,
   }) {
-    return Project(
+    return ProjectModel(
       id: id ?? this.id,
       name: name ?? this.name,
       address: address ?? this.address,
@@ -148,11 +166,12 @@ class Client {
 
   factory Client.fromJson(Map<String, dynamic> json) {
     try {
-      final id = json['_id'] ?? json['id'] ?? '';
-      final name = json['name'] ?? '';
-      final address = json['address'] ?? '';
+      final id = json['_id']?.toString() ?? json['id']?.toString() ?? '';
+      final name = json['name']?.toString() ?? '';
+      final address = json['address']?.toString() ?? '';
       return Client(id: id, name: name, address: address);
     } catch (e) {
+      print('Error parsing Client: $e');
       return Client(id: '', name: '', address: '');
     }
   }
@@ -179,11 +198,12 @@ class CreatedBy {
 
   factory CreatedBy.fromJson(Map<String, dynamic> json) {
     try {
-      final id = json['_id'] ?? json['id'] ?? '';
-      final email = json['email'] ?? '';
-      final username = json['username'] ?? '';
+      final id = json['_id']?.toString() ?? json['id']?.toString() ?? '';
+      final email = json['email']?.toString() ?? '';
+      final username = json['username']?.toString() ?? '';
       return CreatedBy(id: id, email: email, username: username);
     } catch (e) {
+      print('Error parsing CreatedBy: $e');
       return CreatedBy(id: '', email: '', username: 'Unknown');
     }
   }
@@ -212,10 +232,10 @@ class Pagination {
 
   factory Pagination.fromJson(Map<String, dynamic> json) {
     return Pagination(
-      total: json['total'] ?? 0,
-      page: json['page'] ?? 1,
-      limit: json['limit'] ?? 10,
-      totalPages: json['totalPages'] ?? 1,
+      total: json['total']?.toInt() ?? 0,
+      page: json['page']?.toInt() ?? 1,
+      limit: json['limit']?.toInt() ?? 10,
+      totalPages: json['totalPages']?.toInt() ?? 1,
     );
   }
 
@@ -229,5 +249,5 @@ class Pagination {
   }
 }
 
-ProjectResponse projectResponseFromJson(String str) =>
-    ProjectResponse.fromJson(json.decode(str));
+ProjectModelResponse projectModelResponseFromJson(String str) =>
+    ProjectModelResponse.fromJson(json.decode(str));

@@ -154,9 +154,7 @@ class _SplashScreenState extends State<SplashScreen>
                       child: _buildLogo(_logoPaths[0], isMainLogo: true),
                     ),
                   ),
-
                   const SizedBox(height: 30),
-
                   AnimatedOpacity(
                     opacity: _showLogos ? 1.0 : 0.0,
                     duration: const Duration(milliseconds: 800),

@@ -354,7 +354,7 @@ class _PlantsListViewState extends State<PlantsListView> {
         color: const Color(0xFF334155),
       ),
       onPressed: () {
-        context.pop();
+        context.go(RouteNames.homeScreen);
       },
     );
   }

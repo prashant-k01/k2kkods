@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart' hide ScreenUtil;
 import 'package:k2k/app/routes_name.dart';
-import 'package:k2k/common/list_helper/add_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
 import 'package:k2k/common/list_helper/shimmer.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
-import 'package:k2k/konkrete_klinkers/master_data/projects/provider/projects_provider.dart';
-import 'package:k2k/konkrete_klinkers/master_data/projects/view/projects_delete_screen.dart';
+import 'package:k2k/konkrete_klinkers/master_data/products/model/product.dart';
+import 'package:k2k/konkrete_klinkers/master_data/products/provider/product_provider.dart';
+import 'package:k2k/konkrete_klinkers/master_data/products/view/product_delete_screen.dart';
 import 'package:k2k/utils/sreen_util.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
-class ProjectsListView extends StatefulWidget {
-  const ProjectsListView({super.key});
+class ProductsListView extends StatefulWidget {
+  const ProductsListView({super.key});
 
   @override
-  State<ProjectsListView> createState() => _ProjectsListViewState();
+  State<ProductsListView> createState() => _ProductsListViewState();
 }
 
-class _ProjectsListViewState extends State<ProjectsListView> {
+class _ProductsListViewState extends State<ProductsListView> {
   bool _isInitialized = false;
   final ScrollController _scrollController = ScrollController();
 
@@ -39,21 +39,21 @@ class _ProjectsListViewState extends State<ProjectsListView> {
       _isInitialized = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          final provider = context.read<ProjectProvider>();
-          if (provider.projects.isEmpty && provider.error == null) {
-            provider.loadAllProjects();
+          final provider = context.read<ProductProvider>();
+          if (provider.products.isEmpty && provider.error == null) {
+            provider.loadAllProducts();
           }
         }
       });
     }
   }
 
-  void _editProjects(String? projectsId) {
-    if (projectsId != null) {
-      context.goNamed(
-        RouteNames.projectsedit,
-        pathParameters: {'projectsId': projectsId},
-      );
+  void _editProduct(String? productId) {
+    if (productId != null) {
+      // context.goNamed(
+      //   RouteNames.Productsedit,
+      //   pathParameters: {'ProductId': productId},
+      // );
     }
   }
 
@@ -61,15 +61,8 @@ class _ProjectsListViewState extends State<ProjectsListView> {
     return '${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year}';
   }
 
-  String _getCreatedBy(dynamic createdBy) {
-    if (createdBy is Map<String, dynamic>) {
-      return createdBy['username'] ?? 'Unknown';
-    }
-    return createdBy?.toString() ?? 'Unknown';
-  }
-
   Widget _buildPaginationInfo() {
-    return Consumer<ProjectProvider>(
+    return Consumer<ProductProvider>(
       builder: (context, provider, child) {
         if (provider.totalItems == 0 || provider.totalPages == 1) {
           return const SizedBox.shrink();
@@ -149,22 +142,23 @@ class _ProjectsListViewState extends State<ProjectsListView> {
     );
   }
 
-  Widget _buildProjectsCard(dynamic projects) {
-    final projectsData = projects is Map<String, dynamic>
-        ? projects
-        : projects.toJson();
-    final projectsId = projectsData['_id'] ?? projectsData['id'] ?? '';
-    final projectsName =
-        projectsData['name'] ?? projectsData['name'] ?? 'Unknown Projects';
-    final projectsCode =
-        projectsData['address'] ?? projectsData['address'] ?? 'N/A';
-    final createdBy = _getCreatedBy(
-      projectsData['created_by'] ?? projectsData['createdBy'],
-    );
-    final createdAt = projectsData['createdAt'] != null
-        ? DateTime.tryParse(projectsData['createdAt'].toString()) ??
-              DateTime.now()
-        : DateTime.now();
+  Widget _buildProductCard(dynamic product) {
+    // Ensure product is a ProductModel; if not, handle accordingly
+    final ProductModel productModel = product is ProductModel
+        ? product
+        : ProductModel.fromJson(product is Map<String, dynamic> ? product : {});
+
+    final productId = productModel.id;
+    final materialCode = productModel.materialCode.isNotEmpty
+        ? productModel.materialCode
+        : 'Unknown Product';
+    final plantName = productModel.plant.plantName.isNotEmpty
+        ? productModel.plant.plantName
+        : 'N/A';
+    final createdBy = productModel.createdBy.username.isNotEmpty
+        ? productModel.createdBy.username
+        : 'Unknown';
+    final createdAt = productModel.createdAt;
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
@@ -198,7 +192,7 @@ class _ProjectsListViewState extends State<ProjectsListView> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            projectsName,
+                            materialCode,
                             style: TextStyle(
                               fontSize: 18.sp,
                               fontWeight: FontWeight.w600,
@@ -206,22 +200,26 @@ class _ProjectsListViewState extends State<ProjectsListView> {
                             ),
                           ),
                           SizedBox(height: 8.h),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 12.w,
-                              vertical: 6.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                            child: Text(
-                              projectsCode,
-                              style: TextStyle(
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF3B82F6),
-                              ),
+                          RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: 'Plant name: ',
+                                  style: TextStyle(
+                                    fontSize: 16.sp,
+                                    fontWeight: FontWeight.w500,
+                                    color: const Color(0xFF334155),
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: plantName,
+                                  style: TextStyle(
+                                    fontSize: 16.sp,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF3B82F6),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -235,12 +233,12 @@ class _ProjectsListViewState extends State<ProjectsListView> {
                       ),
                       onSelected: (value) {
                         if (value == 'edit') {
-                          _editProjects(projectsId);
+                          _editProduct(productId);
                         } else if (value == 'delete') {
-                          ProjectDeleteHandler.deleteProject(
+                          ProductDeleteHandler.deleteProduct(
                             context,
-                            projectsId,
-                            projectsName,
+                            productId,
+                            plantName,
                           );
                         }
                       },
@@ -338,7 +336,7 @@ class _ProjectsListViewState extends State<ProjectsListView> {
       children: [
         SizedBox(width: 8.w),
         Text(
-          'Projects',
+          'Products',
           style: TextStyle(
             fontSize: 18.sp,
             fontWeight: FontWeight.w600,
@@ -367,7 +365,7 @@ class _ProjectsListViewState extends State<ProjectsListView> {
       padding: EdgeInsets.only(right: 16.w),
       child: TextButton(
         onPressed: () {
-          context.goNamed(RouteNames.projectsadd);
+          // context.goNamed(RouteNames.Productsadd);
         },
         child: Row(
           children: [
@@ -375,7 +373,7 @@ class _ProjectsListViewState extends State<ProjectsListView> {
             SizedBox(width: 4.w),
             Center(
               child: Text(
-                'Add Projects',
+                'Add Product',
                 style: TextStyle(
                   fontSize: 16.sp,
                   fontWeight: FontWeight.w600,
@@ -401,7 +399,7 @@ class _ProjectsListViewState extends State<ProjectsListView> {
           ),
           SizedBox(height: 16.h),
           Text(
-            'No Projects Found',
+            'No Products Found',
             style: TextStyle(
               fontSize: 18.sp,
               fontWeight: FontWeight.w600,
@@ -410,15 +408,15 @@ class _ProjectsListViewState extends State<ProjectsListView> {
           ),
           SizedBox(height: 8.h),
           Text(
-            'Tap the button below to add your first Projects!',
+            'Tap the button below to add your first Product!',
             style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
           ),
           SizedBox(height: 16.h),
-          AddButton(
-            text: 'Add Projects',
-            icon: Icons.add,
-            route: RouteNames.projectsadd,
-          ),
+          // AddButton(
+          //   text: 'Add Product',
+          //   icon: Icons.add,
+          //   route: RouteNames.Productsadd,
+          // ),
         ],
       ),
     );
@@ -438,7 +436,7 @@ class _ProjectsListViewState extends State<ProjectsListView> {
 
       body: Stack(
         children: [
-          Consumer<ProjectProvider>(
+          Consumer<ProductProvider>(
             builder: (context, provider, child) {
               if (provider.error != null) {
                 return Center(
@@ -452,7 +450,7 @@ class _ProjectsListViewState extends State<ProjectsListView> {
                       ),
                       SizedBox(height: 16.h),
                       Text(
-                        'Error Loading Projects',
+                        'Error Loading Products',
                         style: TextStyle(
                           fontSize: 18.sp,
                           fontWeight: FontWeight.w600,
@@ -477,7 +475,7 @@ class _ProjectsListViewState extends State<ProjectsListView> {
                         icon: Icons.refresh,
                         onTap: () {
                           provider.clearError();
-                          provider.loadAllProjects(refresh: true);
+                          provider.loadAllProducts(refresh: true);
                         },
                       ),
                     ],
@@ -500,25 +498,25 @@ class _ProjectsListViewState extends State<ProjectsListView> {
                     Expanded(
                       child: RefreshIndicator(
                         onRefresh: () async {
-                          await provider.loadAllProjects(refresh: true);
+                          await provider.loadAllProducts(refresh: true);
                         },
                         color: const Color(0xFF3B82F6),
                         backgroundColor: Colors.white,
-                        child: provider.isLoading && provider.projects.isEmpty
+                        child: provider.isLoading && provider.products.isEmpty
                             ? ListView.builder(
                                 itemCount: 5,
                                 itemBuilder: (context, index) =>
                                     buildShimmerCard(),
                               )
-                            : provider.projects.isEmpty
+                            : provider.products.isEmpty
                             ? _buildEmptyState()
                             : ListView.builder(
                                 controller: _scrollController,
                                 padding: EdgeInsets.only(bottom: 80.h),
-                                itemCount: provider.projects.length,
+                                itemCount: provider.products.length,
                                 itemBuilder: (context, index) {
-                                  return _buildProjectsCard(
-                                    provider.projects[index],
+                                  return _buildProductCard(
+                                    provider.products[index],
                                   );
                                 },
                               ),

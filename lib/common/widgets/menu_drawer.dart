@@ -208,13 +208,13 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
             SubMenuItem(
               title: 'Projects',
               icon: Icons.assignment_outlined,
-              route: '/settings/users',
+              route: RouteNames.projects,
               isExpanded: false,
             ),
             SubMenuItem(
               title: 'Products',
               icon: Icons.inventory_2_outlined,
-              route: '/settings/users',
+              route: RouteNames.products,
               isExpanded: false,
             ),
           ],
@@ -268,8 +268,11 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
     MenuSection(
       heading: "USERS",
       items: [
-        MenuItem(title: 'Users', icon: Icons.work_outline,
-          route: '/settings/users', subItems: [
+        MenuItem(
+          title: 'Users',
+          icon: Icons.work_outline,
+          route: '/settings/users',
+          subItems: [
             SubMenuItem(
               title: 'Users',
               icon: Icons.supervised_user_circle_outlined,
@@ -287,7 +290,8 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
               icon: Icons.file_copy_sharp,
               route: '/settings/plant/view-clients',
               isExpanded: false,
-            ),] 
+            ),
+          ],
         ),
       ],
     ),

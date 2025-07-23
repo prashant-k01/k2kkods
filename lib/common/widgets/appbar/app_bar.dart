@@ -43,7 +43,7 @@ class AppBars extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
-  // Adjusted height to accommodate added padding
   @override
-  Size get preferredSize => Size.fromHeight(kToolbarHeight+60.h);
+Size get preferredSize => Size.fromHeight(kToolbarHeight + 70.h); // Increased height
 }
+

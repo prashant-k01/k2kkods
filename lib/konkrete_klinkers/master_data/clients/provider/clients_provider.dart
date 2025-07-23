@@ -6,7 +6,9 @@ class ClientsProvider with ChangeNotifier {
   final ClientRepository _repository = ClientRepository();
 
   List<ClientsModel> _clients = [];
+  List<ClientsModel> _allClients = []; // New list for all clients
   bool _isLoading = false;
+  bool _isAllClientsLoading = false; // Separate loading state for all clients
   String? _error;
   int _currentPage = 1;
   int _totalPages = 1;
@@ -20,8 +22,11 @@ class ClientsProvider with ChangeNotifier {
   bool _isUpdateClientsLoading = false;
   bool _isDeleteClientsLoading = false;
 
+  // Getters
   List<ClientsModel> get clients => _clients;
+  List<ClientsModel> get allClients => _allClients; // Getter for all clients
   bool get isLoading => _isLoading;
+  bool get isAllClientsLoading => _isAllClientsLoading;
   String? get error => _error;
   bool get isAddClientsLoading => _isAddClientLoading;
   bool get isUpdateClientsLoading => _isUpdateClientsLoading;
@@ -34,6 +39,7 @@ class ClientsProvider with ChangeNotifier {
   int get limit => _limit;
   String get searchQuery => _searchQuery;
 
+  // Load clients for the current page (used for paginated views)
   Future<void> loadAllClients({bool refresh = false}) async {
     if (refresh) {
       _currentPage = 1;
@@ -68,6 +74,51 @@ class ClientsProvider with ChangeNotifier {
     }
   }
 
+  // Load all clients across all pages (used for dropdown)
+  Future<void> loadAllClientsForDropdown({bool refresh = false}) async {
+    if (refresh) {
+      _allClients.clear();
+      _currentPage = 1;
+    }
+
+    _isAllClientsLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      print('Loading all clients for dropdown');
+
+      _allClients = [];
+      int currentPage = 1;
+      bool hasMorePages = true;
+
+      while (hasMorePages) {
+        final response = await _repository.getAllClients(
+          page: currentPage,
+          limit: _limit,
+          search: _searchQuery.isNotEmpty ? _searchQuery : null,
+        );
+
+        _allClients.addAll(response.clients);
+        _updatePaginationInfo(response.pagination);
+
+        hasMorePages = response.pagination.hasNextPage;
+        currentPage++;
+
+        if (!hasMorePages) break;
+      }
+
+      print('Loaded ${_allClients.length} clients for dropdown');
+    } catch (e) {
+      _error = _getErrorMessage(e);
+      _allClients.clear();
+      print('Error loading all clients: $e');
+    } finally {
+      _isAllClientsLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> loadPage(int page) async {
     if (page < 1 || page > _totalPages || page == _currentPage) return;
 
@@ -97,12 +148,14 @@ class ClientsProvider with ChangeNotifier {
     _searchQuery = query;
     _currentPage = 1;
     await loadAllClients();
+    await loadAllClientsForDropdown(); // Update dropdown options on search
   }
 
   Future<void> clearSearch() async {
     _searchQuery = '';
     _currentPage = 1;
     await loadAllClients();
+    await loadAllClientsForDropdown(); // Reset dropdown options
   }
 
   void _updatePaginationInfo(PaginationInfo pagination) {
@@ -125,6 +178,7 @@ class ClientsProvider with ChangeNotifier {
       if (newClient.id.isNotEmpty) {
         _currentPage = 1;
         await loadAllClients();
+        await loadAllClientsForDropdown(); // Update dropdown after adding client
         return true;
       } else {
         _error = 'Failed to create client - no ID returned';
@@ -153,6 +207,7 @@ class ClientsProvider with ChangeNotifier {
 
       if (success) {
         await loadAllClients();
+        await loadAllClientsForDropdown(); // Update dropdown after updating client
         return true;
       } else {
         _error = 'Failed to update client';
@@ -180,6 +235,7 @@ class ClientsProvider with ChangeNotifier {
           _currentPage--;
         }
         await loadAllClients();
+        await loadAllClientsForDropdown(); // Update dropdown after deleting client
         return true;
       } else {
         _error = 'Failed to delete client';

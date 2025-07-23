@@ -4,6 +4,7 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/dropdown.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
@@ -12,14 +13,14 @@ import 'package:k2k/konkrete_klinkers/master_data/projects/provider/projects_pro
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class AddProjectFormScreen extends StatefulWidget {
-  const AddProjectFormScreen({super.key});
+class AddProductFormScreen extends StatefulWidget {
+  const AddProductFormScreen({super.key});
 
   @override
-  _AddProjectFormScreenState createState() => _AddProjectFormScreenState();
+  _AddProductFormScreenState createState() => _AddProductFormScreenState();
 }
 
-class _AddProjectFormScreenState extends State<AddProjectFormScreen> {
+class _AddProductFormScreenState extends State<AddProductFormScreen> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
 
   @override
@@ -142,9 +143,9 @@ class _AddProjectFormScreenState extends State<AddProjectFormScreen> {
                     .toList();
 
                 return CustomSearchableDropdownFormField(
-                  name: 'client',
-                  labelText: 'Client Name',
-                  hintText: 'Select Client Name',
+                  name: 'plant',
+                  labelText: 'Plant Name',
+                  hintText: 'Select Plant Name',
                   prefixIcon: Icons.person,
                   options: clientsProvider.isAllClientsLoading
                       ? ['Loading...']
@@ -166,29 +167,85 @@ class _AddProjectFormScreenState extends State<AddProjectFormScreen> {
                 );
               },
             ),
-            SizedBox(height: 24.h),
 
+            SizedBox(height: 24.h),
             CustomTextFormField(
-              name: 'name',
-              labelText: ' Project Name',
-              hintText: 'Enter Project Name',
-              prefixIcon: Icons.code,
+              name: 'material_code',
+              // keyboardType:,
+              labelText: 'Material Code',
+              hintText: 'Enter Material Code ',
+              prefixIcon: Icons.business,
+
               validators: [
                 FormBuilderValidators.required(),
-                FormBuilderValidators.minLength(3),
-                FormBuilderValidators.maxLength(20),
+                FormBuilderValidators.minLength(2),
               ],
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
               focusedBorderColor: const Color(0xFF3B82F6),
               borderRadius: 12.r,
             ),
-            SizedBox(height: 24.h),
             CustomTextFormField(
-              name: 'address',
-              labelText: 'Address',
-              hintText: 'Enter Address',
+              name: 'description',
+              // keyboardType:,
+              labelText: 'Description (e.g. Drain 600X300X100MM)',
+              hintText: 'Enter description (e.g. Drain 600X300X100MM)',
               prefixIcon: Icons.business,
+
+              validators: [
+                FormBuilderValidators.required(),
+                FormBuilderValidators.minLength(2),
+              ],
+              fillColor: const Color(0xFFF8FAFC),
+              borderColor: Colors.grey.shade300,
+              focusedBorderColor: const Color(0xFF3B82F6),
+              borderRadius: 12.r,
+            ),
+            CustomTextFormField(
+              name: 'no_of_pieces_per_punch',
+              // keyboardType:,
+              labelText: 'No Of Pieces Per Punch',
+              hintText: 'Enter No Of Pieces Per Punch',
+              prefixIcon: Icons.business,
+
+              validators: [
+                FormBuilderValidators.required(),
+                FormBuilderValidators.minLength(2),
+              ],
+              fillColor: const Color(0xFFF8FAFC),
+              borderColor: Colors.grey.shade300,
+              focusedBorderColor: const Color(0xFF3B82F6),
+              borderRadius: 12.r,
+            ),
+            CustomDropdownFormField<String>(
+              name: 'uom',
+              labelText: 'UOM',
+              items: ["Square Meter/No", "Meter/No"]
+                  .map(
+                    (item) => DropdownMenuItem<String>(
+                      value: item,
+                      child: Text(item),
+                    ),
+                  )
+                  .toList(),
+              hintText: 'UOM',
+              prefixIcon: Icons.workspaces,
+              validators: [
+                FormBuilderValidators.required(),
+                FormBuilderValidators.minLength(2),
+              ],
+              fillColor: const Color(0xFFF8FAFC),
+              borderColor: Colors.grey.shade300,
+              focusedBorderColor: const Color(0xFF3B82F6),
+              borderRadius: 12.r,
+            ),
+
+            CustomTextFormField(
+              name: 'qty_in_bundle',
+              // keyboardType:,
+              labelText: 'Quantity in bundle',
+              hintText: 'Quantity in bundle',
+              prefixIcon: Icons.workspaces,
               validators: [
                 FormBuilderValidators.required(),
                 FormBuilderValidators.minLength(2),

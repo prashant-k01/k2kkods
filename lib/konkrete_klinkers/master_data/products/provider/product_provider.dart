@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:k2k/konkrete_klinkers/master_data/projects/model/projects.dart';
-import 'package:k2k/konkrete_klinkers/master_data/projects/repo/projects_repo.dart';
+import 'package:k2k/konkrete_klinkers/master_data/products/model/product.dart';
+import 'package:k2k/konkrete_klinkers/master_data/products/repo/product_repo.dart';
 
-class ProjectProvider with ChangeNotifier {
-  final ProjectRepository _repository = ProjectRepository();
+class ProductProvider with ChangeNotifier {
+  final ProductRepository _repository = ProductRepository();
 
-  List<ProjectModel> _projects = [];
+  List<ProductModel> _products = [];
   bool _isLoading = false;
   String? _error;
   int _currentPage = 1;
@@ -17,17 +17,17 @@ class ProjectProvider with ChangeNotifier {
   String _searchQuery = '';
 
   // Loading states for specific operations
-  bool _isAddProjectLoading = false;
-  bool _isUpdateProjectLoading = false;
-  bool _isDeleteProjectLoading = false;
+  bool _isAddProductLoading = false;
+  bool _isUpdateProductLoading = false;
+  bool _isDeleteProductLoading = false;
 
   // Getters
-  List<ProjectModel> get projects => _projects;
+  List<ProductModel> get products => _products;
   bool get isLoading => _isLoading;
   String? get error => _error;
-  bool get isAddProjectLoading => _isAddProjectLoading;
-  bool get isUpdateProjectLoading => _isUpdateProjectLoading;
-  bool get isDeleteProjectLoading => _isDeleteProjectLoading;
+  bool get isAddProductLoading => _isAddProductLoading;
+  bool get isUpdateProductLoading => _isUpdateProductLoading;
+  bool get isDeleteProductLoading => _isDeleteProductLoading;
   int get currentPage => _currentPage;
   int get totalPages => _totalPages;
   int get totalItems => _totalItems;
@@ -36,11 +36,10 @@ class ProjectProvider with ChangeNotifier {
   int get limit => _limit;
   String get searchQuery => _searchQuery;
 
-  // Load Projects for current page
-  Future<void> loadAllProjects({bool refresh = false}) async {
+  Future<void> loadAllProducts({bool refresh = false}) async {
     if (refresh) {
       _currentPage = 1;
-      _projects.clear();
+      _products.clear();
     }
 
     _isLoading = true;
@@ -48,27 +47,23 @@ class ProjectProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      print(
-        'Loading Projects - Page: $_currentPage, Limit: $_limit, Search: $_searchQuery',
-      );
+      print('Loading Products - Page: $_currentPage, Limit: $_limit, Search: $_searchQuery');
 
-      final response = await _repository.getAllProjects(
+      final response = await _repository.getAllProduct(
         page: _currentPage,
         limit: _limit,
         search: _searchQuery.isNotEmpty ? _searchQuery : null,
       );
 
-      _projects = response.projects;
+      _products = response.data;
       _updatePaginationInfo(response.pagination);
       _error = null;
 
-      print(
-        'Loaded ${_projects.length} Projects, Total: $_totalItems, Pages: $_totalPages',
-      );
+      print('Loaded ${_products.length} Products, Total: $_totalItems, Pages: $_totalPages');
     } catch (e) {
       _error = _getErrorMessage(e);
-      _projects.clear();
-      print('Error loading Projects: $e');
+      _products.clear();
+      print('Error loading Products: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -80,7 +75,7 @@ class ProjectProvider with ChangeNotifier {
     if (page < 1 || page > _totalPages || page == _currentPage) return;
 
     _currentPage = page;
-    await loadAllProjects();
+    await loadAllProducts();
   }
 
   // Go to next page
@@ -105,139 +100,127 @@ class ProjectProvider with ChangeNotifier {
     await loadPage(_totalPages);
   }
 
-  // Search Projects
-  Future<void> searchProjects(String query) async {
+  // Search Products
+  Future<void> searchProducts(String query) async {
     _searchQuery = query;
     _currentPage = 1;
-    await loadAllProjects();
+    await loadAllProducts();
   }
 
   // Clear search
   Future<void> clearSearch() async {
     _searchQuery = '';
     _currentPage = 1;
-    await loadAllProjects();
+    await loadAllProducts();
   }
 
   // Update pagination info
-  void _updatePaginationInfo(PaginationInfo pagination) {
+  void _updatePaginationInfo(Pagination pagination) {
     _totalPages = pagination.totalPages;
     _totalItems = pagination.total;
     _currentPage = pagination.page;
-    _hasNextPage = pagination.hasNextPage;
-    _hasPreviousPage = pagination.hasPreviousPage;
+    _hasNextPage = pagination.page < pagination.totalPages;
+    _hasPreviousPage = pagination.page > 1;
     notifyListeners();
   }
 
-  Future<bool> createProject(
-    String projectName,
-    String address,
-    String clientId,
-  ) async {
-    _isAddProjectLoading = true;
+  Future<bool> createProduct(String productCode, String productName) async {
+    _isAddProductLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final newProject = await _repository.createProject(
-        projectName,
-        address,
-        clientId,
-      );
+      final newProduct = await _repository.createProduct(productCode, productName);
 
-      if (newProject.id.isNotEmpty) {
+      if (newProduct.id.isNotEmpty) {
         _currentPage = 1;
-        await loadAllProjects();
+        await loadAllProducts();
         return true;
       } else {
-        _error = 'Created project has no ID';
         return false;
       }
     } catch (e) {
       _error = _getErrorMessage(e);
-      print('Create Project Error: $_error');
       return false;
     } finally {
-      _isAddProjectLoading = false;
+      _isAddProductLoading = false;
       notifyListeners();
     }
   }
 
-  Future<bool> updateProject(
-    String projectId,
-    String projectName,
-    String address,
-    String clientId,
+  Future<bool> updateProduct(
+    String productId,
+    String productCode,
+    String productName,
   ) async {
-    _isUpdateProjectLoading = true;
+    _isUpdateProductLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final success = await _repository.updateProject(
-        projectId,
-        projectName,
-        address,
-        clientId,
+      final success = await _repository.updateProduct(
+        productId,
+        productCode,
+        productName,
       );
 
       if (success) {
-        await loadAllProjects();
+        await loadAllProducts();
         return true;
       } else {
-        _error = 'Failed to update Project';
+        _error = 'Failed to update Product';
         return false;
       }
     } catch (e) {
       _error = _getErrorMessage(e);
       return false;
     } finally {
-      _isUpdateProjectLoading = false;
+      _isUpdateProductLoading = false;
       notifyListeners();
     }
   }
 
-  Future<bool> deleteProject(String projectId) async {
-    _isDeleteProjectLoading = true;
+  Future<bool> deleteProduct(String productId) async {
+    _isDeleteProductLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final success = await _repository.deleteProject(projectId);
+      final success = await _repository.deleteProduct(productId);
 
       if (success) {
-        if (_projects.length == 1 && _currentPage > 1) {
+        if (_products.length == 1 && _currentPage > 1) {
           _currentPage--;
         }
-        await loadAllProjects();
+        await loadAllProducts();
         return true;
       } else {
-        _error = 'Failed to delete Project';
+        _error = 'Failed to delete Product';
         return false;
       }
     } catch (e) {
       _error = _getErrorMessage(e);
       return false;
     } finally {
-      _isDeleteProjectLoading = false;
+      _isDeleteProductLoading = false;
       notifyListeners();
     }
   }
 
-  Future<ProjectModel?> getProject(String projectId) async {
+  Future<ProductModel?> getProduct(String productId) async {
     try {
       _error = null;
-      final project = await _repository.getProject(projectId);
-      return project;
+      final product = await _repository.getProduct(productId);
+      return product;
     } catch (e) {
       _error = _getErrorMessage(e);
       return null;
     }
   }
 
-  ProjectModel? getProjectByIndex(int index) {
-    if (index >= 0 && index < _projects.length) {
-      return _projects[index];
+  ProductModel? getProductByIndex(int index) {
+    if (index >= 0 && index < _products.length) {
+      return _products[index];
     }
     return null;
   }
@@ -249,7 +232,7 @@ class ProjectProvider with ChangeNotifier {
 
   String _getErrorMessage(Object error) {
     if (error is Exception) {
-      return error.toString();
+      return error.toString().replaceFirst('Exception: ', '');
     } else if (error is String) {
       return error;
     } else {
