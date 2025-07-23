@@ -8,6 +8,7 @@ import 'package:k2k/konkrete_klinkers/master_data/clients/view/clients_screen_li
 import 'package:k2k/konkrete_klinkers/master_data/plants/view/plant_edit_screen.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/view/plant_add.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/view/plants_screen_list.dart';
+import 'package:k2k/konkrete_klinkers/master_data/products/view/product_add.dart';
 import 'package:k2k/konkrete_klinkers/master_data/products/view/product_screen_list.dart';
 import 'package:k2k/konkrete_klinkers/master_data/projects/view/projects_add.dart';
 import 'package:k2k/konkrete_klinkers/master_data/projects/view/projects_edit_screen.dart';
@@ -59,6 +60,13 @@ class AppRoutes {
         name: RouteNames.plantsadd,
         builder: (BuildContext context, GoRouterState state) {
           return AddPlantFormScreen();
+        },
+      ),
+      GoRoute(
+        path: RouteNames.productsadd,
+        name: RouteNames.productsadd,
+        builder: (BuildContext context, GoRouterState state) {
+          return AddProductFormScreen();
         },
       ),
       GoRoute(

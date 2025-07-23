@@ -12,8 +12,10 @@ class RouteNames {
   static const String plantsedit = '/plants/edit/:plantId';
   //projects
   static const String projects = '/projects';
-  static const String products= '/products';
   static const String projectsadd = '/projectsadd';
-static const String projectsedit = '/projects/edit/:projectsId'; // Verify this
+  static const String projectsedit =
+      '/projects/edit/:projectsId'; 
 
+  static const String products = '/products';
+  static const String productsadd = '/productsadd';
 }

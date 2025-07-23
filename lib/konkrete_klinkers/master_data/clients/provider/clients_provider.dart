@@ -6,9 +6,9 @@ class ClientsProvider with ChangeNotifier {
   final ClientRepository _repository = ClientRepository();
 
   List<ClientsModel> _clients = [];
-  List<ClientsModel> _allClients = []; // New list for all clients
+  List<ClientsModel> _allClients = []; 
   bool _isLoading = false;
-  bool _isAllClientsLoading = false; // Separate loading state for all clients
+  bool _isAllClientsLoading = false; 
   String? _error;
   int _currentPage = 1;
   int _totalPages = 1;
@@ -24,7 +24,7 @@ class ClientsProvider with ChangeNotifier {
 
   // Getters
   List<ClientsModel> get clients => _clients;
-  List<ClientsModel> get allClients => _allClients; // Getter for all clients
+  List<ClientsModel> get allClients => _allClients; 
   bool get isLoading => _isLoading;
   bool get isAllClientsLoading => _isAllClientsLoading;
   String? get error => _error;

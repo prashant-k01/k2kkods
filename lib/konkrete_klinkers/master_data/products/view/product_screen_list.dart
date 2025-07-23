@@ -365,7 +365,7 @@ class _ProductsListViewState extends State<ProductsListView> {
       padding: EdgeInsets.only(right: 16.w),
       child: TextButton(
         onPressed: () {
-          // context.goNamed(RouteNames.Productsadd);
+          context.goNamed(RouteNames.productsadd);
         },
         child: Row(
           children: [
