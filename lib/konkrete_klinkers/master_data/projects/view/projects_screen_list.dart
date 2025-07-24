@@ -5,20 +5,20 @@ import 'package:k2k/common/list_helper/add_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
 import 'package:k2k/common/list_helper/shimmer.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
-import 'package:k2k/konkrete_klinkers/master_data/plants/provider/plants_provider.dart';
-import 'package:k2k/konkrete_klinkers/master_data/plants/view/plant_delete_screen.dart';
+import 'package:k2k/konkrete_klinkers/master_data/projects/provider/projects_provider.dart';
+import 'package:k2k/konkrete_klinkers/master_data/projects/view/projects_delete_screen.dart';
 import 'package:k2k/utils/sreen_util.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
-class PlantsListView extends StatefulWidget {
-  const PlantsListView({super.key});
+class ProjectsListView extends StatefulWidget {
+  const ProjectsListView({super.key});
 
   @override
-  State<PlantsListView> createState() => _PlantsListViewState();
+  State<ProjectsListView> createState() => _ProjectsListViewState();
 }
 
-class _PlantsListViewState extends State<PlantsListView> {
+class _ProjectsListViewState extends State<ProjectsListView> {
   bool _isInitialized = false;
   final ScrollController _scrollController = ScrollController();
 
@@ -39,20 +39,20 @@ class _PlantsListViewState extends State<PlantsListView> {
       _isInitialized = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          final provider = context.read<PlantProvider>();
-          if (provider.plants.isEmpty && provider.error == null) {
-            provider.loadAllPlants();
+          final provider = context.read<ProjectProvider>();
+          if (provider.projects.isEmpty && provider.error == null) {
+            provider.loadAllProjects();
           }
         }
       });
     }
   }
 
-  void _editPlant(String? plantId) {
-    if (plantId != null) {
+  void _editProjects(String? projectsId) {
+    if (projectsId != null) {
       context.goNamed(
-        RouteNames.plantsedit,
-        pathParameters: {'plantId': plantId},
+        RouteNames.projectsedit,
+        pathParameters: {'projectsId': projectsId},
       );
     }
   }
@@ -69,7 +69,7 @@ class _PlantsListViewState extends State<PlantsListView> {
   }
 
   Widget _buildPaginationInfo() {
-    return Consumer<PlantProvider>(
+    return Consumer<ProjectProvider>(
       builder: (context, provider, child) {
         if (provider.totalItems == 0 || provider.totalPages == 1) {
           return const SizedBox.shrink();
@@ -149,18 +149,21 @@ class _PlantsListViewState extends State<PlantsListView> {
     );
   }
 
-  Widget _buildPlantCard(dynamic plant) {
-    final plantData = plant is Map<String, dynamic> ? plant : plant.toJson();
-    final plantId = plantData['_id'] ?? plantData['id'] ?? '';
-    final plantName =
-        plantData['plant_name'] ?? plantData['plantName'] ?? 'Unknown Plant';
-    final plantCode =
-        plantData['plant_code'] ?? plantData['plantCode'] ?? 'N/A';
+  Widget _buildProjectsCard(dynamic projects) {
+    final projectsData = projects is Map<String, dynamic>
+        ? projects
+        : projects.toJson();
+    final projectsId = projectsData['_id'] ?? projectsData['id'] ?? '';
+    final projectsName =
+        projectsData['name'] ?? projectsData['name'] ?? 'Unknown Projects';
+    final projectsCode =
+        projectsData['address'] ?? projectsData['address'] ?? 'N/A';
     final createdBy = _getCreatedBy(
-      plantData['created_by'] ?? plantData['createdBy'],
+      projectsData['created_by'] ?? projectsData['createdBy'],
     );
-    final createdAt = plantData['createdAt'] != null
-        ? DateTime.tryParse(plantData['createdAt'].toString()) ?? DateTime.now()
+    final createdAt = projectsData['createdAt'] != null
+        ? DateTime.tryParse(projectsData['createdAt'].toString()) ??
+              DateTime.now()
         : DateTime.now();
 
     return Container(
@@ -195,7 +198,7 @@ class _PlantsListViewState extends State<PlantsListView> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            plantName,
+                            projectsName,
                             style: TextStyle(
                               fontSize: 18.sp,
                               fontWeight: FontWeight.w600,
@@ -213,7 +216,7 @@ class _PlantsListViewState extends State<PlantsListView> {
                               borderRadius: BorderRadius.circular(12.r),
                             ),
                             child: Text(
-                              plantCode,
+                              projectsCode,
                               style: TextStyle(
                                 fontSize: 14.sp,
                                 fontWeight: FontWeight.w600,
@@ -232,12 +235,12 @@ class _PlantsListViewState extends State<PlantsListView> {
                       ),
                       onSelected: (value) {
                         if (value == 'edit') {
-                          _editPlant(plantId);
+                          _editProjects(projectsId);
                         } else if (value == 'delete') {
-                          PlantDeleteHandler.deletePlant(
+                          ProjectDeleteHandler.deleteProject(
                             context,
-                            plantId,
-                            plantName,
+                            projectsId,
+                            projectsName,
                           );
                         }
                       },
@@ -335,7 +338,7 @@ class _PlantsListViewState extends State<PlantsListView> {
       children: [
         SizedBox(width: 8.w),
         Text(
-          'Plants Management',
+          'Projects',
           style: TextStyle(
             fontSize: 18.sp,
             fontWeight: FontWeight.w600,
@@ -364,7 +367,7 @@ class _PlantsListViewState extends State<PlantsListView> {
       padding: EdgeInsets.only(right: 16.w),
       child: TextButton(
         onPressed: () {
-          context.goNamed(RouteNames.plantsadd);
+          context.goNamed(RouteNames.projectsadd);
         },
         child: Row(
           children: [
@@ -372,11 +375,11 @@ class _PlantsListViewState extends State<PlantsListView> {
             SizedBox(width: 4.w),
             Center(
               child: Text(
-                'Add Plant',
+                'Add Projects',
                 style: TextStyle(
                   fontSize: 16.sp,
                   fontWeight: FontWeight.w600,
-                color: Colors.blue
+                  color: Colors.blue,
                 ),
               ),
             ),
@@ -398,7 +401,7 @@ class _PlantsListViewState extends State<PlantsListView> {
           ),
           SizedBox(height: 16.h),
           Text(
-            'No Plants Found',
+            'No Projects Found',
             style: TextStyle(
               fontSize: 18.sp,
               fontWeight: FontWeight.w600,
@@ -407,14 +410,14 @@ class _PlantsListViewState extends State<PlantsListView> {
           ),
           SizedBox(height: 8.h),
           Text(
-            'Tap the button below to add your first plant!',
+            'Tap the button below to add your first Projects!',
             style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
           ),
           SizedBox(height: 16.h),
           AddButton(
-            text: 'Add Plant',
+            text: 'Add Projects',
             icon: Icons.add,
-            route: RouteNames.plantsadd,
+            route: RouteNames.projectsadd,
           ),
         ],
       ),
@@ -435,7 +438,7 @@ class _PlantsListViewState extends State<PlantsListView> {
 
       body: Stack(
         children: [
-          Consumer<PlantProvider>(
+          Consumer<ProjectProvider>(
             builder: (context, provider, child) {
               if (provider.error != null) {
                 return Center(
@@ -449,7 +452,7 @@ class _PlantsListViewState extends State<PlantsListView> {
                       ),
                       SizedBox(height: 16.h),
                       Text(
-                        'Error Loading Plants',
+                        'Error Loading Projects',
                         style: TextStyle(
                           fontSize: 18.sp,
                           fontWeight: FontWeight.w600,
@@ -474,7 +477,7 @@ class _PlantsListViewState extends State<PlantsListView> {
                         icon: Icons.refresh,
                         onTap: () {
                           provider.clearError();
-                          provider.loadAllPlants(refresh: true);
+                          provider.loadAllProjects(refresh: true);
                         },
                       ),
                     ],
@@ -497,25 +500,25 @@ class _PlantsListViewState extends State<PlantsListView> {
                     Expanded(
                       child: RefreshIndicator(
                         onRefresh: () async {
-                          await provider.loadAllPlants(refresh: true);
+                          await provider.loadAllProjects(refresh: true);
                         },
                         color: const Color(0xFF3B82F6),
                         backgroundColor: Colors.white,
-                        child: provider.isLoading && provider.plants.isEmpty
+                        child: provider.isLoading && provider.projects.isEmpty
                             ? ListView.builder(
                                 itemCount: 5,
                                 itemBuilder: (context, index) =>
                                     buildShimmerCard(),
                               )
-                            : provider.plants.isEmpty
+                            : provider.projects.isEmpty
                             ? _buildEmptyState()
                             : ListView.builder(
                                 controller: _scrollController,
                                 padding: EdgeInsets.only(bottom: 80.h),
-                                itemCount: provider.plants.length,
+                                itemCount: provider.projects.length,
                                 itemBuilder: (context, index) {
-                                  return _buildPlantCard(
-                                    provider.plants[index],
+                                  return _buildProjectsCard(
+                                    provider.projects[index],
                                   );
                                 },
                               ),

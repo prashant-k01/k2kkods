@@ -4,6 +4,8 @@ import 'package:k2k/app/routes.dart';
 import 'package:k2k/konkrete_klinkers/master_data/clients/provider/clients_provider.dart';
 import 'package:k2k/konkrete_klinkers/master_data/machines/provider/machine_provider.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/provider/plants_provider.dart';
+import 'package:k2k/konkrete_klinkers/master_data/products/provider/product_provider.dart';
+import 'package:k2k/konkrete_klinkers/master_data/projects/provider/projects_provider.dart';
 import 'package:k2k/login/provider/login_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -27,6 +29,8 @@ class MyApp extends StatelessWidget {
             ChangeNotifierProvider(create: (_) => PlantProvider()),
             ChangeNotifierProvider(create: (_) => ClientsProvider()),
             ChangeNotifierProvider(create: (_) => MachinesProvider()),
+            ChangeNotifierProvider(create: (_) => ProductProvider()),
+            ChangeNotifierProvider(create: (_) => ProjectProvider()),
           ],
           child: Consumer<LoginProvider>(
             builder: (context, value, child) {

@@ -188,7 +188,7 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
                 SubMenuItem(
                   title: 'Plants',
                   icon: Icons.add_business,
-                  route: '/plants',
+                  route: RouteNames.plants,
                   isExpanded: false,
                 ),
                 SubMenuItem(
@@ -208,13 +208,13 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
             SubMenuItem(
               title: 'Projects',
               icon: Icons.assignment_outlined,
-              route: '/settings/users',
+              route: RouteNames.projects,
               isExpanded: false,
             ),
             SubMenuItem(
               title: 'Products',
               icon: Icons.inventory_2_outlined,
-              route: '/settings/users',
+              route: RouteNames.products,
               isExpanded: false,
             ),
           ],

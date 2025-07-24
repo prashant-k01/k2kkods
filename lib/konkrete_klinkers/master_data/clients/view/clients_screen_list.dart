@@ -4,6 +4,7 @@ import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/list_helper/add_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
 import 'package:k2k/common/list_helper/shimmer.dart';
+import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/konkrete_klinkers/master_data/clients/provider/clients_provider.dart';
 import 'package:k2k/konkrete_klinkers/master_data/clients/view/clients_delete_screen.dart';
 import 'package:k2k/utils/sreen_util.dart';
@@ -67,18 +68,66 @@ class _ClientsListViewState extends State<ClientsListView> {
     return createdBy?.toString() ?? 'Unknown';
   }
 
+  Widget _buildLogoAndTitle() {
+    return Row(
+      children: [
+        SizedBox(width: 8.w),
+        Text(
+          'Client Management',
+          style: TextStyle(
+            fontSize: 18.sp,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF334155),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBackButton() {
+    return IconButton(
+      icon: Icon(
+        Icons.arrow_back_ios,
+        size: 24.sp,
+        color: const Color(0xFF334155),
+      ),
+      onPressed: () {
+        context.go(RouteNames.homeScreen);
+      },
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Padding(
+      padding: EdgeInsets.only(right: 16.w),
+      child: TextButton(
+        onPressed: () {
+          context.goNamed(RouteNames.clientsadd);
+        },
+        child: Row(
+          children: [
+            Icon(Icons.add, size: 20.sp, color: const Color(0xFF3B82F6)),
+            SizedBox(width: 4.w),
+            Text(
+              'Add Client',
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF3B82F6),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildPaginationInfo() {
     return Consumer<ClientsProvider>(
       builder: (context, provider, child) {
         if (provider.totalItems == 0 || provider.totalPages == 1) {
           return const SizedBox.shrink();
         }
-
-        final startItem = ((provider.currentPage - 1) * provider.limit) + 1;
-        final endItem = (startItem + provider.clients.length - 1).clamp(
-          1,
-          provider.totalItems,
-        );
 
         return Positioned(
           bottom: 0,
@@ -158,13 +207,18 @@ class _ClientsListViewState extends State<ClientsListView> {
   }
 
   Widget _buildClientCard(dynamic client) {
-    final clientData = client is Map<String, dynamic> ? client : client.toJson();
+    final clientData = client is Map<String, dynamic>
+        ? client
+        : client.toJson();
     final clientId = clientData['_id'] ?? clientData['id'] ?? '';
     final name = clientData['name'] ?? 'Unknown Client';
     final address = clientData['address'] ?? 'N/A';
-    final createdBy = _getCreatedBy(clientData['created_by'] ?? clientData['createdBy']);
+    final createdBy = _getCreatedBy(
+      clientData['created_by'] ?? clientData['createdBy'],
+    );
     final createdAt = clientData['createdAt'] != null
-        ? DateTime.tryParse(clientData['createdAt'].toString()) ?? DateTime.now()
+        ? DateTime.tryParse(clientData['createdAt'].toString()) ??
+              DateTime.now()
         : DateTime.now();
 
     return Container(
@@ -375,42 +429,10 @@ class _ClientsListViewState extends State<ClientsListView> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF334155),
-        title: Text(
-          'Clients Management',
-          style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w600),
-        ),
-        actions: [
-          Padding(
-            padding: EdgeInsets.only(right: 16.w),
-            child: TextButton(
-              onPressed: () {
-                context.goNamed(RouteNames.clientsadd);
-              },
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.add,
-                    size: 20.sp,
-                    color: const Color(0xFF3B82F6),
-                  ),
-                  SizedBox(width: 4.w),
-                  Text(
-                    'Add Client',
-                    style: TextStyle(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF3B82F6),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+      appBar: AppBars(
+        title: _buildLogoAndTitle(),
+        leading: _buildBackButton(),
+        action: [_buildActionButtons()],
       ),
       body: Stack(
         children: [
@@ -463,9 +485,11 @@ class _ClientsListViewState extends State<ClientsListView> {
 
               return GestureDetector(
                 onHorizontalDragEnd: (details) {
-                  if (details.primaryVelocity! > 0 && provider.hasPreviousPage) {
+                  if (details.primaryVelocity! > 0 &&
+                      provider.hasPreviousPage) {
                     provider.previousPage();
-                  } else if (details.primaryVelocity! < 0 && provider.hasNextPage) {
+                  } else if (details.primaryVelocity! < 0 &&
+                      provider.hasNextPage) {
                     provider.nextPage();
                   }
                 },
@@ -481,18 +505,21 @@ class _ClientsListViewState extends State<ClientsListView> {
                         child: provider.isLoading && provider.clients.isEmpty
                             ? ListView.builder(
                                 itemCount: 5,
-                                itemBuilder: (context, index) => buildShimmerCard(),
+                                itemBuilder: (context, index) =>
+                                    buildShimmerCard(),
                               )
                             : provider.clients.isEmpty
-                                ? _buildEmptyState()
-                                : ListView.builder(
-                                    controller: _scrollController,
-                                    padding: EdgeInsets.only(bottom: 80.h),
-                                    itemCount: provider.clients.length,
-                                    itemBuilder: (context, index) {
-                                      return _buildClientCard(provider.clients[index]);
-                                    },
-                                  ),
+                            ? _buildEmptyState()
+                            : ListView.builder(
+                                controller: _scrollController,
+                                padding: EdgeInsets.only(bottom: 80.h),
+                                itemCount: provider.clients.length,
+                                itemBuilder: (context, index) {
+                                  return _buildClientCard(
+                                    provider.clients[index],
+                                  );
+                                },
+                              ),
                       ),
                     ),
                   ],

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:k2k/konkrete_klinkers/master_data/plants/model/plants_model.dart';
-import 'package:k2k/konkrete_klinkers/master_data/plants/repo/plants.repo.dart';
+import 'package:k2k/konkrete_klinkers/master_data/projects/model/projects.dart';
+import 'package:k2k/konkrete_klinkers/master_data/projects/repo/projects_repo.dart';
 
-class PlantProvider with ChangeNotifier {
-  final PlantRepository _repository = PlantRepository();
+class ProjectProvider with ChangeNotifier {
+  final ProjectRepository _repository = ProjectRepository();
 
-  List<PlantModel> _plants = [];
+  List<ProjectModel> _projects = [];
   bool _isLoading = false;
   String? _error;
   int _currentPage = 1;
@@ -17,17 +17,17 @@ class PlantProvider with ChangeNotifier {
   String _searchQuery = '';
 
   // Loading states for specific operations
-  bool _isAddPlantLoading = false;
-  bool _isUpdatePlantLoading = false;
-  bool _isDeletePlantLoading = false;
+  bool _isAddProjectLoading = false;
+  bool _isUpdateProjectLoading = false;
+  bool _isDeleteProjectLoading = false;
 
   // Getters
-  List<PlantModel> get plants => _plants;
+  List<ProjectModel> get projects => _projects;
   bool get isLoading => _isLoading;
   String? get error => _error;
-  bool get isAddPlantLoading => _isAddPlantLoading;
-  bool get isUpdatePlantLoading => _isUpdatePlantLoading;
-  bool get isDeletePlantLoading => _isDeletePlantLoading;
+  bool get isAddProjectLoading => _isAddProjectLoading;
+  bool get isUpdateProjectLoading => _isUpdateProjectLoading;
+  bool get isDeleteProjectLoading => _isDeleteProjectLoading;
   int get currentPage => _currentPage;
   int get totalPages => _totalPages;
   int get totalItems => _totalItems;
@@ -36,11 +36,11 @@ class PlantProvider with ChangeNotifier {
   int get limit => _limit;
   String get searchQuery => _searchQuery;
 
-  // Load plants for current page
-  Future<void> loadAllPlants({bool refresh = false}) async {
+  // Load Projects for current page
+  Future<void> loadAllProjects({bool refresh = false}) async {
     if (refresh) {
       _currentPage = 1;
-      _plants.clear();
+      _projects.clear();
     }
 
     _isLoading = true;
@@ -48,23 +48,27 @@ class PlantProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      print('Loading plants - Page: $_currentPage, Limit: $_limit, Search: $_searchQuery');
+      print(
+        'Loading Projects - Page: $_currentPage, Limit: $_limit, Search: $_searchQuery',
+      );
 
-      final response = await _repository.getAllPlants(
+      final response = await _repository.getAllProjects(
         page: _currentPage,
         limit: _limit,
         search: _searchQuery.isNotEmpty ? _searchQuery : null,
       );
 
-      _plants = response.plants;
+      _projects = response.projects;
       _updatePaginationInfo(response.pagination);
       _error = null;
 
-      print('Loaded ${_plants.length} plants, Total: $_totalItems, Pages: $_totalPages');
+      print(
+        'Loaded ${_projects.length} Projects, Total: $_totalItems, Pages: $_totalPages',
+      );
     } catch (e) {
       _error = _getErrorMessage(e);
-      _plants.clear();
-      print('Error loading plants: $e');
+      _projects.clear();
+      print('Error loading Projects: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -76,7 +80,7 @@ class PlantProvider with ChangeNotifier {
     if (page < 1 || page > _totalPages || page == _currentPage) return;
 
     _currentPage = page;
-    await loadAllPlants();
+    await loadAllProjects();
   }
 
   // Go to next page
@@ -101,18 +105,18 @@ class PlantProvider with ChangeNotifier {
     await loadPage(_totalPages);
   }
 
-  // Search plants
-  Future<void> searchPlants(String query) async {
+  // Search Projects
+  Future<void> searchProjects(String query) async {
     _searchQuery = query;
     _currentPage = 1;
-    await loadAllPlants();
+    await loadAllProjects();
   }
 
   // Clear search
   Future<void> clearSearch() async {
     _searchQuery = '';
     _currentPage = 1;
-    await loadAllPlants();
+    await loadAllProjects();
   }
 
   // Update pagination info
@@ -125,103 +129,115 @@ class PlantProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> createPlant(String plantCode, String plantName) async {
-    _isAddPlantLoading = true;
+  Future<bool> createProject(
+    String projectName,
+    String address,
+    String clientId,
+  ) async {
+    _isAddProjectLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final newPlant = await _repository.createPlant(plantCode, plantName);
+      final newProject = await _repository.createProject(
+        projectName,
+        address,
+        clientId,
+      );
 
-      if (newPlant.id.isNotEmpty) {
+      if (newProject.id.isNotEmpty) {
         _currentPage = 1;
-        await loadAllPlants();
+        await loadAllProjects();
         return true;
       } else {
+        _error = 'Created project has no ID';
         return false;
       }
     } catch (e) {
       _error = _getErrorMessage(e);
+      print('Create Project Error: $_error');
       return false;
     } finally {
-      _isAddPlantLoading = false;
+      _isAddProjectLoading = false;
       notifyListeners();
     }
   }
 
-  Future<bool> updatePlant(
-    String plantId,
-    String plantCode,
-    String plantName,
+  Future<bool> updateProject(
+    String projectId,
+    String projectName,
+    String address,
+    String clientId,
   ) async {
-    _isUpdatePlantLoading = true;
+    _isUpdateProjectLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final success = await _repository.updatePlant(
-        plantId,
-        plantCode,
-        plantName,
+      final success = await _repository.updateProject(
+        projectId,
+        projectName,
+        address,
+        clientId,
       );
 
       if (success) {
-        await loadAllPlants();
+        await loadAllProjects();
         return true;
       } else {
-        _error = 'Failed to update plant';
+        _error = 'Failed to update Project';
         return false;
       }
     } catch (e) {
       _error = _getErrorMessage(e);
       return false;
     } finally {
-      _isUpdatePlantLoading = false;
+      _isUpdateProjectLoading = false;
       notifyListeners();
     }
   }
 
-  Future<bool> deletePlant(String plantId) async {
-    _isDeletePlantLoading = true;
+  Future<bool> deleteProject(String projectId) async {
+    _isDeleteProjectLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final success = await _repository.deletePlant(plantId);
+      final success = await _repository.deleteProject(projectId);
 
       if (success) {
-        if (_plants.length == 1 && _currentPage > 1) {
+        if (_projects.length == 1 && _currentPage > 1) {
           _currentPage--;
         }
-        await loadAllPlants();
+        await loadAllProjects();
         return true;
       } else {
-        _error = 'Failed to delete plant';
+        _error = 'Failed to delete Project';
         return false;
       }
     } catch (e) {
       _error = _getErrorMessage(e);
       return false;
     } finally {
-      _isDeletePlantLoading = false;
+      _isDeleteProjectLoading = false;
       notifyListeners();
     }
   }
 
-  Future<PlantModel?> getPlant(String plantId) async {
+  Future<ProjectModel?> getProject(String projectId) async {
     try {
       _error = null;
-      final plant = await _repository.getPlant(plantId);
-      return plant;
+      final project = await _repository.getProject(projectId);
+      return project;
     } catch (e) {
       _error = _getErrorMessage(e);
       return null;
     }
   }
 
-  PlantModel? getPlantByIndex(int index) {
-    if (index >= 0 && index < _plants.length) {
-      return _plants[index];
+  ProjectModel? getProjectByIndex(int index) {
+    if (index >= 0 && index < _projects.length) {
+      return _projects[index];
     }
     return null;
   }

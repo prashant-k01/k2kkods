@@ -4,20 +4,46 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
-import 'package:k2k/konkrete_klinkers/master_data/plants/provider/plants_provider.dart';
+import 'package:k2k/konkrete_klinkers/master_data/clients/provider/clients_provider.dart';
+import 'package:k2k/konkrete_klinkers/master_data/projects/provider/projects_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class AddPlantFormScreen extends StatelessWidget {
-  AddPlantFormScreen({super.key});
+class AddProjectFormScreen extends StatefulWidget {
+  const AddProjectFormScreen({super.key});
 
+  @override
+  _AddProjectFormScreenState createState() => _AddProjectFormScreenState();
+}
+
+class _AddProjectFormScreenState extends State<AddProjectFormScreen> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
 
   @override
+  void initState() {
+    super.initState();
+    // Defer loading clients until after the build phase
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final clientsProvider = Provider.of<ClientsProvider>(
+        context,
+        listen: false,
+      );
+      clientsProvider.loadAllClientsForDropdown(
+        refresh: true,
+      ); // Load all clients for dropdown
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final plantProvider = Provider.of<PlantProvider>(context, listen: false);
+    final projectProvider = Provider.of<ProjectProvider>(
+      context,
+      listen: false,
+    );
+    final clientsProvider = Provider.of<ClientsProvider>(context);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -30,7 +56,7 @@ class AddPlantFormScreen extends StatelessWidget {
         padding: EdgeInsets.all(24.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [_buildFormCard(context, plantProvider)],
+          children: [_buildFormCard(context, projectProvider, clientsProvider)],
         ),
       ),
     );
@@ -41,7 +67,7 @@ class AddPlantFormScreen extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          'Add Plant',
+          'Add Project',
           style: TextStyle(
             fontSize: 18.sp,
             fontWeight: FontWeight.w600,
@@ -62,7 +88,7 @@ class AddPlantFormScreen extends StatelessWidget {
             color: const Color(0xFF334155),
           ),
           onPressed: () {
-            context.go(RouteNames.plants);
+            context.go(RouteNames.projects);
           },
           tooltip: 'Back',
         );
@@ -70,7 +96,11 @@ class AddPlantFormScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFormCard(BuildContext context, PlantProvider plantProvider) {
+  Widget _buildFormCard(
+    BuildContext context,
+    ProjectProvider projectProvider,
+    ClientsProvider clientsProvider,
+  ) {
     return Container(
       padding: EdgeInsets.all(24.w),
       decoration: BoxDecoration(
@@ -90,7 +120,7 @@ class AddPlantFormScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Plant Details',
+              'Project Details',
               style: TextStyle(
                 fontSize: 18.sp,
                 fontWeight: FontWeight.w600,
@@ -103,12 +133,45 @@ class AddPlantFormScreen extends StatelessWidget {
               style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
             ),
             SizedBox(height: 24.h),
+            Consumer<ClientsProvider>(
+              builder: (context, clientsProvider, _) {
+                final clients = clientsProvider
+                    .allClients; // Use allClients instead of clients
+                final clientNames = clients
+                    .map((client) => client.name)
+                    .toList();
 
-            // Plant Code
+                return CustomSearchableDropdownFormField(
+                  name: 'client',
+                  labelText: 'Client Name',
+                  hintText: 'Select Client Name',
+                  prefixIcon: Icons.person,
+                  options: clientsProvider.isAllClientsLoading
+                      ? ['Loading...']
+                      : clientNames.isEmpty
+                      ? ['No clients available']
+                      : clientNames,
+                  fillColor: const Color(0xFFF8FAFC),
+                  borderColor: Colors.grey.shade300,
+                  focusedBorderColor: const Color(0xFF3B82F6),
+                  borderRadius: 12.r,
+                  validators: [
+                    FormBuilderValidators.required(
+                      errorText: 'Please select a client',
+                    ),
+                  ],
+                  enabled:
+                      !clientsProvider.isAllClientsLoading &&
+                      clientNames.isNotEmpty,
+                );
+              },
+            ),
+            SizedBox(height: 24.h),
+
             CustomTextFormField(
-              name: 'plant_code',
-              labelText: 'Plant Code',
-              hintText: 'Enter plant code',
+              name: 'name',
+              labelText: ' Project Name',
+              hintText: 'Enter Project Name',
               prefixIcon: Icons.code,
               validators: [
                 FormBuilderValidators.required(),
@@ -121,17 +184,14 @@ class AddPlantFormScreen extends StatelessWidget {
               borderRadius: 12.r,
             ),
             SizedBox(height: 24.h),
-
-            // Plant Name
             CustomTextFormField(
-              name: 'plant_name',
-              labelText: 'Plant Name',
-              hintText: 'Enter plant name',
+              name: 'address',
+              labelText: 'Address',
+              hintText: 'Enter Address',
               prefixIcon: Icons.business,
               validators: [
                 FormBuilderValidators.required(),
                 FormBuilderValidators.minLength(2),
-                FormBuilderValidators.maxLength(50),
               ],
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
@@ -139,9 +199,7 @@ class AddPlantFormScreen extends StatelessWidget {
               borderRadius: 12.r,
             ),
             SizedBox(height: 40.h),
-
-            // Submit
-            Consumer<PlantProvider>(
+            Consumer<ProjectProvider>(
               builder: (context, provider, _) => SizedBox(
                 width: double.infinity,
                 height: 56.h,
@@ -154,7 +212,7 @@ class AddPlantFormScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSubmitButton(BuildContext context, PlantProvider provider) {
+  Widget _buildSubmitButton(BuildContext context, ProjectProvider provider) {
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -174,12 +232,12 @@ class AddPlantFormScreen extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: provider.isAddPlantLoading
+          onTap: provider.isAddProjectLoading
               ? null
               : () => _submitForm(context, provider),
           borderRadius: BorderRadius.circular(12.r),
           child: Center(
-            child: provider.isAddPlantLoading
+            child: provider.isAddProjectLoading
                 ? Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -189,7 +247,7 @@ class AddPlantFormScreen extends StatelessWidget {
                       ),
                       SizedBox(width: 12.w),
                       Text(
-                        'Creating Plant...',
+                        'Creating Project...',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16.sp,
@@ -204,7 +262,7 @@ class AddPlantFormScreen extends StatelessWidget {
                       Icon(Icons.add_circle, color: Colors.white, size: 20.sp),
                       SizedBox(width: 8.w),
                       Text(
-                        'Create Plant',
+                        'Create Project',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16.sp,
@@ -219,9 +277,33 @@ class AddPlantFormScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _submitForm(BuildContext context, PlantProvider provider) async {
+  Future<void> _submitForm(
+    BuildContext context,
+    ProjectProvider provider,
+  ) async {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       final formData = _formKey.currentState!.value;
+      final clientsProvider = Provider.of<ClientsProvider>(
+        context,
+        listen: false,
+      );
+
+      final selectedClientName = formData['client'] as String?;
+      if (selectedClientName == null) {
+        context.showErrorSnackbar("Please select a client.");
+        return;
+      }
+
+      final selectedClient = clientsProvider.allClients.firstWhere(
+        (client) => client.name == selectedClientName,
+      );
+
+      if (selectedClient.id.isEmpty) {
+        context.showErrorSnackbar(
+          "Selected client not found. Please try again.",
+        );
+        return;
+      }
 
       showDialog(
         context: context,
@@ -246,7 +328,7 @@ class AddPlantFormScreen extends StatelessWidget {
                 const CircularProgressIndicator(color: Color(0xFF3B82F6)),
                 SizedBox(height: 16.h),
                 Text(
-                  'Creating Plant...',
+                  'Creating Project...',
                   style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w500,
@@ -259,18 +341,21 @@ class AddPlantFormScreen extends StatelessWidget {
         ),
       );
 
-      final success = await provider.createPlant(
-        formData['plant_code'],
-        formData['plant_name'],
+      final success = await provider.createProject(
+        formData['name'],
+        formData['address'],
+        selectedClient.id,
       );
 
       Navigator.of(context).pop();
 
       if (success && context.mounted) {
-        context.showSuccessSnackbar("Plant created successfully!");
-        context.go(RouteNames.plants);
+        context.showSuccessSnackbar("Project successfully created");
+        context.go(RouteNames.projects);
       } else {
-        context.showErrorSnackbar("Failed to create plant. Please try again.");
+        context.showErrorSnackbar(
+          "Failed to create project: ${provider.error?.replaceFirst('Exception: ', '') ?? 'Unknown error. Please try again.'}",
+        );
       }
     } else {
       context.showWarningSnackbar(

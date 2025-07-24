@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart' hide ScreenUtil;
 import 'package:k2k/app/routes_name.dart';
-import 'package:k2k/common/list_helper/add_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
 import 'package:k2k/common/list_helper/shimmer.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
-import 'package:k2k/konkrete_klinkers/master_data/plants/provider/plants_provider.dart';
-import 'package:k2k/konkrete_klinkers/master_data/plants/view/plant_delete_screen.dart';
+import 'package:k2k/konkrete_klinkers/master_data/products/model/product.dart';
+import 'package:k2k/konkrete_klinkers/master_data/products/provider/product_provider.dart';
+import 'package:k2k/konkrete_klinkers/master_data/products/view/product_delete_screen.dart';
 import 'package:k2k/utils/sreen_util.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
-class PlantsListView extends StatefulWidget {
-  const PlantsListView({super.key});
+class ProductsListView extends StatefulWidget {
+  const ProductsListView({super.key});
 
   @override
-  State<PlantsListView> createState() => _PlantsListViewState();
+  State<ProductsListView> createState() => _ProductsListViewState();
 }
 
-class _PlantsListViewState extends State<PlantsListView> {
+class _ProductsListViewState extends State<ProductsListView> {
   bool _isInitialized = false;
   final ScrollController _scrollController = ScrollController();
 
@@ -39,21 +39,21 @@ class _PlantsListViewState extends State<PlantsListView> {
       _isInitialized = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          final provider = context.read<PlantProvider>();
-          if (provider.plants.isEmpty && provider.error == null) {
-            provider.loadAllPlants();
+          final provider = context.read<ProductProvider>();
+          if (provider.products.isEmpty && provider.error == null) {
+            provider.loadAllProducts();
           }
         }
       });
     }
   }
 
-  void _editPlant(String? plantId) {
-    if (plantId != null) {
-      context.goNamed(
-        RouteNames.plantsedit,
-        pathParameters: {'plantId': plantId},
-      );
+  void _editProduct(String? productId) {
+    if (productId != null) {
+      // context.goNamed(
+      //   RouteNames.Productsedit,
+      //   pathParameters: {'ProductId': productId},
+      // );
     }
   }
 
@@ -61,15 +61,8 @@ class _PlantsListViewState extends State<PlantsListView> {
     return '${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year}';
   }
 
-  String _getCreatedBy(dynamic createdBy) {
-    if (createdBy is Map<String, dynamic>) {
-      return createdBy['username'] ?? 'Unknown';
-    }
-    return createdBy?.toString() ?? 'Unknown';
-  }
-
   Widget _buildPaginationInfo() {
-    return Consumer<PlantProvider>(
+    return Consumer<ProductProvider>(
       builder: (context, provider, child) {
         if (provider.totalItems == 0 || provider.totalPages == 1) {
           return const SizedBox.shrink();
@@ -149,19 +142,23 @@ class _PlantsListViewState extends State<PlantsListView> {
     );
   }
 
-  Widget _buildPlantCard(dynamic plant) {
-    final plantData = plant is Map<String, dynamic> ? plant : plant.toJson();
-    final plantId = plantData['_id'] ?? plantData['id'] ?? '';
-    final plantName =
-        plantData['plant_name'] ?? plantData['plantName'] ?? 'Unknown Plant';
-    final plantCode =
-        plantData['plant_code'] ?? plantData['plantCode'] ?? 'N/A';
-    final createdBy = _getCreatedBy(
-      plantData['created_by'] ?? plantData['createdBy'],
-    );
-    final createdAt = plantData['createdAt'] != null
-        ? DateTime.tryParse(plantData['createdAt'].toString()) ?? DateTime.now()
-        : DateTime.now();
+  Widget _buildProductCard(dynamic product) {
+    // Ensure product is a ProductModel; if not, handle accordingly
+    final ProductModel productModel = product is ProductModel
+        ? product
+        : ProductModel.fromJson(product is Map<String, dynamic> ? product : {});
+
+    final productId = productModel.id;
+    final materialCode = productModel.materialCode.isNotEmpty
+        ? productModel.materialCode
+        : 'Unknown Product';
+    final plantName = productModel.plant.plantName.isNotEmpty
+        ? productModel.plant.plantName
+        : 'N/A';
+    final createdBy = productModel.createdBy.username.isNotEmpty
+        ? productModel.createdBy.username
+        : 'Unknown';
+    final createdAt = productModel.createdAt;
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
@@ -195,7 +192,7 @@ class _PlantsListViewState extends State<PlantsListView> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            plantName,
+                            materialCode,
                             style: TextStyle(
                               fontSize: 18.sp,
                               fontWeight: FontWeight.w600,
@@ -203,22 +200,26 @@ class _PlantsListViewState extends State<PlantsListView> {
                             ),
                           ),
                           SizedBox(height: 8.h),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 12.w,
-                              vertical: 6.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                            child: Text(
-                              plantCode,
-                              style: TextStyle(
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF3B82F6),
-                              ),
+                          RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: 'Plant name: ',
+                                  style: TextStyle(
+                                    fontSize: 16.sp,
+                                    fontWeight: FontWeight.w500,
+                                    color: const Color(0xFF334155),
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: plantName,
+                                  style: TextStyle(
+                                    fontSize: 16.sp,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF3B82F6),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -232,11 +233,11 @@ class _PlantsListViewState extends State<PlantsListView> {
                       ),
                       onSelected: (value) {
                         if (value == 'edit') {
-                          _editPlant(plantId);
+                          _editProduct(productId);
                         } else if (value == 'delete') {
-                          PlantDeleteHandler.deletePlant(
+                          ProductDeleteHandler.deleteProduct(
                             context,
-                            plantId,
+                            productId,
                             plantName,
                           );
                         }
@@ -335,7 +336,7 @@ class _PlantsListViewState extends State<PlantsListView> {
       children: [
         SizedBox(width: 8.w),
         Text(
-          'Plants Management',
+          'Products',
           style: TextStyle(
             fontSize: 18.sp,
             fontWeight: FontWeight.w600,
@@ -364,7 +365,7 @@ class _PlantsListViewState extends State<PlantsListView> {
       padding: EdgeInsets.only(right: 16.w),
       child: TextButton(
         onPressed: () {
-          context.goNamed(RouteNames.plantsadd);
+          // context.goNamed(RouteNames.Productsadd);
         },
         child: Row(
           children: [
@@ -372,11 +373,11 @@ class _PlantsListViewState extends State<PlantsListView> {
             SizedBox(width: 4.w),
             Center(
               child: Text(
-                'Add Plant',
+                'Add Product',
                 style: TextStyle(
                   fontSize: 16.sp,
                   fontWeight: FontWeight.w600,
-                color: Colors.blue
+                  color: Colors.blue,
                 ),
               ),
             ),
@@ -398,7 +399,7 @@ class _PlantsListViewState extends State<PlantsListView> {
           ),
           SizedBox(height: 16.h),
           Text(
-            'No Plants Found',
+            'No Products Found',
             style: TextStyle(
               fontSize: 18.sp,
               fontWeight: FontWeight.w600,
@@ -407,15 +408,15 @@ class _PlantsListViewState extends State<PlantsListView> {
           ),
           SizedBox(height: 8.h),
           Text(
-            'Tap the button below to add your first plant!',
+            'Tap the button below to add your first Product!',
             style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
           ),
           SizedBox(height: 16.h),
-          AddButton(
-            text: 'Add Plant',
-            icon: Icons.add,
-            route: RouteNames.plantsadd,
-          ),
+          // AddButton(
+          //   text: 'Add Product',
+          //   icon: Icons.add,
+          //   route: RouteNames.Productsadd,
+          // ),
         ],
       ),
     );
@@ -435,7 +436,7 @@ class _PlantsListViewState extends State<PlantsListView> {
 
       body: Stack(
         children: [
-          Consumer<PlantProvider>(
+          Consumer<ProductProvider>(
             builder: (context, provider, child) {
               if (provider.error != null) {
                 return Center(
@@ -449,7 +450,7 @@ class _PlantsListViewState extends State<PlantsListView> {
                       ),
                       SizedBox(height: 16.h),
                       Text(
-                        'Error Loading Plants',
+                        'Error Loading Products',
                         style: TextStyle(
                           fontSize: 18.sp,
                           fontWeight: FontWeight.w600,
@@ -474,7 +475,7 @@ class _PlantsListViewState extends State<PlantsListView> {
                         icon: Icons.refresh,
                         onTap: () {
                           provider.clearError();
-                          provider.loadAllPlants(refresh: true);
+                          provider.loadAllProducts(refresh: true);
                         },
                       ),
                     ],
@@ -497,25 +498,25 @@ class _PlantsListViewState extends State<PlantsListView> {
                     Expanded(
                       child: RefreshIndicator(
                         onRefresh: () async {
-                          await provider.loadAllPlants(refresh: true);
+                          await provider.loadAllProducts(refresh: true);
                         },
                         color: const Color(0xFF3B82F6),
                         backgroundColor: Colors.white,
-                        child: provider.isLoading && provider.plants.isEmpty
+                        child: provider.isLoading && provider.products.isEmpty
                             ? ListView.builder(
                                 itemCount: 5,
                                 itemBuilder: (context, index) =>
                                     buildShimmerCard(),
                               )
-                            : provider.plants.isEmpty
+                            : provider.products.isEmpty
                             ? _buildEmptyState()
                             : ListView.builder(
                                 controller: _scrollController,
                                 padding: EdgeInsets.only(bottom: 80.h),
-                                itemCount: provider.plants.length,
+                                itemCount: provider.products.length,
                                 itemBuilder: (context, index) {
-                                  return _buildPlantCard(
-                                    provider.plants[index],
+                                  return _buildProductCard(
+                                    provider.products[index],
                                   );
                                 },
                               ),
