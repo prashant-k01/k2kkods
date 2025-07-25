@@ -67,11 +67,16 @@ class AppUrl {
       '$baseUrl/konkreteKlinkers/workorders-getProject?clientId=';
 
   //JobOrder
-  static const String joborder = "$baseUrl/konkreteKlinkers/joborders";
+  static const String getjoborder = "$baseUrl/konkreteKlinkers/joborders";
   static const String createJoborder =
       "$baseUrl/konkreteKlinkers/joborder/create";
   static const String getproductsbyworkOrder =
       "$baseUrl/dropdown/products?work_order_id=";
+  static const String updatejoborder =
+      "$baseUrl/dropdown/products?work_order_id=";
+  static const String deleteJobOrder =
+      "$baseUrl/konkreteKlinkers/joborders/delete";
+
   static const String getJOMachinesbyProduct =
       "$baseUrl/konkreteKlinkers/joborder-getMachine?material_code=";
 

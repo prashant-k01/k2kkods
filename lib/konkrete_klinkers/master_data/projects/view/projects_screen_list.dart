@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart' hide ScreenUtil;
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/list_helper/add_button.dart';
@@ -9,7 +10,6 @@ import 'package:k2k/konkrete_klinkers/master_data/projects/provider/projects_pro
 import 'package:k2k/konkrete_klinkers/master_data/projects/view/projects_delete_screen.dart';
 import 'package:k2k/utils/sreen_util.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 
 class ProjectsListView extends StatefulWidget {
   const ProjectsListView({super.key});
@@ -367,20 +367,18 @@ class _ProjectsListViewState extends State<ProjectsListView> {
       padding: EdgeInsets.only(right: 16.w),
       child: TextButton(
         onPressed: () {
-          context.goNamed(RouteNames.projectsadd);
+          context.goNamed(RouteNames.productsadd);
         },
         child: Row(
           children: [
             Icon(Icons.add, size: 20.sp, color: const Color(0xFF3B82F6)),
             SizedBox(width: 4.w),
-            Center(
-              child: Text(
-                'Add Projects',
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.blue,
-                ),
+            Text(
+              'Add Project',
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF3B82F6),
               ),
             ),
           ],

@@ -370,14 +370,12 @@ class _PlantsListViewState extends State<PlantsListView> {
           children: [
             Icon(Icons.add, size: 20.sp, color: const Color(0xFF3B82F6)),
             SizedBox(width: 4.w),
-            Center(
-              child: Text(
-                'Add Plant',
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.blue,
-                ),
+            Text(
+              'Add Plant',
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF3B82F6),
               ),
             ),
           ],

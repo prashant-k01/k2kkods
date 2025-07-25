@@ -4,21 +4,20 @@ import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
 import 'package:k2k/common/list_helper/shimmer.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
-import 'package:k2k/konkrete_klinkers/master_data/products/model/product.dart';
-import 'package:k2k/konkrete_klinkers/master_data/products/provider/product_provider.dart';
-import 'package:k2k/konkrete_klinkers/master_data/products/view/product_delete_screen.dart';
+import 'package:k2k/konkrete_klinkers/job_order/model/job_order.dart';
+import 'package:k2k/konkrete_klinkers/job_order/provider/job_order_provider.dart';
 import 'package:k2k/utils/sreen_util.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
-class ProductsListView extends StatefulWidget {
-  const ProductsListView({super.key});
+class JobOrderListView extends StatefulWidget {
+  const JobOrderListView({super.key});
 
   @override
-  State<ProductsListView> createState() => _ProductsListViewState();
+  State<JobOrderListView> createState() => _JobOrderListViewState();
 }
 
-class _ProductsListViewState extends State<ProductsListView> {
+class _JobOrderListViewState extends State<JobOrderListView> {
   bool _isInitialized = false;
   final ScrollController _scrollController = ScrollController();
 
@@ -34,35 +33,34 @@ class _ProductsListViewState extends State<ProductsListView> {
     super.dispose();
   }
 
-  void _initializeData() async {
+  void _initializeData() {
     if (!_isInitialized) {
       _isInitialized = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          final provider = context.read<ProductProvider>();
-          if (provider.products.isEmpty && provider.error == null) {
-            provider.loadAllProducts();
+          final provider = context.read<JobOrderProvider>();
+          if (provider.jobOrders.isEmpty && provider.error == null) {
+            provider.loadAllJobOrders(refresh: true);
           }
         }
       });
     }
   }
 
- void _editProduct(String? productId) {
-  if (productId != null) {
-    context.goNamed(
-      RouteNames.productedit,
-      pathParameters: {'productId': productId}, // Fix: Use 'productId' instead of 'productedit'
-    );
+  void _editJobOrder(String jobOrderId) {
+    // context.goNamed(
+    //   RouteNames.JobOrderedit,
+    //   pathParameters: {'jobOrderId': jobOrderId},
+    // );
   }
-}
 
-  String _formatDateTime(DateTime dateTime) {
+  String _formatDateTime(DateTime? dateTime) {
+    if (dateTime == null) return 'N/A';
     return '${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year}';
   }
 
   Widget _buildPaginationInfo() {
-    return Consumer<ProductProvider>(
+    return Consumer<JobOrderProvider>(
       builder: (context, provider, child) {
         if (provider.totalItems == 0 || provider.totalPages == 1) {
           return const SizedBox.shrink();
@@ -142,22 +140,12 @@ class _ProductsListViewState extends State<ProductsListView> {
     );
   }
 
-  Widget _buildProductCard(dynamic product) {
-    final ProductModel productModel = product is ProductModel
-        ? product
-        : ProductModel.fromJson(product is Map<String, dynamic> ? product : {});
+  Widget _buildJobOrderCard(JobOrderModel jobOrder) {
+    final jobOrderId = jobOrder.jobOrderId;
+    final batchNumber = jobOrder.batchNumber.toString();
 
-    final productId = productModel.id;
-    final materialCode = productModel.materialCode.isNotEmpty
-        ? productModel.materialCode
-        : 'Unknown Product';
-    final plantName = productModel.plant.plantName.isNotEmpty
-        ? productModel.plant.plantName
-        : 'N/A';
-    final createdBy = productModel.createdBy.username.isNotEmpty
-        ? productModel.createdBy.username
-        : 'Unknown';
-    final createdAt = productModel.createdAt;
+    final fromDate = DateTime.tryParse(jobOrder.date.from);
+    final toDate = DateTime.tryParse(jobOrder.date.to);
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
@@ -183,6 +171,7 @@ class _ProductsListViewState extends State<ProductsListView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Header row with batch number and menu
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -191,34 +180,20 @@ class _ProductsListViewState extends State<ProductsListView> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            materialCode,
+                            'Work Order: ${jobOrder.workOrderNumber}',
                             style: TextStyle(
                               fontSize: 18.sp,
                               fontWeight: FontWeight.w600,
                               color: const Color(0xFF334155),
                             ),
                           ),
-                          SizedBox(height: 8.h),
-                          RichText(
-                            text: TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: 'Plant name: ',
-                                  style: TextStyle(
-                                    fontSize: 16.sp,
-                                    fontWeight: FontWeight.w500,
-                                    color: const Color(0xFF334155),
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: plantName,
-                                  style: TextStyle(
-                                    fontSize: 16.sp,
-                                    fontWeight: FontWeight.w700,
-                                    color: const Color(0xFF3B82F6),
-                                  ),
-                                ),
-                              ],
+                          SizedBox(height: 4.h),
+                          Text(
+                            'Project: ${jobOrder.projectName}',
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF64748B),
                             ),
                           ),
                         ],
@@ -232,13 +207,13 @@ class _ProductsListViewState extends State<ProductsListView> {
                       ),
                       onSelected: (value) {
                         if (value == 'edit') {
-                          _editProduct(productId);
+                          _editJobOrder(jobOrderId);
                         } else if (value == 'delete') {
-                          ProductDeleteHandler.deleteProduct(
-                            context,
-                            productId,
-                            plantName,
-                          );
+                          // JobOrderDeleteHandler.deleteJobOrder(
+                          //   context,
+                          //   jobOrderId,
+                          //   batchNumber,
+                          // );
                         }
                       },
                       itemBuilder: (BuildContext context) => [
@@ -287,16 +262,18 @@ class _ProductsListViewState extends State<ProductsListView> {
                   ],
                 ),
                 SizedBox(height: 16.h),
+
+                // Work Order Number
                 Row(
                   children: [
                     Icon(
-                      Icons.person_outline,
+                      Icons.assignment_outlined,
                       size: 16.sp,
                       color: const Color(0xFF64748B),
                     ),
                     SizedBox(width: 8.w),
                     Text(
-                      'Created by: $createdBy',
+                      'Batch No:$batchNumber',
                       style: TextStyle(
                         fontSize: 14.sp,
                         color: const Color(0xFF64748B),
@@ -305,16 +282,18 @@ class _ProductsListViewState extends State<ProductsListView> {
                   ],
                 ),
                 SizedBox(height: 8.h),
+
+                // Sales Order Number
                 Row(
                   children: [
                     Icon(
-                      Icons.access_time_outlined,
+                      Icons.receipt_outlined,
                       size: 16.sp,
                       color: const Color(0xFF64748B),
                     ),
                     SizedBox(width: 8.w),
                     Text(
-                      'Created: ${_formatDateTime(createdAt)}',
+                      'Sales Order: ${jobOrder.salesOrderNumber}',
                       style: TextStyle(
                         fontSize: 14.sp,
                         color: const Color(0xFF64748B),
@@ -322,6 +301,135 @@ class _ProductsListViewState extends State<ProductsListView> {
                     ),
                   ],
                 ),
+                SizedBox(height: 8.h),
+
+                // Status
+                Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 16.sp,
+                      color: const Color(0xFF64748B),
+                    ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'Status: ${jobOrder.status}',
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8.h),
+
+                SizedBox(height: 16.h),
+
+                Container(
+                  padding: EdgeInsets.all(16.w),
+                  decoration: BoxDecoration(
+                    color: Colors.blueAccent.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(
+                      color: const Color(0xFFE2E8F0),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Schedule Period',
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF334155),
+                        ),
+                      ),
+                      SizedBox(height: 12.h),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.play_arrow_outlined,
+                                      size: 16.sp,
+                                      color: const Color(0xFF10B981),
+                                    ),
+                                    SizedBox(width: 6.w),
+                                    Text(
+                                      'From:',
+                                      style: TextStyle(
+                                        fontSize: 12.sp,
+                                        fontWeight: FontWeight.w500,
+                                        color: const Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 4.h),
+                                Text(
+                                  _formatDateTime(fromDate),
+                                  style: TextStyle(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF334155),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            height: 40.h,
+                            width: 1,
+                            color: const Color(0xFFE2E8F0),
+                          ),
+                          SizedBox(width: 16.w),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.stop_outlined,
+                                      size: 16.sp,
+                                      color: const Color(0xFFF59E0B),
+                                    ),
+                                    SizedBox(width: 6.w),
+                                    Text(
+                                      'To:',
+                                      style: TextStyle(
+                                        fontSize: 12.sp,
+                                        fontWeight: FontWeight.w500,
+                                        color: const Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 4.h),
+                                Text(
+                                  _formatDateTime(toDate),
+                                  style: TextStyle(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF334155),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Show machine info if available
               ],
             ),
           ),
@@ -335,7 +443,7 @@ class _ProductsListViewState extends State<ProductsListView> {
       children: [
         SizedBox(width: 8.w),
         Text(
-          'Products',
+          'Job Orders',
           style: TextStyle(
             fontSize: 18.sp,
             fontWeight: FontWeight.w600,
@@ -364,14 +472,14 @@ class _ProductsListViewState extends State<ProductsListView> {
       padding: EdgeInsets.only(right: 16.w),
       child: TextButton(
         onPressed: () {
-          context.goNamed(RouteNames.productsadd);
+          context.goNamed(RouteNames.joborderadd);
         },
         child: Row(
           children: [
             Icon(Icons.add, size: 20.sp, color: const Color(0xFF3B82F6)),
             SizedBox(width: 4.w),
             Text(
-              'Add Product',
+              'Add Job Order',
               style: TextStyle(
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
@@ -396,7 +504,7 @@ class _ProductsListViewState extends State<ProductsListView> {
           ),
           SizedBox(height: 16.h),
           Text(
-            'No Products Found',
+            'No Job Orders Found',
             style: TextStyle(
               fontSize: 18.sp,
               fontWeight: FontWeight.w600,
@@ -405,15 +513,23 @@ class _ProductsListViewState extends State<ProductsListView> {
           ),
           SizedBox(height: 8.h),
           Text(
-            'Tap the button below to add your first Product!',
+            'Tap the button below to add your first Job Order!',
             style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
           ),
           SizedBox(height: 16.h),
-          // AddButton(
-          //   text: 'Add Product',
-          //   icon: Icons.add,
-          //   route: RouteNames.Productsadd,
-          // ),
+          ElevatedButton(
+            onPressed: () {
+              // context.goNamed(RouteNames.JobOrderadd);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF3B82F6),
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+            ),
+            child: Text(
+              'Add Job Order',
+              style: TextStyle(fontSize: 16.sp, color: Colors.white),
+            ),
+          ),
         ],
       ),
     );
@@ -430,10 +546,9 @@ class _ProductsListViewState extends State<ProductsListView> {
         leading: _buildBackButton(),
         action: [_buildActionButtons()],
       ),
-
       body: Stack(
         children: [
-          Consumer<ProductProvider>(
+          Consumer<JobOrderProvider>(
             builder: (context, provider, child) {
               if (provider.error != null) {
                 return Center(
@@ -447,7 +562,7 @@ class _ProductsListViewState extends State<ProductsListView> {
                       ),
                       SizedBox(height: 16.h),
                       Text(
-                        'Error Loading Products',
+                        'Error Loading Job Orders',
                         style: TextStyle(
                           fontSize: 18.sp,
                           fontWeight: FontWeight.w600,
@@ -472,7 +587,7 @@ class _ProductsListViewState extends State<ProductsListView> {
                         icon: Icons.refresh,
                         onTap: () {
                           provider.clearError();
-                          provider.loadAllProducts(refresh: true);
+                          provider.loadAllJobOrders(refresh: true);
                         },
                       ),
                     ],
@@ -495,25 +610,25 @@ class _ProductsListViewState extends State<ProductsListView> {
                     Expanded(
                       child: RefreshIndicator(
                         onRefresh: () async {
-                          await provider.loadAllProducts(refresh: true);
+                          await provider.loadAllJobOrders(refresh: true);
                         },
                         color: const Color(0xFF3B82F6),
                         backgroundColor: Colors.white,
-                        child: provider.isLoading && provider.products.isEmpty
+                        child: provider.isLoading && provider.jobOrders.isEmpty
                             ? ListView.builder(
                                 itemCount: 5,
                                 itemBuilder: (context, index) =>
                                     buildShimmerCard(),
                               )
-                            : provider.products.isEmpty
+                            : provider.jobOrders.isEmpty
                             ? _buildEmptyState()
                             : ListView.builder(
                                 controller: _scrollController,
                                 padding: EdgeInsets.only(bottom: 80.h),
-                                itemCount: provider.products.length,
+                                itemCount: provider.jobOrders.length,
                                 itemBuilder: (context, index) {
-                                  return _buildProductCard(
-                                    provider.products[index],
+                                  return _buildJobOrderCard(
+                                    provider.jobOrders[index],
                                   );
                                 },
                               ),

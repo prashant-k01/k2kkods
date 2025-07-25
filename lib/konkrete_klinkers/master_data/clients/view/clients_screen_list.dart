@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart' hide ScreenUtil;
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/list_helper/add_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
@@ -7,7 +7,6 @@ import 'package:k2k/common/list_helper/shimmer.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/konkrete_klinkers/master_data/clients/provider/clients_provider.dart';
 import 'package:k2k/konkrete_klinkers/master_data/clients/view/clients_delete_screen.dart';
-import 'package:k2k/utils/sreen_util.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
@@ -73,7 +72,7 @@ class _ClientsListViewState extends State<ClientsListView> {
       children: [
         SizedBox(width: 8.w),
         Text(
-          'Client Management',
+          'Clients',
           style: TextStyle(
             fontSize: 18.sp,
             fontWeight: FontWeight.w600,

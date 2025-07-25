@@ -6,9 +6,9 @@ class ClientsProvider with ChangeNotifier {
   final ClientRepository _repository = ClientRepository();
 
   List<ClientsModel> _clients = [];
-  List<ClientsModel> _allClients = []; 
+  List<ClientsModel> _allClients = [];
   bool _isLoading = false;
-  bool _isAllClientsLoading = false; 
+  bool _isAllClientsLoading = false;
   String? _error;
   int _currentPage = 1;
   int _totalPages = 1;
@@ -24,7 +24,7 @@ class ClientsProvider with ChangeNotifier {
 
   // Getters
   List<ClientsModel> get clients => _clients;
-  List<ClientsModel> get allClients => _allClients; 
+  List<ClientsModel> get allClients => _allClients;
   bool get isLoading => _isLoading;
   bool get isAllClientsLoading => _isAllClientsLoading;
   String? get error => _error;
@@ -148,14 +148,14 @@ class ClientsProvider with ChangeNotifier {
     _searchQuery = query;
     _currentPage = 1;
     await loadAllClients();
-    await loadAllClientsForDropdown(); // Update dropdown options on search
+    await loadAllClientsForDropdown();
   }
 
   Future<void> clearSearch() async {
     _searchQuery = '';
     _currentPage = 1;
     await loadAllClients();
-    await loadAllClientsForDropdown(); // Reset dropdown options
+    await loadAllClientsForDropdown();
   }
 
   void _updatePaginationInfo(PaginationInfo pagination) {
@@ -176,9 +176,14 @@ class ClientsProvider with ChangeNotifier {
       final newClient = await _repository.createClient(name, address);
 
       if (newClient.id.isNotEmpty) {
-        _currentPage = 1;
-        await loadAllClients();
-        await loadAllClientsForDropdown(); // Update dropdown after adding client
+        // Calculate the page where the new client will appear
+        // Assuming clients are sorted by creation date (newest first)
+        final newTotalItems = _totalItems + 1;
+        final newTotalPages = (newTotalItems / _limit).ceil();
+        _currentPage = newTotalPages; // Go to the last page where the new client is likely to appear
+
+        await loadAllClients(refresh: true); // Reload with the current page
+        await loadAllClientsForDropdown();
         return true;
       } else {
         _error = 'Failed to create client - no ID returned';
@@ -206,8 +211,9 @@ class ClientsProvider with ChangeNotifier {
       final success = await _repository.updateClient(clientsId, name, address);
 
       if (success) {
-        await loadAllClients();
-        await loadAllClientsForDropdown(); // Update dropdown after updating client
+        // Keep the current page and reload data
+        await loadAllClients(refresh: false); // Do not reset to page 1
+        await loadAllClientsForDropdown();
         return true;
       } else {
         _error = 'Failed to update client';
@@ -234,8 +240,8 @@ class ClientsProvider with ChangeNotifier {
         if (_clients.length == 1 && _currentPage > 1) {
           _currentPage--;
         }
-        await loadAllClients();
-        await loadAllClientsForDropdown(); // Update dropdown after deleting client
+        await loadAllClients(refresh: false); // Do not reset to page 1
+        await loadAllClientsForDropdown();
         return true;
       } else {
         _error = 'Failed to delete client';

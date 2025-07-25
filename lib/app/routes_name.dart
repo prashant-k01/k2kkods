@@ -4,6 +4,7 @@ class RouteNames {
   static const String homeScreen = '/homescreen';
   //clients
   static const String clientsadd = '/clientsadd';
+  static const String joborderadd = '/joborderadd';
   static const String clientsedit = '/clients/edit/:clientId';
   static const String clients = '/clients';
   //plants
@@ -15,7 +16,11 @@ class RouteNames {
   static const String projectsadd = '/projectsadd';
   static const String projectsedit =
       '/projects/edit/:projectsId'; 
-
+  //products
   static const String products = '/products';
+  static const String productedit = '/product/edit/:productId';
   static const String productsadd = '/productsadd';
+//job order
+  static const String jobOrder = '/joborder';
+
 }

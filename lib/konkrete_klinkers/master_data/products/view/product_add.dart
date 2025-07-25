@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/common/widgets/dropdown.dart';
+import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/provider/plants_provider.dart';
@@ -70,7 +71,20 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
   // Function to scroll to the focused text field
   void _scrollToFocusedField(BuildContext context, FocusNode focusNode) {
     if (focusNode.hasFocus) {
-      _scrollDebouncer;
+      _scrollDebouncer.debounce(
+        duration: const Duration(milliseconds: 100),
+        onDebounce: () {
+          final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+          if (renderBox != null) {
+            _scrollController.animateTo(
+              _scrollController.offset +
+                  renderBox.localToGlobal(Offset.zero).dy,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
+          }
+        },
+      );
     }
   }
 
@@ -185,24 +199,37 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
               style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
             ),
             SizedBox(height: 24.h),
-            CustomDropdownFormField<String>(
-              name: 'plant',
-              labelText: 'Plant',
-              hintText: 'Select Plant',
-              prefixIcon: Icons.factory,
-              items: plantProvider.allPlants
-                  .map(
-                    (plant) => DropdownMenuItem<String>(
-                      value: plant.id,
-                      child: Text(plant.plantName),
+            Consumer<PlantProvider>(
+              builder: (context, plantProvider, _) {
+                final plants = plantProvider.allPlants;
+                final plantNames = plants
+                    .map((plant) => plant.plantName)
+                    .toList();
+
+                return CustomSearchableDropdownFormField(
+                  name: 'plant',
+                  labelText: 'Plant',
+                  hintText: 'Select Plant',
+                  prefixIcon: Icons.factory,
+                  options: plantProvider.isAllPlantsLoading
+                      ? ['Loading...']
+                      : plantNames.isEmpty
+                      ? ['No plants available']
+                      : plantNames,
+                  fillColor: const Color(0xFFF8FAFC),
+                  borderColor: Colors.grey.shade300,
+                  focusedBorderColor: const Color(0xFF3B82F6),
+                  borderRadius: 12.r,
+                  validators: [
+                    FormBuilderValidators.required(
+                      errorText: 'Please select a plant',
                     ),
-                  )
-                  .toList(),
-              validators: [FormBuilderValidators.required()],
-              fillColor: const Color(0xFFF8FAFC),
-              borderColor: Colors.grey.shade300,
-              focusedBorderColor: const Color(0xFF3B82F6),
-              borderRadius: 12.r,
+                  ],
+                  enabled:
+                      !plantProvider.isAllPlantsLoading &&
+                      plantNames.isNotEmpty,
+                );
+              },
             ),
             SizedBox(height: 18.h),
             CustomTextFormField(
@@ -293,24 +320,21 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
               focusedBorderColor: const Color(0xFF3B82F6),
               borderRadius: 12.r,
               onChanged: (value) {
-                setState(() {
-                  _showAreaPerUnit = value == "Square Meter/No";
-                  if (!_showAreaPerUnit) {
-                    _formKey.currentState?.fields['area_per_unit']?.didChange(
-                      null,
-                    );
-                  } else {
-                    final description =
-                        _formKey.currentState?.fields['description']?.value;
-                    if (description != null) {
-                      final area = _calculateArea(description);
-                      if (area != null) {
-                        _formKey.currentState?.fields['area_per_unit']
-                            ?.didChange(area.toStringAsFixed(4));
-                      }
+                productProvider.setShowAreaPerUnit(value == "Square Meter/No");
+                if (!productProvider.showAreaPerUnit) {
+                  _formKey.currentState?.fields['area_per_unit']?.didChange('');
+                } else {
+                  final description =
+                      _formKey.currentState?.fields['description']?.value;
+                  if (description != null && description.isNotEmpty) {
+                    final area = productProvider.calculateArea(description);
+                    if (area != null) {
+                      _formKey.currentState?.fields['area_per_unit']?.didChange(
+                        area.toStringAsFixed(4),
+                      );
                     }
                   }
-                });
+                }
               },
             ),
             SizedBox(height: 18.h),
@@ -458,6 +482,24 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
   ) async {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       final formData = _formKey.currentState!.value;
+      final plantProvider = Provider.of<PlantProvider>(context, listen: false);
+
+      final selectedPlantName = formData['plant'] as String?;
+      if (selectedPlantName == null) {
+        context.showErrorSnackbar("Please select a plant.");
+        return;
+      }
+
+      final selectedPlant = plantProvider.allPlants.firstWhere(
+        (plant) => plant.plantName == selectedPlantName,
+      );
+
+      if (selectedPlant.id.isEmpty) {
+        context.showErrorSnackbar(
+          "Selected plant not found. Please try again.",
+        );
+        return;
+      }
 
       showDialog(
         context: context,
@@ -496,7 +538,7 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
       );
 
       final success = await provider.createProduct(
-        plantId: formData['plant'],
+        plantId: selectedPlant.id,
         materialCode: formData['material_code'],
         description: formData['description'],
         uom: [formData['uom']],
@@ -515,9 +557,6 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
         context.showSuccessSnackbar("Product successfully created");
         context.go(RouteNames.products);
       } else {
-        print(
-          "Failed to create Product: ${provider.error?.replaceFirst('Exception: ', '') ?? 'Unknown error. Please try again.'}",
-        );
         context.showErrorSnackbar(
           "Failed to create Product: ${provider.error?.replaceFirst('Exception: ', '') ?? 'Unknown error. Please try again.'}",
         );

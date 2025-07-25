@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/dashboard/view/dashboard_screen.dart';
+import 'package:k2k/konkrete_klinkers/job_order/view/job_order_add.dart';
+import 'package:k2k/konkrete_klinkers/job_order/view/job_order_screen_list.dart';
 import 'package:k2k/konkrete_klinkers/master_data/clients/view/clients_add.dart';
 import 'package:k2k/konkrete_klinkers/master_data/clients/view/clients_edit_screen.dart';
 import 'package:k2k/konkrete_klinkers/master_data/clients/view/clients_screen_list.dart';
@@ -9,6 +11,7 @@ import 'package:k2k/konkrete_klinkers/master_data/plants/view/plant_edit_screen.
 import 'package:k2k/konkrete_klinkers/master_data/plants/view/plant_add.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/view/plants_screen_list.dart';
 import 'package:k2k/konkrete_klinkers/master_data/products/view/product_add.dart';
+import 'package:k2k/konkrete_klinkers/master_data/products/view/product_edit_screen.dart';
 import 'package:k2k/konkrete_klinkers/master_data/products/view/product_screen_list.dart';
 import 'package:k2k/konkrete_klinkers/master_data/projects/view/projects_add.dart';
 import 'package:k2k/konkrete_klinkers/master_data/projects/view/projects_edit_screen.dart';
@@ -84,6 +87,13 @@ class AppRoutes {
         },
       ),
       GoRoute(
+        path: RouteNames.joborderadd,
+        name: RouteNames.joborderadd,
+        builder: (BuildContext context, GoRouterState state) {
+          return JobOrdersFormScreen();
+        },
+      ),
+      GoRoute(
         path: RouteNames.login,
         name: RouteNames.login,
         builder: (BuildContext context, GoRouterState state) {
@@ -100,6 +110,18 @@ class AppRoutes {
             return const PlantsListView(); // Redirect to plants list
           }
           return EditPlantFormScreen(plantId: plantId);
+        },
+      ),
+      GoRoute(
+        path: RouteNames.productedit, // '/plants/edit/:plantId'
+        name: RouteNames.productedit,
+        builder: (context, state) {
+          final productId = state.pathParameters['productId'];
+          if (productId == null) {
+            // Handle missing productId gracefully
+            return const ProductsListView(); // Redirect to plants list
+          }
+          return EditProductFormScreen(productId: productId);
         },
       ),
       GoRoute(
@@ -130,6 +152,13 @@ class AppRoutes {
         name: RouteNames.homeScreen,
         builder: (BuildContext context, GoRouterState state) {
           return const DashboardPage();
+        },
+      ),
+      GoRoute(
+        path: RouteNames.jobOrder,
+        name: RouteNames.jobOrder,
+        builder: (BuildContext context, GoRouterState state) {
+          return const JobOrderListView();
         },
       ),
     ],

@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:k2k/api_services/api_services.dart';
-import 'package:k2k/konkrete_klinkers/master_data/products/model/product.dart';
+import 'package:k2k/konkrete_klinkers/job_order/model/job_order.dart';
 import 'package:k2k/shared_preference/shared_preference.dart';
 
-class ProductRepository {
+class JobOrderRepository {
   Future<Map<String, String>> get headers async {
     final token = await fetchAccessToken();
     return {
@@ -14,18 +14,18 @@ class ProductRepository {
     };
   }
 
-  bool isAddProductLoading = false;
-  ProductModel? _lastCreatedProduct;
-  ProductModel? get lastCreatedProduct => _lastCreatedProduct;
+  bool isAddJobOrderLoading = false;
+  JobOrderModel? _lastCreatedJobOrder;
+  JobOrderModel? get lastCreatedJobOrder => _lastCreatedJobOrder;
 
-  Future<ProductResponse> getAllProduct({
+  Future<JobOrderResponse> getAllJobOrder({
     int page = 1,
     int limit = 10,
     String? search,
   }) async {
     try {
       final authHeaders = await headers;
-      final uri = Uri.parse(AppUrl.fetchproductDetailsUrl).replace(
+      final uri = Uri.parse(AppUrl.getjoborder).replace(
         queryParameters: {
           'page': page.toString(),
           'limit': limit.toString(),
@@ -42,7 +42,7 @@ class ProductRepository {
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         if (jsonData is Map<String, dynamic>) {
-          return ProductResponse.fromJson(jsonData);
+          return JobOrderResponse.fromJson(jsonData);
         } else {
           throw Exception(
             'Unexpected response structure: ${jsonData.runtimeType}',
@@ -50,7 +50,7 @@ class ProductRepository {
         }
       } else {
         throw Exception(
-          'Failed to load Product: ${response.statusCode} - ${response.body}',
+          'Failed to load JobOrder: ${response.statusCode} - ${response.body}',
         );
       }
     } on SocketException catch (e) {
@@ -60,43 +60,43 @@ class ProductRepository {
     } on FormatException catch (e) {
       throw Exception('Invalid response format: $e');
     } catch (e) {
-      throw Exception('Unexpected error loading Product: $e');
+      throw Exception('Unexpected error loading JobOrder: $e');
     }
   }
 
-  Future<ProductModel?> getProduct(String productId) async {
+  Future<JobOrderModel?> getJobOrder(String jobOrderId) async {
     try {
       final authHeaders = await headers;
-      final uri = Uri.parse('${AppUrl.fetchproductDetailsUrl}/$productId');
+      final uri = Uri.parse('${AppUrl.getjoborder}/$jobOrderId');
 
       final response = await http
           .get(uri, headers: authHeaders)
           .timeout(const Duration(seconds: 30));
 
-      print('Raw Product Response: ${response.body}');
+      print('Raw JobOrder Response: ${response.body}');
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-        final productData = (jsonData is Map<String, dynamic>)
+        final jobOrderData = (jsonData is Map<String, dynamic>)
             ? jsonData['data'] ?? jsonData
             : jsonData;
 
-        return ProductModel.fromJson(productData);
+        return JobOrderModel.fromJson(jobOrderData);
       } else if (response.statusCode == 404) {
         return null;
       } else {
         throw Exception(
-          'Failed to load Product: ${response.statusCode} - ${response.body}',
+          'Failed to load JobOrder: ${response.statusCode} - ${response.body}',
         );
       }
     } on SocketException catch (e) {
       throw Exception('No internet connection: $e');
     } catch (e) {
-      throw Exception('Unexpected error loading Product: $e');
+      throw Exception('Unexpected error loading JobOrder: $e');
     }
   }
 
-  Future<ProductModel> createProduct({
+  Future<JobOrderModel> createJobOrder({
     required String plantId,
     required String materialCode,
     required String description,
@@ -105,10 +105,10 @@ class ProductRepository {
     required int noOfPiecesPerPunch,
     required int qtyInBundle,
   }) async {
-    isAddProductLoading = true;
+    isAddJobOrderLoading = true;
     try {
       final authHeaders = await headers;
-      final url = AppUrl.createproductUrl;
+      final url = AppUrl.createJoborder;
       final Map<String, dynamic> body = {
         "plant": plantId,
         "material_code": materialCode,
@@ -123,20 +123,20 @@ class ProductRepository {
           .post(Uri.parse(url), headers: authHeaders, body: json.encode(body))
           .timeout(const Duration(seconds: 30));
 
-      print('Create Product Response: ${response.body}');
+      print('Create JobOrder Response: ${response.body}');
 
       if (response.statusCode == 201) {
         final responseData = json.decode(response.body);
-        final productData = (responseData is Map<String, dynamic>)
+        final JobOrderData = (responseData is Map<String, dynamic>)
             ? responseData['data'] ?? responseData
             : responseData;
 
-        final createdProduct = ProductModel.fromJson(productData);
-        _lastCreatedProduct = createdProduct;
-        return createdProduct;
+        final createdJobOrder = JobOrderModel.fromJson(JobOrderData);
+        _lastCreatedJobOrder = createdJobOrder;
+        return createdJobOrder;
       } else {
         throw Exception(
-          'Failed to create Product: ${response.statusCode} - ${response.body}',
+          'Failed to create JobOrder: ${response.statusCode} - ${response.body}',
         );
       }
     } on SocketException catch (e) {
@@ -146,14 +146,14 @@ class ProductRepository {
     } on FormatException catch (e) {
       throw Exception('Invalid response format: $e');
     } catch (e) {
-      throw Exception('Unexpected error creating Product: $e');
+      throw Exception('Unexpected error creating JobOrder: $e');
     } finally {
-      isAddProductLoading = false;
+      isAddJobOrderLoading = false;
     }
   }
 
-  Future<bool> updateProduct({
-    required String productId,
+  Future<bool> updateJobOrder({
+    required String jobOrderId,
     required String plantId,
     required String materialCode,
     required String description,
@@ -164,7 +164,7 @@ class ProductRepository {
   }) async {
     try {
       final authHeaders = await headers;
-      final updateUrl = '${AppUrl.updateproductDetailsUrl}/$productId';
+      final updateUrl = '${AppUrl.updatejoborder}/$jobOrderId';
 
       final Map<String, dynamic> body = {
         "plant": plantId,
@@ -188,27 +188,27 @@ class ProductRepository {
         return true;
       } else {
         throw Exception(
-          'Failed to update Product: ${response.statusCode} - ${response.body}',
+          'Failed to update JobOrder: ${response.statusCode} - ${response.body}',
         );
       }
     } on SocketException catch (e) {
       throw Exception('No internet connection: $e');
     } catch (e) {
-      throw Exception('Unexpected error updating Product: $e');
+      throw Exception('Unexpected error updating JobOrder: $e');
     }
   }
 
-  Future<bool> deleteProduct(String productId) async {
+  Future<bool> deleteJobOrder(String jobOrderId) async {
     try {
       final authHeaders = await headers;
-      final deleteUrl = AppUrl.deleteproductDetailsUrl;
+      final deleteUrl = AppUrl.deleteJobOrder;
 
       final response = await http
           .delete(
             Uri.parse(deleteUrl),
             headers: authHeaders,
             body: jsonEncode({
-              "ids": [productId],
+              "ids": [jobOrderId],
             }),
           )
           .timeout(const Duration(seconds: 30));
@@ -217,13 +217,13 @@ class ProductRepository {
         return true;
       } else {
         throw Exception(
-          'Failed to delete Product: ${response.statusCode} - ${response.body}',
+          'Failed to delete JobOrder: ${response.statusCode} - ${response.body}',
         );
       }
     } on SocketException catch (e) {
       throw Exception('No internet connection: $e');
     } catch (e) {
-      throw Exception('Unexpected error deleting Product: $e');
+      throw Exception('Unexpected error deleting JobOrder: $e');
     }
   }
 }

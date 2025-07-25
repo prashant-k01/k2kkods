@@ -143,7 +143,7 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
         MenuItem(
           title: 'Job Order/Planning',
           icon: Icons.shopping_bag_outlined,
-          route: '/productexplore',
+          route: RouteNames.jobOrder,
         ),
         MenuItem(
           title: 'Production',
