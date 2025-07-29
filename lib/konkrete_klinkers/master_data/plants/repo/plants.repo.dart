@@ -38,7 +38,9 @@ class PlantRepository {
       final response = await http
           .get(uri, headers: authHeaders)
           .timeout(const Duration(seconds: 30));
-      print('Response status: ${response.statusCode}, body: ${response.body}'); // Debug
+      print(
+        'Response status: ${response.statusCode}, body: ${response.body}',
+      ); // Debug
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
@@ -71,7 +73,7 @@ class PlantRepository {
             .where((item) => item is Map<String, dynamic>)
             .cast<Map<String, dynamic>>()
             .map((plantJson) {
-              print('Parsing plant: $plantJson'); // Debug
+              print('Parsing plant: $plantJson');
               try {
                 return PlantModel.fromJson(plantJson);
               } catch (e) {
@@ -84,7 +86,9 @@ class PlantRepository {
         print('Parsed plants: ${plants.length}'); // Debug
         return plants;
       } else {
-        throw Exception('Failed to load plants: ${response.statusCode} - ${response.body}');
+        throw Exception(
+          'Failed to load plants: ${response.statusCode} - ${response.body}',
+        );
       }
     } on SocketException catch (e) {
       throw Exception('No internet connection: $e');

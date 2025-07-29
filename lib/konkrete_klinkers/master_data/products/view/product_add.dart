@@ -39,17 +39,14 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
   @override
   void initState() {
     super.initState();
-    // Load plants for dropdown when the screen initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final plantProvider = Provider.of<PlantProvider>(context, listen: false);
       plantProvider.loadAllPlantsForDropdown();
     });
   }
 
-  // Function to parse dimensions and calculate area in square meters
   double? _calculateArea(String description) {
     try {
-      // Extract dimensions using regex (e.g., 600X300X100MM)
       final RegExp dimensionRegex = RegExp(
         r'(\d+)X(\d+)X(\d+)MM',
         caseSensitive: false,
@@ -59,7 +56,6 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
       if (match != null) {
         final length = double.parse(match.group(1)!);
         final width = double.parse(match.group(2)!);
-        // Convert mm to meters and calculate area
         return (length / 1000) * (width / 1000);
       }
       return null;

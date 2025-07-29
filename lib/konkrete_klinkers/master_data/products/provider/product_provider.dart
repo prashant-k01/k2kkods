@@ -124,48 +124,48 @@ class ProductProvider with ChangeNotifier {
     }
   }
 
-  Future<void> loadAllProducts({bool refresh = false}) async {
-    if (_isLoading || (!_hasMore && !refresh)) return;
+Future<void> loadAllProducts({bool refresh = false}) async {
+  if (_isLoading || (!_hasMore && !refresh)) return;
 
-    _isLoading = true;
-    if (refresh) {
-      _error = null;
-    }
-    notifyListeners();
-
-    try {
-      final response = await _repository.getAllProduct(
-        search: _searchQuery.isNotEmpty ? _searchQuery : null,
-      );
-
-      if (refresh) {
-        _products.clear();
-        _hasMore = true;
-      }
-
-      if (response.success && response.data.isNotEmpty) {
-        _products.addAll(response.data);
-        _hasMore = response.data.length >= 10; // Adjust based on backend response
-        _error = null;
-      } else if (!response.success) {
-        _error = response.message.isNotEmpty ? response.message : 'Failed to load products';
-      } else if (response.data.isEmpty && _products.isEmpty) {
-        _hasMore = false;
-        _error = null;
-      } else {
-        _hasMore = false;
-      }
-    } catch (e) {
-      _error = _getErrorMessage(e);
-      if (refresh) {
-        _products.clear();
-      }
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+  _isLoading = true;
+  if (refresh) {
+    _products.clear();
+    _hasMore = true;
+    _error = null;
   }
+  notifyListeners();
 
+  try {
+    final response = await _repository.getAllProduct(
+      search: _searchQuery.isNotEmpty ? _searchQuery : null,
+    );
+
+    if (refresh) {
+      _products.clear();
+    }
+
+    if (response.success && response.data.isNotEmpty) {
+      _products.addAll(response.data);
+      // Assume page size is 10; if fewer items are returned, no more data exists
+      _hasMore = response.data.length == 10; // Adjust based on backend page size
+      _error = null;
+    } else {
+      _hasMore = false; // No data or empty response means no more data
+      _error = response.success
+          ? null
+          : (response.message.isNotEmpty ? response.message : 'Failed to load products');
+    }
+  } catch (e) {
+    _hasMore = false; // On error, assume no more data to prevent infinite retries
+    _error = _getErrorMessage(e);
+    if (refresh) {
+      _products.clear();
+    }
+  } finally {
+    _isLoading = false;
+    notifyListeners();
+  }
+}
   Future<void> searchProducts(String query) async {
     _searchQuery = query;
     _hasMore = true;

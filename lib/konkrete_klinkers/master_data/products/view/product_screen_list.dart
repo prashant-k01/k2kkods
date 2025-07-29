@@ -49,15 +49,25 @@ class _ProductsListViewState extends State<ProductsListView> {
   }
 
   void _setupScrollListener() {
-    _scrollController.addListener(() async {
+    _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
               _scrollController.position.maxScrollExtent * 0.9 &&
           !context.read<ProductProvider>().isLoading &&
           context.read<ProductProvider>().hasMore &&
           !_isScrollLoading) {
+        print('Triggering load more products...');
         _isScrollLoading = true;
-        await context.read<ProductProvider>().loadAllProducts();
-        _isScrollLoading = false;
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          try {
+            await context.read<ProductProvider>().loadAllProducts();
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed to load products: $e')),
+            );
+          } finally {
+            _isScrollLoading = false;
+          }
+        });
       }
     });
   }
@@ -119,12 +129,18 @@ class _ProductsListViewState extends State<ProductsListView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            materialCode,
-                            style: TextStyle(
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF334155),
+                          RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: materialCode,
+                                  style: TextStyle(
+                                    fontSize: 18.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF334155),
+                                  ),
+                                ),
+                              ],
                             ),
                             overflow: TextOverflow.ellipsis,
                             maxLines: 1,
@@ -136,15 +152,15 @@ class _ProductsListViewState extends State<ProductsListView> {
                                 TextSpan(
                                   text: 'Plant: ',
                                   style: TextStyle(
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w500,
+                                    fontSize: 16.sp,
+
                                     color: const Color(0xFF334155),
                                   ),
                                 ),
                                 TextSpan(
                                   text: plantName,
                                   style: TextStyle(
-                                    fontSize: 14.sp,
+                                    fontSize: 16.sp,
                                     fontWeight: FontWeight.w700,
                                     color: const Color(0xFF3B82F6),
                                   ),
@@ -160,7 +176,7 @@ class _ProductsListViewState extends State<ProductsListView> {
                     PopupMenuButton<String>(
                       icon: Icon(
                         Icons.more_vert,
-                        size: 20.sp,
+                        size: 22.sp, // Increased slightly
                         color: const Color(0xFF64748B),
                       ),
                       onSelected: (value) {
@@ -181,14 +197,14 @@ class _ProductsListViewState extends State<ProductsListView> {
                             children: [
                               Icon(
                                 Icons.edit_outlined,
-                                size: 18.sp,
+                                size: 20.sp, // Increased slightly
                                 color: const Color(0xFFF59E0B),
                               ),
                               SizedBox(width: 8.w),
                               Text(
                                 'Edit',
                                 style: TextStyle(
-                                  fontSize: 14.sp,
+                                  fontSize: 16.sp, // Increased from 14.sp
                                   color: const Color(0xFF334155),
                                 ),
                               ),
@@ -201,14 +217,14 @@ class _ProductsListViewState extends State<ProductsListView> {
                             children: [
                               Icon(
                                 Icons.delete_outline,
-                                size: 18.sp,
+                                size: 20.sp, // Increased slightly
                                 color: const Color(0xFFF43F5E),
                               ),
                               SizedBox(width: 8.w),
                               Text(
                                 'Delete',
                                 style: TextStyle(
-                                  fontSize: 14.sp,
+                                  fontSize: 16.sp, // Increased from 14.sp
                                   color: const Color(0xFF334155),
                                 ),
                               ),
@@ -224,7 +240,7 @@ class _ProductsListViewState extends State<ProductsListView> {
                   children: [
                     Icon(
                       Icons.person_outline,
-                      size: 14.sp,
+                      size: 16.sp, // Increased from 14.sp
                       color: const Color(0xFF64748B),
                     ),
                     SizedBox(width: 4.w),
@@ -232,7 +248,7 @@ class _ProductsListViewState extends State<ProductsListView> {
                       child: Text(
                         'Created by: $createdBy',
                         style: TextStyle(
-                          fontSize: 12.sp,
+                          fontSize: 14.sp, // Increased from 12.sp
                           color: const Color(0xFF64748B),
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -246,14 +262,14 @@ class _ProductsListViewState extends State<ProductsListView> {
                   children: [
                     Icon(
                       Icons.access_time_outlined,
-                      size: 14.sp,
+                      size: 16.sp, // Increased from 14.sp
                       color: const Color(0xFF64748B),
                     ),
                     SizedBox(width: 4.w),
                     Text(
                       'Created: ${_formatDateTime(createdAt)}',
                       style: TextStyle(
-                        fontSize: 12.sp,
+                        fontSize: 14.sp, // Increased from 12.sp
                         color: const Color(0xFF64748B),
                       ),
                     ),
@@ -274,7 +290,7 @@ class _ProductsListViewState extends State<ProductsListView> {
         Text(
           'Products',
           style: TextStyle(
-            fontSize: 18.sp,
+            fontSize: 20.sp, // Increased from 18.sp
             fontWeight: FontWeight.w600,
             color: const Color(0xFF334155),
           ),
@@ -287,7 +303,7 @@ class _ProductsListViewState extends State<ProductsListView> {
     return IconButton(
       icon: Icon(
         Icons.arrow_back_ios,
-        size: 24.sp,
+        size: 26.sp, // Increased from 24.sp
         color: const Color(0xFF334155),
       ),
       onPressed: () {
@@ -305,12 +321,16 @@ class _ProductsListViewState extends State<ProductsListView> {
         },
         child: Row(
           children: [
-            Icon(Icons.add, size: 20.sp, color: const Color(0xFF3B82F6)),
+            Icon(
+              Icons.add,
+              size: 22.sp,
+              color: const Color(0xFF3B82F6),
+            ), // Increased from 20.sp
             SizedBox(width: 4.w),
             Text(
               'Add Product',
               style: TextStyle(
-                fontSize: 16.sp,
+                fontSize: 18.sp, // Increased from 16.sp
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF3B82F6),
               ),
@@ -335,7 +355,7 @@ class _ProductsListViewState extends State<ProductsListView> {
           Text(
             'No Products Found',
             style: TextStyle(
-              fontSize: 18.sp,
+              fontSize: 20.sp, // Increased from 18.sp
               fontWeight: FontWeight.w600,
               color: const Color(0xFF334155),
             ),
@@ -343,7 +363,10 @@ class _ProductsListViewState extends State<ProductsListView> {
           SizedBox(height: 8.h),
           Text(
             'Tap the button below to add your first Product!',
-            style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
+            style: TextStyle(
+              fontSize: 16.sp, // Increased from 14.sp
+              color: const Color(0xFF64748B),
+            ),
           ),
           SizedBox(height: 16.h),
         ],
@@ -367,7 +390,7 @@ class _ProductsListViewState extends State<ProductsListView> {
             Text(
               'Error Loading Products',
               style: TextStyle(
-                fontSize: 18.sp,
+                fontSize: 20.sp, // Increased from 18.sp
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF334155),
               ),
@@ -377,7 +400,7 @@ class _ProductsListViewState extends State<ProductsListView> {
               'Unable to load products at this time. Please try again.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: 16.sp, // Increased from 14.sp
                 color: const Color(0xFF64748B),
               ),
             ),
@@ -410,7 +433,9 @@ class _ProductsListViewState extends State<ProductsListView> {
       body: Consumer<ProductProvider>(
         builder: (context, provider, child) {
           // Show shimmer loading when initially loading
-          if (provider.isLoading && provider.products.isEmpty && provider.error == null) {
+          if (provider.isLoading &&
+              provider.products.isEmpty &&
+              provider.error == null) {
             return ListView.builder(
               itemCount: 5,
               itemBuilder: (context, index) => buildShimmerCard(),
@@ -437,20 +462,26 @@ class _ProductsListViewState extends State<ProductsListView> {
             child: ListView.builder(
               controller: _scrollController,
               physics: const AlwaysScrollableScrollPhysics(),
-              itemCount: provider.products.length + (provider.hasMore && provider.isLoading ? 1 : 0),
+              itemCount:
+                  provider.products.length +
+                  (provider.hasMore && provider.isLoading ? 1 : 0),
               itemBuilder: (context, index) {
                 // Show loading indicator at the end
-                if (index == provider.products.length && provider.hasMore && provider.isLoading) {
+                if (index == provider.products.length &&
+                    provider.hasMore &&
+                    provider.isLoading) {
                   return const Center(
                     child: Padding(
                       padding: EdgeInsets.all(16.0),
                       child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF3B82F6)),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Color(0xFF3B82F6),
+                        ),
                       ),
                     ),
                   );
                 }
-                
+
                 // Build product card
                 return _buildProductCard(provider.products[index]);
               },
