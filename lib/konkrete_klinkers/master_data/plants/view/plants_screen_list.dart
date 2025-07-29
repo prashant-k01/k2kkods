@@ -20,18 +20,11 @@ class PlantsListView extends StatefulWidget {
 
 class _PlantsListViewState extends State<PlantsListView> {
   bool _isInitialized = false;
-  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _initializeData();
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
   }
 
   void _initializeData() async {
@@ -41,7 +34,7 @@ class _PlantsListViewState extends State<PlantsListView> {
         if (mounted) {
           final provider = context.read<PlantProvider>();
           if (provider.plants.isEmpty && provider.error == null) {
-            provider.loadAllPlants();
+            provider.loadPlants();
           }
         }
       });
@@ -57,111 +50,31 @@ class _PlantsListViewState extends State<PlantsListView> {
     }
   }
 
-  String _formatDateTime(DateTime dateTime) {
+  String _formatDateTime(DateTime? dateTime) {
+    if (dateTime == null) return 'N/A';
     return '${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year}';
   }
 
   String _getCreatedBy(dynamic createdBy) {
     if (createdBy is Map<String, dynamic>) {
-      return createdBy['username'] ?? 'Unknown';
+      return createdBy['username']?.toString() ?? 'Unknown';
     }
     return createdBy?.toString() ?? 'Unknown';
   }
 
-  Widget _buildPaginationInfo() {
-    return Consumer<PlantProvider>(
-      builder: (context, provider, child) {
-        if (provider.totalItems == 0 || provider.totalPages == 1) {
-          return const SizedBox.shrink();
-        }
-
-        return Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(16.r),
-                topRight: Radius.circular(16.r),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 12.r,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildNavButton(
-                  icon: Icons.arrow_back_ios,
-                  onPressed: provider.hasPreviousPage
-                      ? () => provider.previousPage()
-                      : null,
-                  tooltip: 'Previous Page',
-                ),
-                Text(
-                  '${provider.currentPage}/${provider.totalPages}',
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF334155),
-                  ),
-                ),
-                _buildNavButton(
-                  icon: Icons.arrow_forward_ios,
-                  onPressed: provider.hasNextPage
-                      ? () => provider.nextPage()
-                      : null,
-                  tooltip: 'Next Page',
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildNavButton({
-    required IconData icon,
-    required VoidCallback? onPressed,
-    required String tooltip,
-  }) {
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(12.r),
-      child: Container(
-        padding: EdgeInsets.all(12.w),
-        decoration: BoxDecoration(
-          color: onPressed != null
-              ? const Color(0xFF3B82F6)
-              : const Color(0xFFCBD5E1),
-          borderRadius: BorderRadius.circular(12.r),
-        ),
-        child: Icon(icon, size: 24.sp, color: Colors.white),
-      ),
-    );
-  }
-
   Widget _buildPlantCard(dynamic plant) {
     final plantData = plant is Map<String, dynamic> ? plant : plant.toJson();
-    final plantId = plantData['_id'] ?? plantData['id'] ?? '';
+    final plantId = plantData['_id']?.toString() ?? plantData['id']?.toString() ?? '';
     final plantName =
-        plantData['plant_name'] ?? plantData['plantName'] ?? 'Unknown Plant';
+        plantData['plant_name']?.toString() ?? plantData['plantName']?.toString() ?? 'Unknown Plant';
     final plantCode =
-        plantData['plant_code'] ?? plantData['plantCode'] ?? 'N/A';
+        plantData['plant_code']?.toString() ?? plantData['plantCode']?.toString() ?? 'N/A';
     final createdBy = _getCreatedBy(
       plantData['created_by'] ?? plantData['createdBy'],
     );
     final createdAt = plantData['createdAt'] != null
-        ? DateTime.tryParse(plantData['createdAt'].toString()) ?? DateTime.now()
-        : DateTime.now();
+        ? DateTime.tryParse(plantData['createdAt'].toString())
+        : null;
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
@@ -430,102 +343,86 @@ class _PlantsListViewState extends State<PlantsListView> {
         leading: _buildBackButton(),
         action: [_buildActionButtons()],
       ),
-
-      body: Stack(
-        children: [
-          Consumer<PlantProvider>(
-            builder: (context, provider, child) {
-              if (provider.error != null) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 64.sp,
-                        color: const Color(0xFFF43F5E),
-                      ),
-                      SizedBox(height: 16.h),
-                      Text(
-                        'Error Loading Plants',
-                        style: TextStyle(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF334155),
-                        ),
-                      ),
-                      SizedBox(height: 8.h),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 24.w),
-                        child: Text(
-                          provider.error!,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            color: const Color(0xFF64748B),
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 16.h),
-                      RefreshButton(
-                        text: 'Retry',
-                        icon: Icons.refresh,
-                        onTap: () {
-                          provider.clearError();
-                          provider.loadAllPlants(refresh: true);
-                        },
-                      ),
-                    ],
+      body: Consumer<PlantProvider>(
+        builder: (context, provider, child) {
+          if (provider.error != null && provider.plants.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64.sp,
+                    color: const Color(0xFFF43F5E),
                   ),
-                );
-              }
-
-              return GestureDetector(
-                onHorizontalDragEnd: (details) {
-                  if (details.primaryVelocity! > 0 &&
-                      provider.hasPreviousPage) {
-                    provider.previousPage();
-                  } else if (details.primaryVelocity! < 0 &&
-                      provider.hasNextPage) {
-                    provider.nextPage();
-                  }
-                },
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: RefreshIndicator(
-                        onRefresh: () async {
-                          await provider.loadAllPlants(refresh: true);
-                        },
-                        color: const Color(0xFF3B82F6),
-                        backgroundColor: Colors.white,
-                        child: provider.isLoading && provider.plants.isEmpty
-                            ? ListView.builder(
-                                itemCount: 5,
-                                itemBuilder: (context, index) =>
-                                    buildShimmerCard(),
-                              )
-                            : provider.plants.isEmpty
-                            ? _buildEmptyState()
-                            : ListView.builder(
-                                controller: _scrollController,
-                                padding: EdgeInsets.only(bottom: 80.h),
-                                itemCount: provider.plants.length,
-                                itemBuilder: (context, index) {
-                                  return _buildPlantCard(
-                                    provider.plants[index],
-                                  );
-                                },
-                              ),
+                  SizedBox(height: 16.h),
+                  Text(
+                    'Error Loading Plants',
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF334155),
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 24.w),
+                    child: Text(
+                      provider.error!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: const Color(0xFF64748B),
                       ),
                     ),
-                  ],
-                ),
-              );
+                  ),
+                  SizedBox(height: 16.h),
+                  RefreshButton(
+                    text: 'Retry',
+                    icon: Icons.refresh,
+                    onTap: () {
+                      provider.clearError();
+                      provider.loadPlants(refresh: true);
+                    },
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              await context.read<PlantProvider>().loadPlants(refresh: true);
             },
-          ),
-          _buildPaginationInfo(),
-        ],
+            color: const Color(0xFF3B82F6),
+            backgroundColor: Colors.white,
+            child: provider.isLoading && provider.plants.isEmpty
+                ? ListView.builder(
+                    itemCount: 5,
+                    itemBuilder: (context, index) => buildShimmerCard(),
+                  )
+                : provider.plants.isEmpty
+                    ? _buildEmptyState()
+                    : ListView.builder(
+                        padding: EdgeInsets.only(bottom: 80.h),
+                        itemCount: provider.plants.length + (provider.isLoading ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == provider.plants.length && provider.isLoading) {
+                            return const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(16.0),
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Color(0xFF3B82F6)),
+                                ),
+                              ),
+                            );
+                          }
+                          return _buildPlantCard(provider.plants[index]);
+                        },
+                      ),
+          );
+        },
       ),
     );
   }

@@ -21,11 +21,13 @@ class ProductsListView extends StatefulWidget {
 class _ProductsListViewState extends State<ProductsListView> {
   bool _isInitialized = false;
   final ScrollController _scrollController = ScrollController();
+  bool _isScrollLoading = false;
 
   @override
   void initState() {
     super.initState();
     _initializeData();
+    _setupScrollListener();
   }
 
   @override
@@ -34,152 +36,79 @@ class _ProductsListViewState extends State<ProductsListView> {
     super.dispose();
   }
 
-  void _initializeData() async {
+  void _initializeData() {
     if (!_isInitialized) {
       _isInitialized = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          final provider = context.read<ProductProvider>();
-          if (provider.products.isEmpty && provider.error == null) {
-            provider.loadAllProducts();
-          }
+        final provider = context.read<ProductProvider>();
+        if (provider.products.isEmpty && provider.error == null) {
+          provider.loadAllProducts();
         }
       });
     }
   }
 
- void _editProduct(String? productId) {
-  if (productId != null) {
-    context.goNamed(
-      RouteNames.productedit,
-      pathParameters: {'productId': productId}, // Fix: Use 'productId' instead of 'productedit'
-    );
+  void _setupScrollListener() {
+    _scrollController.addListener(() async {
+      if (_scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent * 0.9 &&
+          !context.read<ProductProvider>().isLoading &&
+          context.read<ProductProvider>().hasMore &&
+          !_isScrollLoading) {
+        _isScrollLoading = true;
+        await context.read<ProductProvider>().loadAllProducts();
+        _isScrollLoading = false;
+      }
+    });
   }
-}
+
+  void _editProduct(String? productId) {
+    if (productId != null) {
+      context.goNamed(
+        RouteNames.productedit,
+        pathParameters: {'productId': productId},
+      );
+    }
+  }
 
   String _formatDateTime(DateTime dateTime) {
     return '${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year}';
   }
 
-  Widget _buildPaginationInfo() {
-    return Consumer<ProductProvider>(
-      builder: (context, provider, child) {
-        if (provider.totalItems == 0 || provider.totalPages == 1) {
-          return const SizedBox.shrink();
-        }
-
-        return Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(16.r),
-                topRight: Radius.circular(16.r),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 12.r,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildNavButton(
-                  icon: Icons.arrow_back_ios,
-                  onPressed: provider.hasPreviousPage
-                      ? () => provider.previousPage()
-                      : null,
-                  tooltip: 'Previous Page',
-                ),
-                Text(
-                  '${provider.currentPage}/${provider.totalPages}',
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF334155),
-                  ),
-                ),
-                _buildNavButton(
-                  icon: Icons.arrow_forward_ios,
-                  onPressed: provider.hasNextPage
-                      ? () => provider.nextPage()
-                      : null,
-                  tooltip: 'Next Page',
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildNavButton({
-    required IconData icon,
-    required VoidCallback? onPressed,
-    required String tooltip,
-  }) {
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(12.r),
-      child: Container(
-        padding: EdgeInsets.all(12.w),
-        decoration: BoxDecoration(
-          color: onPressed != null
-              ? const Color(0xFF3B82F6)
-              : const Color(0xFFCBD5E1),
-          borderRadius: BorderRadius.circular(12.r),
-        ),
-        child: Icon(icon, size: 24.sp, color: Colors.white),
-      ),
-    );
-  }
-
-  Widget _buildProductCard(dynamic product) {
-    final ProductModel productModel = product is ProductModel
-        ? product
-        : ProductModel.fromJson(product is Map<String, dynamic> ? product : {});
-
-    final productId = productModel.id;
-    final materialCode = productModel.materialCode.isNotEmpty
-        ? productModel.materialCode
+  Widget _buildProductCard(ProductModel product) {
+    final productId = product.id;
+    final materialCode = product.materialCode.isNotEmpty
+        ? product.materialCode
         : 'Unknown Product';
-    final plantName = productModel.plant.plantName.isNotEmpty
-        ? productModel.plant.plantName
+    final plantName = product.plant.plantName.isNotEmpty
+        ? product.plant.plantName
         : 'N/A';
-    final createdBy = productModel.createdBy.username.isNotEmpty
-        ? productModel.createdBy.username
+    final createdBy = product.createdBy.username.isNotEmpty
+        ? product.createdBy.username
         : 'Unknown';
-    final createdAt = productModel.createdAt;
+    final createdAt = product.createdAt;
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
       child: Card(
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.r),
+          borderRadius: BorderRadius.circular(12.r),
         ),
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20.r),
+            borderRadius: BorderRadius.circular(12.r),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
           child: Padding(
-            padding: EdgeInsets.all(24.w),
+            padding: EdgeInsets.all(16.w),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -193,19 +122,21 @@ class _ProductsListViewState extends State<ProductsListView> {
                           Text(
                             materialCode,
                             style: TextStyle(
-                              fontSize: 18.sp,
+                              fontSize: 16.sp,
                               fontWeight: FontWeight.w600,
                               color: const Color(0xFF334155),
                             ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
-                          SizedBox(height: 8.h),
+                          SizedBox(height: 4.h),
                           RichText(
                             text: TextSpan(
                               children: [
                                 TextSpan(
-                                  text: 'Plant name: ',
+                                  text: 'Plant: ',
                                   style: TextStyle(
-                                    fontSize: 16.sp,
+                                    fontSize: 14.sp,
                                     fontWeight: FontWeight.w500,
                                     color: const Color(0xFF334155),
                                   ),
@@ -213,13 +144,15 @@ class _ProductsListViewState extends State<ProductsListView> {
                                 TextSpan(
                                   text: plantName,
                                   style: TextStyle(
-                                    fontSize: 16.sp,
+                                    fontSize: 14.sp,
                                     fontWeight: FontWeight.w700,
                                     color: const Color(0xFF3B82F6),
                                   ),
                                 ),
                               ],
                             ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                         ],
                       ),
@@ -227,7 +160,7 @@ class _ProductsListViewState extends State<ProductsListView> {
                     PopupMenuButton<String>(
                       icon: Icon(
                         Icons.more_vert,
-                        size: 24.sp,
+                        size: 20.sp,
                         color: const Color(0xFF64748B),
                       ),
                       onSelected: (value) {
@@ -248,7 +181,7 @@ class _ProductsListViewState extends State<ProductsListView> {
                             children: [
                               Icon(
                                 Icons.edit_outlined,
-                                size: 20.sp,
+                                size: 18.sp,
                                 color: const Color(0xFFF59E0B),
                               ),
                               SizedBox(width: 8.w),
@@ -268,7 +201,7 @@ class _ProductsListViewState extends State<ProductsListView> {
                             children: [
                               Icon(
                                 Icons.delete_outline,
-                                size: 20.sp,
+                                size: 18.sp,
                                 color: const Color(0xFFF43F5E),
                               ),
                               SizedBox(width: 8.w),
@@ -286,37 +219,41 @@ class _ProductsListViewState extends State<ProductsListView> {
                     ),
                   ],
                 ),
-                SizedBox(height: 16.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.person_outline,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Created by: $createdBy',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
-                ),
                 SizedBox(height: 8.h),
                 Row(
                   children: [
                     Icon(
-                      Icons.access_time_outlined,
-                      size: 16.sp,
+                      Icons.person_outline,
+                      size: 14.sp,
                       color: const Color(0xFF64748B),
                     ),
-                    SizedBox(width: 8.w),
+                    SizedBox(width: 4.w),
+                    Expanded(
+                      child: Text(
+                        'Created by: $createdBy',
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 4.h),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.access_time_outlined,
+                      size: 14.sp,
+                      color: const Color(0xFF64748B),
+                    ),
+                    SizedBox(width: 4.w),
                     Text(
                       'Created: ${_formatDateTime(createdAt)}',
                       style: TextStyle(
-                        fontSize: 14.sp,
+                        fontSize: 12.sp,
                         color: const Color(0xFF64748B),
                       ),
                     ),
@@ -409,12 +346,52 @@ class _ProductsListViewState extends State<ProductsListView> {
             style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
           ),
           SizedBox(height: 16.h),
-          // AddButton(
-          //   text: 'Add Product',
-          //   icon: Icons.add,
-          //   route: RouteNames.Productsadd,
-          // ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(ProductProvider provider) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 24.w),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64.sp,
+              color: const Color(0xFFF43F5E),
+            ),
+            SizedBox(height: 16.h),
+            Text(
+              'Error Loading Products',
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF334155),
+              ),
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              'Unable to load products at this time. Please try again.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+            SizedBox(height: 16.h),
+            RefreshButton(
+              text: 'Retry',
+              icon: Icons.refresh,
+              onTap: () {
+                provider.clearError();
+                provider.loadAllProducts(refresh: true);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -430,102 +407,56 @@ class _ProductsListViewState extends State<ProductsListView> {
         leading: _buildBackButton(),
         action: [_buildActionButtons()],
       ),
+      body: Consumer<ProductProvider>(
+        builder: (context, provider, child) {
+          // Show shimmer loading when initially loading
+          if (provider.isLoading && provider.products.isEmpty && provider.error == null) {
+            return ListView.builder(
+              itemCount: 5,
+              itemBuilder: (context, index) => buildShimmerCard(),
+            );
+          }
 
-      body: Stack(
-        children: [
-          Consumer<ProductProvider>(
-            builder: (context, provider, child) {
-              if (provider.error != null) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 64.sp,
-                        color: const Color(0xFFF43F5E),
-                      ),
-                      SizedBox(height: 16.h),
-                      Text(
-                        'Error Loading Products',
-                        style: TextStyle(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF334155),
-                        ),
-                      ),
-                      SizedBox(height: 8.h),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 24.w),
-                        child: Text(
-                          provider.error!,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            color: const Color(0xFF64748B),
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 16.h),
-                      RefreshButton(
-                        text: 'Retry',
-                        icon: Icons.refresh,
-                        onTap: () {
-                          provider.clearError();
-                          provider.loadAllProducts(refresh: true);
-                        },
-                      ),
-                    ],
-                  ),
-                );
-              }
+          // Show error state
+          if (provider.error != null) {
+            return _buildErrorState(provider);
+          }
 
-              return GestureDetector(
-                onHorizontalDragEnd: (details) {
-                  if (details.primaryVelocity! > 0 &&
-                      provider.hasPreviousPage) {
-                    provider.previousPage();
-                  } else if (details.primaryVelocity! < 0 &&
-                      provider.hasNextPage) {
-                    provider.nextPage();
-                  }
-                },
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: RefreshIndicator(
-                        onRefresh: () async {
-                          await provider.loadAllProducts(refresh: true);
-                        },
-                        color: const Color(0xFF3B82F6),
-                        backgroundColor: Colors.white,
-                        child: provider.isLoading && provider.products.isEmpty
-                            ? ListView.builder(
-                                itemCount: 5,
-                                itemBuilder: (context, index) =>
-                                    buildShimmerCard(),
-                              )
-                            : provider.products.isEmpty
-                            ? _buildEmptyState()
-                            : ListView.builder(
-                                controller: _scrollController,
-                                padding: EdgeInsets.only(bottom: 80.h),
-                                itemCount: provider.products.length,
-                                itemBuilder: (context, index) {
-                                  return _buildProductCard(
-                                    provider.products[index],
-                                  );
-                                },
-                              ),
+          // Show empty state
+          if (provider.products.isEmpty && !provider.isLoading) {
+            return _buildEmptyState();
+          }
+
+          // Show products list
+          return RefreshIndicator(
+            onRefresh: () async {
+              await provider.loadAllProducts(refresh: true);
+            },
+            color: const Color(0xFF3B82F6),
+            backgroundColor: Colors.white,
+            child: ListView.builder(
+              controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemCount: provider.products.length + (provider.hasMore && provider.isLoading ? 1 : 0),
+              itemBuilder: (context, index) {
+                // Show loading indicator at the end
+                if (index == provider.products.length && provider.hasMore && provider.isLoading) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF3B82F6)),
                       ),
                     ),
-                  ],
-                ),
-              );
-            },
-          ),
-          _buildPaginationInfo(),
-        ],
+                  );
+                }
+                
+                // Build product card
+                return _buildProductCard(provider.products[index]);
+              },
+            ),
+          );
+        },
       ),
     );
   }

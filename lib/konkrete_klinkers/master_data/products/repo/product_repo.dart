@@ -18,35 +18,38 @@ class ProductRepository {
   ProductModel? _lastCreatedProduct;
   ProductModel? get lastCreatedProduct => _lastCreatedProduct;
 
-  Future<ProductResponse> getAllProduct({
-    int page = 1,
-    int limit = 10,
-    String? search,
-  }) async {
+  Future<ProductResponse> getAllProduct({String? search}) async {
     try {
       final authHeaders = await headers;
       final uri = Uri.parse(AppUrl.fetchproductDetailsUrl).replace(
         queryParameters: {
-          'page': page.toString(),
-          'limit': limit.toString(),
           if (search != null && search.isNotEmpty) 'search': search,
         },
       );
 
       final response = await http
           .get(uri, headers: authHeaders)
-          .timeout(const Duration(seconds: 30));
+          .timeout(const Duration(seconds: 60));
 
+      print('API Status Code: ${response.statusCode}');
+      print('Response Length: ${response.body.length}');
+      print('Response Headers: ${response.headers}');
       print('Raw API Response: ${response.body}');
 
       if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        if (jsonData is Map<String, dynamic>) {
-          return ProductResponse.fromJson(jsonData);
-        } else {
-          throw Exception(
-            'Unexpected response structure: ${jsonData.runtimeType}',
-          );
+        try {
+          final jsonData = json.decode(response.body);
+          if (jsonData is Map<String, dynamic>) {
+            print('Parsed JSON Data: $jsonData');
+            return ProductResponse.fromJson(jsonData);
+          } else {
+            throw Exception(
+              'Unexpected response structure: ${jsonData.runtimeType}',
+            );
+          }
+        } on FormatException catch (e) {
+          print('JSON Parsing Error: $e');
+          throw Exception('Invalid response format: $e');
         }
       } else {
         throw Exception(
@@ -57,8 +60,6 @@ class ProductRepository {
       throw Exception('No internet connection: $e');
     } on HttpException catch (e) {
       throw Exception('Network error occurred: $e');
-    } on FormatException catch (e) {
-      throw Exception('Invalid response format: $e');
     } catch (e) {
       throw Exception('Unexpected error loading Product: $e');
     }

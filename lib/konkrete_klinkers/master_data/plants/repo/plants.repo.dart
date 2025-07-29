@@ -5,45 +5,6 @@ import 'package:k2k/api_services/api_services.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/model/plants_model.dart';
 import 'package:k2k/shared_preference/shared_preference.dart';
 
-class PaginationInfo {
-  final int total;
-  final int page;
-  final int limit;
-  final int totalPages;
-  final bool hasNextPage;
-  final bool hasPreviousPage;
-
-  PaginationInfo({
-    required this.total,
-    required this.page,
-    required this.limit,
-    required this.totalPages,
-    required this.hasNextPage,
-    required this.hasPreviousPage,
-  });
-
-  factory PaginationInfo.fromJson(Map<String, dynamic> json) {
-    final page = json['page'] ?? 1;
-    final totalPages = json['totalPages'] ?? 1;
-
-    return PaginationInfo(
-      total: json['total'] ?? 0,
-      page: page,
-      limit: json['limit'] ?? 10,
-      totalPages: totalPages,
-      hasNextPage: page < totalPages,
-      hasPreviousPage: page > 1,
-    );
-  }
-}
-
-class PaginatedPlantsResponse {
-  final List<PlantModel> plants;
-  final PaginationInfo pagination;
-
-  PaginatedPlantsResponse({required this.plants, required this.pagination});
-}
-
 class PlantRepository {
   Future<Map<String, String>> get headers async {
     final token = await fetchAccessToken();
@@ -57,66 +18,84 @@ class PlantRepository {
   PlantModel? _lastCreatedPlant;
   PlantModel? get lastCreatedPlant => _lastCreatedPlant;
 
-  Future<PaginatedPlantsResponse> getAllPlants({
-  int page = 1,
-  int limit = 10,
-  String? search,
-}) async {
-  try {
-    final authHeaders = await headers;
-    print('Headers: $authHeaders'); // Debug
-    final uri = Uri.parse(AppUrl.allPlantsUrl).replace(
-      queryParameters: {
-        'page': page.toString(),
-        'limit': limit.toString(),
-        if (search != null && search.isNotEmpty) 'search': search,
-      },
-    );
-    print('Request URL: $uri'); // Debug
-
-    final response = await http
-        .get(uri, headers: authHeaders)
-        .timeout(const Duration(seconds: 30));
-    print('Response status: ${response.statusCode}, body: ${response.body}'); // Debug
-
-    if (response.statusCode == 200) {
-      final jsonData = json.decode(response.body);
-      print('Decoded JSON: $jsonData'); 
-      List<dynamic> plantsJson = [];
-      PaginationInfo paginationInfo;
-
-      if (jsonData is Map<String, dynamic> && jsonData.containsKey('data')) {
-        final data = jsonData['data'];
-        print('Data: $data'); 
-        paginationInfo = PaginationInfo.fromJson(data['pagination'] ?? {});
-        plantsJson = (data['plants'] as List?) ?? [];
-        print('Plants JSON: $plantsJson'); // Debug
-      } else {
-        throw Exception('Unexpected response structure: ${jsonData.runtimeType}');
-      }
-
-      final plants = plantsJson
-          .where((item) => item is Map<String, dynamic>)
-          .cast<Map<String, dynamic>>()
-          .map((plantJson) {
-            print('Parsing plant: $plantJson'); // Debug
-            return PlantModel.fromJson(plantJson);
-          })
-          .toList();
-
-      print('Parsed plants: ${plants.length}'); // Debug
-      return PaginatedPlantsResponse(
-        plants: plants,
-        pagination: paginationInfo,
+  Future<List<PlantModel>> getPlants({
+    required int skip,
+    required int limit,
+    String? search,
+  }) async {
+    try {
+      final authHeaders = await headers;
+      print('Headers: $authHeaders'); // Debug
+      final uri = Uri.parse(AppUrl.allPlantsUrl).replace(
+        queryParameters: {
+          'skip': skip.toString(),
+          'limit': limit.toString(),
+          if (search != null && search.isNotEmpty) 'search': search,
+        },
       );
-    } else {
-      throw Exception('Failed to load plants: ${response.statusCode} - ${response.body}');
+      print('Request URL: $uri'); // Debug
+
+      final response = await http
+          .get(uri, headers: authHeaders)
+          .timeout(const Duration(seconds: 30));
+      print('Response status: ${response.statusCode}, body: ${response.body}'); // Debug
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        print('Decoded JSON: $jsonData'); // Debug
+        List<dynamic> plantsJson;
+
+        // Handle various response structures
+        if (jsonData is Map<String, dynamic>) {
+          if (jsonData.containsKey('data')) {
+            final data = jsonData['data'];
+            if (data is List) {
+              plantsJson = data;
+            } else if (data is Map<String, dynamic>) {
+              plantsJson = data['plants'] ?? data['items'] ?? [];
+            } else {
+              throw Exception('Unexpected data structure: ${data.runtimeType}');
+            }
+          } else if (jsonData.containsKey('plants')) {
+            plantsJson = jsonData['plants'] ?? [];
+          } else {
+            throw Exception('Response missing expected keys: $jsonData');
+          }
+        } else if (jsonData is List) {
+          plantsJson = jsonData;
+        } else {
+          throw Exception('Unexpected response type: ${jsonData.runtimeType}');
+        }
+
+        final plants = plantsJson
+            .where((item) => item is Map<String, dynamic>)
+            .cast<Map<String, dynamic>>()
+            .map((plantJson) {
+              print('Parsing plant: $plantJson'); // Debug
+              try {
+                return PlantModel.fromJson(plantJson);
+              } catch (e) {
+                print('Error parsing plant: $e, JSON: $plantJson');
+                rethrow;
+              }
+            })
+            .toList();
+
+        print('Parsed plants: ${plants.length}'); // Debug
+        return plants;
+      } else {
+        throw Exception('Failed to load plants: ${response.statusCode} - ${response.body}');
+      }
+    } on SocketException catch (e) {
+      throw Exception('No internet connection: $e');
+    } on FormatException catch (e) {
+      throw Exception('Invalid JSON format: $e');
+    } catch (e) {
+      print('Error in getPlants: $e'); // Debug
+      rethrow;
     }
-  } catch (e) {
-    print('Error in getAllPlants: $e'); // Debug
-    rethrow;
   }
-}
+
   Future<PlantModel?> getPlant(String plantId) async {
     try {
       final authHeaders = await headers;

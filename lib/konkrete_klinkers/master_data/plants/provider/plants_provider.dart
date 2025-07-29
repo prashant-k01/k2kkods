@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/model/plants_model.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/repo/plants.repo.dart';
@@ -10,11 +12,8 @@ class PlantProvider with ChangeNotifier {
   bool _isLoading = false;
   bool _isAllPlantsLoading = false;
   String? _error;
-  int _currentPage = 1;
-  int _totalPages = 1;
-  int _totalItems = 0;
-  bool _hasNextPage = false;
-  bool _hasPreviousPage = false;
+  bool _hasMore = true;
+  int _skip = 0;
   final int _limit = 10;
   String _searchQuery = '';
 
@@ -32,48 +31,54 @@ class PlantProvider with ChangeNotifier {
   bool get isAddPlantLoading => _isAddPlantLoading;
   bool get isUpdatePlantLoading => _isUpdatePlantLoading;
   bool get isDeletePlantLoading => _isDeletePlantLoading;
-  int get currentPage => _currentPage;
-  int get totalPages => _totalPages;
-  int get totalItems => _totalItems;
-  bool get hasNextPage => _hasNextPage;
-  bool get hasPreviousPage => _hasPreviousPage;
-  int get limit => _limit;
+  bool get hasMore => _hasMore;
   String get searchQuery => _searchQuery;
 
-Future<void> loadAllPlants({bool refresh = false}) async {
-  if (refresh) {
-    _currentPage = 1;
-    _plants.clear();
-  }
+  Future<void> loadPlants({bool refresh = false}) async {
+    if (_isLoading || (!_hasMore && !refresh)) return;
 
-  _isLoading = true;
-  _error = null;
-  print('Starting loadAllPlants, refresh=$refresh, page=$_currentPage'); // Debug
-  notifyListeners();
+    if (refresh) {
+      _skip = 0;
+      _plants.clear();
+      _hasMore = true;
+    } else {
+      _skip += _limit;
+    }
 
-  try {
-    print('Fetching plants: page=$_currentPage, limit=$_limit, search=$_searchQuery');
-    final response = await _repository.getAllPlants(
-      page: _currentPage,
-      limit: _limit,
-      search: _searchQuery.isNotEmpty ? _searchQuery : null,
-    );
-
-    _plants = response.plants;
-    _updatePaginationInfo(response.pagination);
+    _isLoading = true;
     _error = null;
-    print('Loaded ${_plants.length} plants: ${response.plants.map((p) => p.plantName).toList()}');
-  } catch (e) {
-    _error = _getErrorMessage(e);
-    _plants.clear();
-    print('Error in loadAllPlants: $e');
-  } finally {
-    _isLoading = false;
-    print('Finished loadAllPlants, isLoading=$_isLoading, error=$_error');
+    print('Starting loadPlants, refresh=$refresh, skip=$_skip');
     notifyListeners();
+
+    try {
+      print('Fetching plants: skip=$_skip, limit=$_limit, search=$_searchQuery');
+      final newPlants = await _repository.getPlants(
+        skip: _skip,
+        limit: _limit,
+        search: _searchQuery.isNotEmpty ? _searchQuery : null,
+      );
+
+      if (refresh) {
+        _plants = newPlants;
+      } else {
+        _plants.addAll(newPlants);
+      }
+
+      _hasMore = newPlants.length >= _limit;
+      _error = null;
+      print('Loaded ${newPlants.length} plants, total: ${_plants.length}, hasMore: $_hasMore');
+    } catch (e) {
+      _error = _getErrorMessage(e);
+      print('Error in loadPlants: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
-} // Load all plants for dropdown without pagination
+
   Future<void> loadAllPlantsForDropdown({bool refresh = false}) async {
+    if (_isAllPlantsLoading) return;
+
     if (refresh) {
       _allPlants.clear();
     }
@@ -84,27 +89,14 @@ Future<void> loadAllPlants({bool refresh = false}) async {
 
     try {
       print('Loading all plants for dropdown');
-
-      // Fetch all plants with a high limit to avoid pagination
-      final response = await _repository.getAllPlants(
-        page: 1,
-        limit: 100, // High limit to fetch all plants in one request
+      final plants = await _repository.getPlants(
+        skip: 0,
+        limit: 100,
         search: _searchQuery.isNotEmpty ? _searchQuery : null,
       );
 
-      _allPlants = response.plants;
-      _updatePaginationInfo(response.pagination);
-
-      print(
-        'Loaded ${_allPlants.length} plants for dropdown, PlantNames: ${_allPlants.map((p) => p.plantName).toList()}',
-      );
-
-      // Validate total items
-      if (_allPlants.length != response.pagination.total) {
-        print(
-          'Warning: Loaded ${_allPlants.length} plants, but pagination indicates ${response.pagination.total} total items',
-        );
-      }
+      _allPlants = plants;
+      print('Loaded ${_allPlants.length} plants for dropdown');
     } catch (e) {
       _error = _getErrorMessage(e);
       _allPlants.clear();
@@ -115,92 +107,18 @@ Future<void> loadAllPlants({bool refresh = false}) async {
     }
   }
 
-  // Load specific page
-  Future<void> loadPage(int page) async {
-    if (page < 1 || page > _totalPages || page == _currentPage) {
-      print(
-        'Invalid page request: page=$page, currentPage=$_currentPage, totalPages=$_totalPages',
-      );
-      return;
-    }
-
-    _currentPage = page;
-    await loadAllPlants();
-  }
-
-  // Go to next page
-  Future<void> nextPage() async {
-    if (!_hasNextPage) {
-      print('No next page available');
-      return;
-    }
-    print('Navigating to next page: ${_currentPage + 1}');
-    await loadPage(_currentPage + 1);
-  }
-
-  // Go to previous page
-  Future<void> previousPage() async {
-    if (!_hasPreviousPage) {
-      print('No previous page available');
-      return;
-    }
-    print('Navigating to previous page: ${_currentPage - 1}');
-    await loadPage(_currentPage - 1);
-  }
-
-  // Go to first page
-  Future<void> firstPage() async {
-    print('Navigating to first page');
-    await loadPage(1);
-  }
-
-  // Go to last page
-  Future<void> lastPage() async {
-    print('Navigating to last page: $_totalPages');
-    await loadPage(_totalPages);
-  }
-
-  // Search plants
-  Future<void> searchPlants(String query) async {
-    _searchQuery = query;
-    _currentPage = 1;
-    print('Searching plants with query: $query');
-    await loadAllPlants();
-  }
-
-  // Clear search
-  Future<void> clearSearch() async {
-    _searchQuery = '';
-    _currentPage = 1;
-    print('Clearing search query');
-    await loadAllPlants();
-  }
-
-  // Update pagination info
-  void _updatePaginationInfo(PaginationInfo pagination) {
-    _totalPages = pagination.totalPages;
-    _totalItems = pagination.total;
-    _currentPage = pagination.page;
-    _hasNextPage = pagination.hasNextPage;
-    _hasPreviousPage = pagination.hasPreviousPage;
-    print(
-      'Pagination updated: page=$_currentPage, totalPages=$_totalPages, totalItems=$_totalItems, hasNextPage=$_hasNextPage, hasPreviousPage=$_hasPreviousPage',
-    );
-    notifyListeners();
-  }
-
   Future<bool> createPlant(String plantCode, String plantName) async {
     _isAddPlantLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      print('Creating plant: code=$plantCode, name=$plantName');
+      print('Creating plant: $plantCode, $plantName');
       final newPlant = await _repository.createPlant(plantCode, plantName);
 
       if (newPlant.id.isNotEmpty) {
-        _currentPage = 1;
-        await loadAllPlants();
+        _skip = 0;
+        await loadPlants(refresh: true);
         await loadAllPlantsForDropdown(refresh: true);
         return true;
       } else {
@@ -227,7 +145,7 @@ Future<void> loadAllPlants({bool refresh = false}) async {
     notifyListeners();
 
     try {
-      print('Updating plant: id=$plantId, code=$plantCode, name=$plantName');
+      print('Updating plant: $plantId, $plantCode, $plantName');
       final success = await _repository.updatePlant(
         plantId,
         plantCode,
@@ -235,7 +153,7 @@ Future<void> loadAllPlants({bool refresh = false}) async {
       );
 
       if (success) {
-        await loadAllPlants();
+        await loadPlants(refresh: true);
         await loadAllPlantsForDropdown(refresh: true);
         return true;
       } else {
@@ -259,14 +177,11 @@ Future<void> loadAllPlants({bool refresh = false}) async {
     notifyListeners();
 
     try {
-      print('Deleting plant: id=$plantId');
+      print('Deleting plant: $plantId');
       final success = await _repository.deletePlant(plantId);
 
       if (success) {
-        if (_plants.length == 1 && _currentPage > 1) {
-          _currentPage--;
-        }
-        await loadAllPlants();
+        await loadPlants(refresh: true);
         await loadAllPlantsForDropdown(refresh: true);
         return true;
       } else {
@@ -287,10 +202,10 @@ Future<void> loadAllPlants({bool refresh = false}) async {
   Future<PlantModel?> getPlant(String plantId) async {
     try {
       _error = null;
-      print('Fetching plant: id=$plantId');
+      print('Fetching plant: $plantId');
       final plant = await _repository.getPlant(plantId);
       if (plant != null) {
-        print('Fetched plant: ${plant.plantName} (${plant.id})');
+        print('Loaded plant: ${plant.plantName}');
       } else {
         print('Plant $plantId not found');
       }
@@ -306,7 +221,7 @@ Future<void> loadAllPlants({bool refresh = false}) async {
     if (index >= 0 && index < _plants.length) {
       return _plants[index];
     }
-    print('Invalid index for getPlantByIndex: $index');
+    print('Invalid index: $index');
     return null;
   }
 
@@ -316,12 +231,35 @@ Future<void> loadAllPlants({bool refresh = false}) async {
     print('Error cleared');
   }
 
+  Future<void> searchPlants(String query) async {
+    _searchQuery = query;
+    _skip = 0;
+    _hasMore = true;
+    print('Searching plants: $query');
+    await loadPlants(refresh: true);
+  }
+
+  Future<void> clearSearch() async {
+    _searchQuery = '';
+    _skip = 0;
+    _hasMore = true;
+    print('Clearing search');
+    await loadPlants(refresh: true);
+  }
+
   String _getErrorMessage(Object error) {
-    if (error is Exception) {
-      return error.toString();
+    if (error is SocketException) {
+      return 'No internet connection. Please check your network.';
+    } else if (error is HttpException) {
+      return 'Network error: $error';
+    } else if (error is FormatException) {
+      return 'Invalid response format. Please contact support.';
+    } else if (error is Exception) {
+      return error.toString().replaceFirst('Exception: ', '');
     } else if (error is String) {
       return error;
     } else {
-      return 'An unexpected error occurred';
-}}
+      return 'Unexpected error occurred.';
+    }
+  }
 }

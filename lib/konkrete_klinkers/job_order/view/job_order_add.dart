@@ -26,20 +26,46 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
     'work_order': FocusNode(),
     'sales_order_number': FocusNode(),
     'batch_number': FocusNode(),
-    'product': FocusNode(),
-    'machine_name': FocusNode(),
-    'planned_quantity': FocusNode(),
   };
-  bool _showAdditionalFields = false;
+  final List<Map<String, FocusNode>> _productFocusNodes = [];
+  List<Map<String, dynamic>> _products = [];
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize with one product section
+    _addProductSection();
+  }
 
   @override
   void dispose() {
     _scrollController.dispose();
     _focusNodes.forEach((_, node) => node.dispose());
+    for (var product in _productFocusNodes) {
+      product.forEach((_, node) => node.dispose());
+    }
     super.dispose();
   }
 
-  // Function to scroll to the focused text field
+  void _addProductSection() {
+    setState(() {
+      _products.add({});
+      _productFocusNodes.add({
+        'product': FocusNode(),
+        'machine_name': FocusNode(),
+        'planned_quantity': FocusNode(),
+      });
+    });
+  }
+
+  void _removeProductSection(int index) {
+    setState(() {
+      _products.removeAt(index);
+      _productFocusNodes[index].forEach((_, node) => node.dispose());
+      _productFocusNodes.removeAt(index);
+    });
+  }
+
   void _scrollToFocusedField(BuildContext context, FocusNode focusNode) {
     if (focusNode.hasFocus) {
       final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
@@ -70,9 +96,9 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
         behavior: HitTestBehavior.opaque,
         child: ListView.builder(
           controller: _scrollController,
-          padding: EdgeInsets.all(
-            24.w,
-          ).copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 24.h),
+          padding: EdgeInsets.all(24.w).copyWith(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
+          ),
           itemCount: 1,
           itemBuilder: (context, index) => _buildFormCard(context),
         ),
@@ -106,7 +132,7 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
             color: const Color(0xFF334155),
           ),
           onPressed: () {
-            context.go(RouteNames.jobOrder); // Adjust route as needed
+            context.go(RouteNames.jobOrder);
           },
         );
       },
@@ -151,11 +177,7 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
               labelText: 'Work Order',
               hintText: 'Select Work Order',
               prefixIcon: Icons.work,
-              options: [
-                'Work Order 1',
-                'Work Order 2',
-                'Work Order 3',
-              ], // Sample data
+              options: ['Work Order 1', 'Work Order 2', 'Work Order 3'],
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
               focusedBorderColor: const Color(0xFF3B82F6),
@@ -207,113 +229,155 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
             SizedBox(height: 18.h),
             CustomRangeDatePicker(
               name: 'date_range',
-              labelText: 'Date Range(from & to)',
-              hintText: 'Select Date Range(from & to)',
+              labelText: 'Date Range (from & to)',
+              hintText: 'Select Date Range (from & to)',
             ),
+            SizedBox(height: 24.h),
+            ..._products.asMap().entries.map((entry) {
+              final index = entry.key;
+              return _buildProductSection(context, index);
+            }).toList(),
             SizedBox(height: 18.h),
-            _buildAddFieldsButton(context),
-            if (_showAdditionalFields) ...[
-              SizedBox(height: 18.h),
-              CustomSearchableDropdownFormField(
-                name: 'product',
-                labelText: 'Product',
-                hintText: 'Select Product',
-                prefixIcon: Icons.inventory_2,
-                options: ['Product A', 'Product B', 'Product C'],
-                fillColor: const Color(0xFFF8FAFC),
-                borderColor: Colors.grey.shade300,
-                focusedBorderColor: const Color(0xFF3B82F6),
-                borderRadius: 12.r,
-                validators: [
-                  FormBuilderValidators.required(
-                    errorText: 'Please select a product',
-                  ),
-                ],
-              ),
-              SizedBox(height: 18.h),
-              CustomSearchableDropdownFormField(
-                name: 'machine_name',
-                labelText: 'Machine Name',
-                hintText: 'Select Machine Name',
-                prefixIcon: Icons.build,
-                options: ['Machine 1', 'Machine 2', 'Machine 3'], // Sample data
-                fillColor: const Color(0xFFF8FAFC),
-                borderColor: Colors.grey.shade300,
-                focusedBorderColor: const Color(0xFF3B82F6),
-                borderRadius: 12.r,
-                validators: [
-                  FormBuilderValidators.required(
-                    errorText: 'Please select a machine',
-                  ),
-                ],
-              ),
-              SizedBox(height: 18.h),
-              CustomDropdownFormField<String>(
-                name: 'uom',
-                labelText: 'UOM',
-                initialValue: 'Square Meter/No',
-                items: ['Square Meter/No', 'Meter/No']
-                    .map(
-                      (item) => DropdownMenuItem<String>(
-                        value: item,
-                        child: Text(item),
-                      ),
-                    )
-                    .toList(),
-                hintText: 'Select UOM',
-                prefixIcon: Icons.workspaces,
-                validators: [FormBuilderValidators.required()],
-                fillColor: const Color(0xFFF8FAFC),
-                borderColor: Colors.grey.shade300,
-                focusedBorderColor: const Color(0xFF3B82F6),
-                borderRadius: 12.r,
-              ),
-              SizedBox(height: 18.h),
-              CustomTextFormField(
-                name: 'planned_quantity',
-                keyboardType: TextInputType.number,
-                labelText: 'Planned Quantity',
-                hintText: 'Enter Planned Quantity',
-                focusNode: _focusNodes['planned_quantity'],
-                prefixIcon: Icons.numbers,
-                validators: [
-                  FormBuilderValidators.required(),
-                  FormBuilderValidators.numeric(),
-                  FormBuilderValidators.min(
-                    0,
-                    errorText: 'Quantity must be positive',
-                  ),
-                ],
-                fillColor: const Color(0xFFF8FAFC),
-                borderColor: Colors.grey.shade300,
-                focusedBorderColor: const Color(0xFF3B82F6),
-                borderRadius: 12.r,
-                onTap: () => _scrollToFocusedField(
-                  context,
-                  _focusNodes['planned_quantity']!,
-                ),
-              ),
-              SizedBox(height: 18.h),
-              ReusableDateFormField(
-                name: 'planned_date',
-                hintText: 'Schedule Date',
-                inputType: InputType.date,
-                fillColor: const Color(0xFFF8FAFC),
-                borderColor: Colors.grey.shade300,
-                focusedBorderColor: const Color(0xFF3B82F6),
-                borderRadius: 12.r,
-              ),
-
-              SizedBox(height: 40.h),
-              _buildSubmitButton(context),
-            ],
+            _buildAddProductButton(),
+            SizedBox(height: 40.h),
+            _buildSubmitButton(context),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildAddFieldsButton(BuildContext context) {
+  Widget _buildProductSection(BuildContext context, int index) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 24.h),
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Product ${index + 1}',
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF334155),
+                ),
+              ),
+              if (_products.length > 1)
+                IconButton(
+                  icon: Icon(
+                    Icons.delete_outline,
+                    size: 20.sp,
+                    color: const Color(0xFFF43F5E),
+                  ),
+                  onPressed: () => _removeProductSection(index),
+                  tooltip: 'Remove Product',
+                ),
+            ],
+          ),
+          SizedBox(height: 16.h),
+          CustomSearchableDropdownFormField(
+            name: 'product_$index',
+            labelText: 'Product',
+            hintText: 'Select Product',
+            prefixIcon: Icons.inventory_2,
+            options: ['Product A', 'Product B', 'Product C'],
+            fillColor: const Color(0xFFF8FAFC),
+            borderColor: Colors.grey.shade300,
+            focusedBorderColor: const Color(0xFF3B82F6),
+            borderRadius: 12.r,
+            validators: [
+              FormBuilderValidators.required(
+                errorText: 'Please select a product',
+              ),
+            ],
+          ),
+          SizedBox(height: 18.h),
+          CustomSearchableDropdownFormField(
+            name: 'machine_name_$index',
+            labelText: 'Machine Name',
+            hintText: 'Select Machine Name',
+            prefixIcon: Icons.build,
+            options: ['Machine 1', 'Machine 2', 'Machine 3'],
+            fillColor: const Color(0xFFF8FAFC),
+            borderColor: Colors.grey.shade300,
+            focusedBorderColor: const Color(0xFF3B82F6),
+            borderRadius: 12.r,
+            validators: [
+              FormBuilderValidators.required(
+                errorText: 'Please select a machine',
+              ),
+            ],
+          ),
+          SizedBox(height: 18.h),
+          CustomDropdownFormField<String>(
+            name: 'uom_$index',
+            labelText: 'UOM',
+            initialValue: 'Square Meter/No',
+            items: ['Square Meter/No', 'Meter/No']
+                .map(
+                  (item) => DropdownMenuItem<String>(
+                    value: item,
+                    child: Text(item),
+                  ),
+                )
+                .toList(),
+            hintText: 'Select UOM',
+            prefixIcon: Icons.workspaces,
+            validators: [FormBuilderValidators.required()],
+            fillColor: const Color(0xFFF8FAFC),
+            borderColor: Colors.grey.shade300,
+            focusedBorderColor: const Color(0xFF3B82F6),
+            borderRadius: 12.r,
+          ),
+          SizedBox(height: 18.h),
+          CustomTextFormField(
+            name: 'planned_quantity_$index',
+            keyboardType: TextInputType.number,
+            labelText: 'Planned Quantity',
+            hintText: 'Enter Planned Quantity',
+            focusNode: _productFocusNodes[index]['planned_quantity'],
+            prefixIcon: Icons.numbers,
+            validators: [
+              FormBuilderValidators.required(),
+              FormBuilderValidators.numeric(),
+              FormBuilderValidators.min(
+                0,
+                errorText: 'Quantity must be positive',
+              ),
+            ],
+            fillColor: const Color(0xFFF8FAFC),
+            borderColor: Colors.grey.shade300,
+            focusedBorderColor: const Color(0xFF3B82F6),
+            borderRadius: 12.r,
+            onTap: () => _scrollToFocusedField(
+              context,
+              _productFocusNodes[index]['planned_quantity']!,
+            ),
+          ),
+          SizedBox(height: 18.h),
+          ReusableDateFormField(
+            name: 'planned_date_$index',
+            hintText: 'Schedule Date',
+            inputType: InputType.date,
+            fillColor: const Color(0xFFF8FAFC),
+            borderColor: Colors.grey.shade300,
+            focusedBorderColor: const Color(0xFF3B82F6),
+            borderRadius: 12.r,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAddProductButton() {
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -333,11 +397,7 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {
-            setState(() {
-              _showAdditionalFields = true;
-            });
-          },
+          onTap: _addProductSection,
           borderRadius: BorderRadius.circular(12.r),
           child: Center(
             child: Padding(
@@ -348,7 +408,7 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
                   Icon(Icons.add_circle, color: Colors.white, size: 20.sp),
                   SizedBox(width: 8.w),
                   Text(
-                    'Add Product',
+                    'Add Another Product',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16.sp,
@@ -386,8 +446,22 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
         child: InkWell(
           onTap: () {
             if (_formKey.currentState?.saveAndValidate() ?? false) {
+              // Process form data
+              final formData = _formKey.currentState!.value;
+              _products.asMap().entries.map((entry) {
+                final index = entry.key;
+                return {
+                  'product': formData['product_$index'],
+                  'machine_name': formData['machine_name_$index'],
+                  'uom': formData['uom_$index'],
+                  'planned_quantity': formData['planned_quantity_$index'],
+                  'planned_date': formData['planned_date_$index'],
+                };
+              }).toList();
+
+              // Here you can handle the submission of formData and products
               context.showSuccessSnackbar("Job Order submitted successfully");
-              // context.go(RouteNames.jobOrders); // Adjust route as needed
+              context.go(RouteNames.jobOrder);
             } else {
               context.showWarningSnackbar(
                 "Please fill in all required fields correctly.",

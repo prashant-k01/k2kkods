@@ -20,7 +20,7 @@ class AppUrl {
   static const String deleteMachineUrl =
       '$baseUrl/konkreteKlinkers/helpers/machines/delete';
   static const String updateMachineurl =
-      '$baseUrl/konkreteKlinkers/helpers/machines/';
+      '$baseUrl/konkreteKlinkers/helpers/machines';
 
   //Client's Urls
   static const String createClientUrl =

@@ -5,8 +5,8 @@ class ClientsModel {
   final String address;
   final CreatedBy createdBy;
   final bool isDeleted;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
   final int version;
 
   ClientsModel({
@@ -15,51 +15,48 @@ class ClientsModel {
     required this.address,
     required this.createdBy,
     required this.isDeleted,
-    required this.createdAt,
-    required this.updatedAt,
+    this.createdAt,
+    this.updatedAt,
     required this.version,
   });
 
   factory ClientsModel.fromJson(Map<String, dynamic> json) {
     try {
-      final id = json['_id'] ?? json['id'] ?? '';
-      final name = json['name'] ?? '';
-      final address = json['address'] ?? '';
+      final id = json['_id']?.toString() ?? json['id']?.toString() ?? '';
+      final name = json['name']?.toString() ?? '';
+      final address = json['address']?.toString() ?? '';
       CreatedBy createdBy;
-      final createdByData = json['created_by'];
+      final createdByData = json['created_by'] ?? json['createdBy'];
       if (createdByData is Map<String, dynamic>) {
         createdBy = CreatedBy.fromJson(createdByData);
       } else if (createdByData is String) {
         createdBy = CreatedBy(id: createdByData, email: '', username: '');
       } else {
-        createdBy = CreatedBy(id: '', email: '', username: '');
+        createdBy = CreatedBy(id: '', email: '', username: 'Unknown');
       }
-      final isDeleted = json['isDeleted'] ?? false;
-      DateTime createdAt;
-      DateTime updatedAt;
+      final isDeleted = json['is_deleted']?.toString() == 'true' ||
+          json['isDeleted'] == true ||
+          false;
 
+      DateTime? createdAt;
       try {
-        final createdAtStr = json['createdAt'];
-        if (createdAtStr != null) {
-          createdAt = DateTime.parse(createdAtStr);
-        } else {
-          createdAt = DateTime.now();
-        }
+        final createdAtStr = json['created_at'] ?? json['createdAt'];
+        createdAt = createdAtStr != null ? DateTime.tryParse(createdAtStr.toString()) : null;
       } catch (e) {
-        createdAt = DateTime.now();
+        print('Error parsing createdAt: $e');
+        createdAt = null;
       }
 
+      DateTime? updatedAt;
       try {
-        final updatedAtStr = json['updatedAt'];
-        if (updatedAtStr != null) {
-          updatedAt = DateTime.parse(updatedAtStr);
-        } else {
-          updatedAt = DateTime.now();
-        }
+        final updatedAtStr = json['updatedAt'] ?? json['updated_at'];
+        updatedAt = updatedAtStr != null ? DateTime.tryParse(updatedAtStr.toString()) : null;
       } catch (e) {
-        updatedAt = DateTime.now();
+        print('Error parsing updatedAt: $e');
+        updatedAt = null;
       }
-      final version = json['__v'] ?? json['v'] ?? 0;
+
+      final version = (json['__v'] ?? json['version'] ?? 0) as int;
 
       return ClientsModel(
         id: id,
@@ -72,6 +69,7 @@ class ClientsModel {
         version: version,
       );
     } catch (e) {
+      print('Error in ClientsModel.fromJson: $e');
       rethrow;
     }
   }
@@ -82,9 +80,9 @@ class ClientsModel {
       'name': name,
       'address': address,
       'created_by': createdBy.toJson(),
-      'isDeleted': isDeleted,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
+      'is_deleted': isDeleted,
+      'created_at': createdAt?.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
       '__v': version,
     };
   }
@@ -99,11 +97,12 @@ class CreatedBy {
 
   factory CreatedBy.fromJson(Map<String, dynamic> json) {
     try {
-      final id = json['_id'] ?? json['id'] ?? '';
-      final email = json['email'] ?? '';
-      final username = json['username'] ?? '';
+      final id = json['_id']?.toString() ?? json['id']?.toString() ?? '';
+      final email = json['email']?.toString() ?? '';
+      final username = json['username']?.toString() ?? '';
       return CreatedBy(id: id, email: email, username: username);
     } catch (e) {
+      print('Error in CreatedBy.fromJson: $e');
       return CreatedBy(id: '', email: '', username: 'Unknown');
     }
   }
