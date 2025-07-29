@@ -59,87 +59,6 @@ class _JobOrderListViewState extends State<JobOrderListView> {
     return '${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year}';
   }
 
-  Widget _buildPaginationInfo() {
-    return Consumer<JobOrderProvider>(
-      builder: (context, provider, child) {
-        if (provider.totalItems == 0 || provider.totalPages == 1) {
-          return const SizedBox.shrink();
-        }
-
-        return Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(16.r),
-                topRight: Radius.circular(16.r),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 12.r,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildNavButton(
-                  icon: Icons.arrow_back_ios,
-                  onPressed: provider.hasPreviousPage
-                      ? () => provider.previousPage()
-                      : null,
-                  tooltip: 'Previous Page',
-                ),
-                Text(
-                  '${provider.currentPage}/${provider.totalPages}',
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF334155),
-                  ),
-                ),
-                _buildNavButton(
-                  icon: Icons.arrow_forward_ios,
-                  onPressed: provider.hasNextPage
-                      ? () => provider.nextPage()
-                      : null,
-                  tooltip: 'Next Page',
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildNavButton({
-    required IconData icon,
-    required VoidCallback? onPressed,
-    required String tooltip,
-  }) {
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(12.r),
-      child: Container(
-        padding: EdgeInsets.all(12.w),
-        decoration: BoxDecoration(
-          color: onPressed != null
-              ? const Color(0xFF3B82F6)
-              : const Color(0xFFCBD5E1),
-          borderRadius: BorderRadius.circular(12.r),
-        ),
-        child: Icon(icon, size: 24.sp, color: Colors.white),
-      ),
-    );
-  }
-
   Widget _buildJobOrderCard(JobOrderModel jobOrder) {
     final jobOrderId = jobOrder.jobOrderId;
     final batchNumber = jobOrder.batchNumber.toString();
@@ -508,7 +427,7 @@ class _JobOrderListViewState extends State<JobOrderListView> {
             style: TextStyle(
               fontSize: 18.sp,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF334155),
+              color: Color(0xFF334155),
             ),
           ),
           SizedBox(height: 8.h),
@@ -519,7 +438,7 @@ class _JobOrderListViewState extends State<JobOrderListView> {
           SizedBox(height: 16.h),
           ElevatedButton(
             onPressed: () {
-              // context.goNamed(RouteNames.JobOrderadd);
+              context.goNamed(RouteNames.joborderadd);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF3B82F6),
@@ -546,101 +465,76 @@ class _JobOrderListViewState extends State<JobOrderListView> {
         leading: _buildBackButton(),
         action: [_buildActionButtons()],
       ),
-      body: Stack(
-        children: [
-          Consumer<JobOrderProvider>(
-            builder: (context, provider, child) {
-              if (provider.error != null) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 64.sp,
-                        color: const Color(0xFFF43F5E),
-                      ),
-                      SizedBox(height: 16.h),
-                      Text(
-                        'Error Loading Job Orders',
-                        style: TextStyle(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF334155),
-                        ),
-                      ),
-                      SizedBox(height: 8.h),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 24.w),
-                        child: Text(
-                          provider.error!,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            color: const Color(0xFF64748B),
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 16.h),
-                      RefreshButton(
-                        text: 'Retry',
-                        icon: Icons.refresh,
-                        onTap: () {
-                          provider.clearError();
-                          provider.loadAllJobOrders(refresh: true);
-                        },
-                      ),
-                    ],
+      body: Consumer<JobOrderProvider>(
+        builder: (context, provider, child) {
+          if (provider.error != null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64.sp,
+                    color: const Color(0xFFF43F5E),
                   ),
-                );
-              }
-
-              return GestureDetector(
-                onHorizontalDragEnd: (details) {
-                  if (details.primaryVelocity! > 0 &&
-                      provider.hasPreviousPage) {
-                    provider.previousPage();
-                  } else if (details.primaryVelocity! < 0 &&
-                      provider.hasNextPage) {
-                    provider.nextPage();
-                  }
-                },
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: RefreshIndicator(
-                        onRefresh: () async {
-                          await provider.loadAllJobOrders(refresh: true);
-                        },
-                        color: const Color(0xFF3B82F6),
-                        backgroundColor: Colors.white,
-                        child: provider.isLoading && provider.jobOrders.isEmpty
-                            ? ListView.builder(
-                                itemCount: 5,
-                                itemBuilder: (context, index) =>
-                                    buildShimmerCard(),
-                              )
-                            : provider.jobOrders.isEmpty
-                            ? _buildEmptyState()
-                            : ListView.builder(
-                                controller: _scrollController,
-                                padding: EdgeInsets.only(bottom: 80.h),
-                                itemCount: provider.jobOrders.length,
-                                itemBuilder: (context, index) {
-                                  return _buildJobOrderCard(
-                                    provider.jobOrders[index],
-                                  );
-                                },
-                              ),
+                  SizedBox(height: 16.h),
+                  Text(
+                    'Error Loading Job Orders',
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF334155),
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 24.w),
+                    child: Text(
+                      provider.error!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: const Color(0xFF64748B),
                       ),
                     ),
-                  ],
-                ),
-              );
+                  ),
+                  SizedBox(height: 16.h),
+                  RefreshButton(
+                    text: 'Retry',
+                    icon: Icons.refresh,
+                    onTap: () {
+                      provider.clearError();
+                      provider.loadAllJobOrders(refresh: true);
+                    },
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              await provider.loadAllJobOrders(refresh: true);
             },
-          ),
-          _buildPaginationInfo(),
-        ],
+            color: const Color(0xFF3B82F6),
+            backgroundColor: Colors.white,
+            child: provider.isLoading && provider.jobOrders.isEmpty
+                ? ListView.builder(
+                    itemCount: 5,
+                    itemBuilder: (context, index) => buildShimmerCard(),
+                  )
+                : provider.jobOrders.isEmpty
+                ? _buildEmptyState()
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: EdgeInsets.only(bottom: 16.h),
+                    itemCount: provider.jobOrders.length,
+                    itemBuilder: (context, index) {
+                      return _buildJobOrderCard(provider.jobOrders[index]);
+                    },
+                  ),
+          );
+        },
       ),
     );
   }

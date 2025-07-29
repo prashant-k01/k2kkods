@@ -18,20 +18,10 @@ class JobOrderRepository {
   JobOrderModel? _lastCreatedJobOrder;
   JobOrderModel? get lastCreatedJobOrder => _lastCreatedJobOrder;
 
-  Future<JobOrderResponse> getAllJobOrder({
-    int page = 1,
-    int limit = 10,
-    String? search,
-  }) async {
+  Future<JobOrderResponse> getAllJobOrder() async {
     try {
       final authHeaders = await headers;
-      final uri = Uri.parse(AppUrl.getjoborder).replace(
-        queryParameters: {
-          'page': page.toString(),
-          'limit': limit.toString(),
-          if (search != null && search.isNotEmpty) 'search': search,
-        },
-      );
+      final uri = Uri.parse(AppUrl.getjoborder);
 
       final response = await http
           .get(uri, headers: authHeaders)
@@ -96,6 +86,7 @@ class JobOrderRepository {
     }
   }
 
+c
   Future<JobOrderModel> createJobOrder({
     required String plantId,
     required String materialCode,
@@ -127,11 +118,11 @@ class JobOrderRepository {
 
       if (response.statusCode == 201) {
         final responseData = json.decode(response.body);
-        final JobOrderData = (responseData is Map<String, dynamic>)
+        final jobOrderData = (responseData is Map<String, dynamic>)
             ? responseData['data'] ?? responseData
             : responseData;
 
-        final createdJobOrder = JobOrderModel.fromJson(JobOrderData);
+        final createdJobOrder = JobOrderModel.fromJson(jobOrderData);
         _lastCreatedJobOrder = createdJobOrder;
         return createdJobOrder;
       } else {

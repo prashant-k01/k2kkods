@@ -11,6 +11,8 @@ import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/dropdown.dart';
 import 'package:k2k/common/widgets/textfield.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
+import 'package:k2k/konkrete_klinkers/job_order/provider/job_order_provider.dart';
+import 'package:provider/provider.dart';
 
 class JobOrdersFormScreen extends StatefulWidget {
   const JobOrdersFormScreen({super.key});
@@ -30,11 +32,22 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
   final List<Map<String, FocusNode>> _productFocusNodes = [];
   List<Map<String, dynamic>> _products = [];
 
+  // For safe, one-time fetch
+  bool _didLoadWorkOrders = false;
+
   @override
   void initState() {
     super.initState();
-    // Initialize with one product section
     _addProductSection();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_didLoadWorkOrders) {
+      Provider.of<JobOrderProvider>(context, listen: false).loadWorkOrderNumbers();
+      _didLoadWorkOrders = true;
+    }
   }
 
   @override
@@ -172,23 +185,71 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
               style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
             ),
             SizedBox(height: 24.h),
-            CustomSearchableDropdownFormField(
-              name: 'work_order',
-              labelText: 'Work Order',
-              hintText: 'Select Work Order',
-              prefixIcon: Icons.work,
-              options: ['Work Order 1', 'Work Order 2', 'Work Order 3'],
-              fillColor: const Color(0xFFF8FAFC),
-              borderColor: Colors.grey.shade300,
-              focusedBorderColor: const Color(0xFF3B82F6),
-              borderRadius: 12.r,
-              validators: [
-                FormBuilderValidators.required(
-                  errorText: 'Please select a work order',
-                ),
-              ],
+            // ----- DYNAMIC Work Order Dropdown -----
+     Builder(
+  builder: (context) {
+    final provider = context.watch<JobOrderProvider>();
+
+    if (provider.isLoadingWorkOrderNumbers) {
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: 12.h),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (provider.workOrderNumbersError != null) {
+      // Show error UI with retry button if needed
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: 12.h),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Failed to load work orders: ${provider.workOrderNumbersError}',
+              style: TextStyle(color: Colors.red, fontSize: 14.sp),
             ),
-            SizedBox(height: 18.h),
+            SizedBox(height: 8.h),
+            ElevatedButton(
+              onPressed: () {
+                provider.loadWorkOrderNumbers();
+              },
+              child: Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (provider.workOrderNumbers.isEmpty) {
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: 12.h),
+        child: Text(
+          'No work orders available',
+          style: TextStyle(fontSize: 14.sp, color: Colors.grey),
+        ),
+      );
+    }
+
+    // Otherwise, show the dropdown with the fetched options
+    return CustomSearchableDropdownFormField(
+      name: 'work_order',
+      labelText: 'Work Order',
+      hintText: 'Select Work Order',
+      prefixIcon: Icons.work,
+      options: provider.workOrderNumbers,
+      fillColor: const Color(0xFFF8FAFC),
+      borderColor: Colors.grey.shade300,
+      focusedBorderColor: const Color(0xFF3B82F6),
+      borderRadius: 12.r,
+      validators: [
+        FormBuilderValidators.required(
+          errorText: 'Please select a work order',
+        ),
+      ],
+    );
+  },
+),
+      SizedBox(height: 18.h),
             CustomTextFormField(
               name: 'sales_order_number',
               labelText: 'Sales Order Number',
@@ -323,10 +384,8 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
             initialValue: 'Square Meter/No',
             items: ['Square Meter/No', 'Meter/No']
                 .map(
-                  (item) => DropdownMenuItem<String>(
-                    value: item,
-                    child: Text(item),
-                  ),
+                  (item) =>
+                      DropdownMenuItem<String>(value: item, child: Text(item)),
                 )
                 .toList(),
             hintText: 'Select UOM',
@@ -446,7 +505,6 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
         child: InkWell(
           onTap: () {
             if (_formKey.currentState?.saveAndValidate() ?? false) {
-              // Process form data
               final formData = _formKey.currentState!.value;
               _products.asMap().entries.map((entry) {
                 final index = entry.key;
@@ -459,7 +517,6 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
                 };
               }).toList();
 
-              // Here you can handle the submission of formData and products
               context.showSuccessSnackbar("Job Order submitted successfully");
               context.go(RouteNames.jobOrder);
             } else {
