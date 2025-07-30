@@ -86,7 +86,131 @@ class JobOrderRepository {
     }
   }
 
-c
+  // Add this method to your JobOrderRepository class
+
+  Future<List<Map<String, dynamic>>> fetchProductDetailsByIds(
+    List<String> productIds,
+  ) async {
+    try {
+      final authHeaders = await headers;
+
+      // Construct URL for fetching product details by IDs
+      // This might be a POST request or a GET with query parameters
+      // Adjust the URL according to your API specification
+      final uri = Uri.parse(
+        '${AppUrl.baseUrl}/products/details',
+      ); // Adjust this URL
+
+      print('🔗 Fetching product details from: $uri');
+      print('🆔 Product IDs: $productIds');
+
+      // Use POST request to send product IDs in body
+      final response = await http
+          .post(
+            uri,
+            headers: authHeaders,
+            body: json.encode({'product_ids': productIds}),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      print('📱 Response Status: ${response.statusCode}');
+      print('📄 Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonData = json.decode(response.body);
+        final List<dynamic> dataList =
+            jsonData['data'] ?? jsonData['products'] ?? [];
+
+        print('✅ Retrieved ${dataList.length} product details');
+        return dataList.cast<Map<String, dynamic>>();
+      } else {
+        throw Exception(
+          'Failed to fetch product details: ${response.statusCode} - ${response.body}',
+        );
+      }
+    } catch (e) {
+      print('❌ Error in fetchProductDetailsByIds: $e');
+      throw Exception('Error fetching product details: $e');
+    }
+  }
+
+  // Alternative: If you don't have a bulk product details API,
+  // modify the existing method to handle the work order ID correctly
+  Future<List<Map<String, dynamic>>> fetchProductsByWorkOrder(
+    String workOrderId,
+  ) async {
+    try {
+      final authHeaders = await headers;
+
+      // Construct the full URL with the work order ID
+      final fullUrl = '${AppUrl.getproductsbyworkOrder}$workOrderId';
+      final uri = Uri.parse(fullUrl);
+
+      print('🔗 Full API URL: $fullUrl');
+      print('🆔 Work Order ID being sent: $workOrderId');
+
+      final response = await http
+          .get(uri, headers: authHeaders)
+          .timeout(const Duration(seconds: 30));
+
+      print('📱 HTTP Response Status Code: ${response.statusCode}');
+      print('📄 Raw Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonData = json.decode(response.body);
+        print('🔍 Parsed JSON data: $jsonData');
+
+        final List<dynamic> dataList = jsonData['data'] ?? [];
+        print('📋 Data List Length: ${dataList.length}');
+
+        // Debug each product
+        for (int i = 0; i < dataList.length; i++) {
+          final product = dataList[i];
+          print('🎯 Product $i: $product');
+        }
+
+        if (dataList.isEmpty) {
+          print(
+            '⚠️ Warning: Empty product list returned for work order: $workOrderId',
+          );
+        }
+
+        return dataList.cast<Map<String, dynamic>>();
+      } else if (response.statusCode == 404) {
+        print('🔍 404 Error - No products found for work order: $workOrderId');
+        return [];
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('💥 Error in fetchProductsByWorkOrder: $e');
+      throw Exception('Error fetching products: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchWorkOrderDetailsRaw() async {
+    try {
+      final authHeaders = await headers;
+      final uri = Uri.parse(AppUrl.fetchWorkOrderDetailsUrl);
+      final response = await http
+          .get(uri, headers: authHeaders)
+          .timeout(const Duration(seconds: 30));
+      print('Work Order fetch response: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonData = json.decode(response.body);
+        final List<dynamic> dataList = jsonData['data'] ?? [];
+        return dataList.cast<Map<String, dynamic>>();
+      } else {
+        throw Exception(
+          'Failed to fetch work order details: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      throw Exception('Error fetching work order details: $e');
+    }
+  }
+
   Future<JobOrderModel> createJobOrder({
     required String plantId,
     required String materialCode,

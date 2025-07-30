@@ -14,7 +14,6 @@ class JobOrderProvider with ChangeNotifier {
   bool _isUpdateJobOrderLoading = false;
   bool _isDeleteJobOrderLoading = false;
 
-  // Edit form specific states
   bool _isInitialized = false;
   String? _errorMessage;
   JobOrderModel? _jobOrder;
@@ -27,25 +26,166 @@ class JobOrderProvider with ChangeNotifier {
   bool _isLoadingWorkOrderNumbers = false;
   bool get isLoadingWorkOrderNumbers => _isLoadingWorkOrderNumbers;
 
-  String? _workOrderNumbersError;
-  String? get workOrderNumbersError => _workOrderNumbersError;
+  List<Map<String, dynamic>> _workOrderDetails = [];
+  List<Map<String, dynamic>> get workOrderDetails => _workOrderDetails;
 
-  Future<void> loadWorkOrderNumbers() async {
+  // Products management
+  final List<Map<String, dynamic>> _products = [];
+  List<Map<String, dynamic>> get products => _products;
+
+  String? _selectedWorkOrder;
+  String? get selectedWorkOrder => _selectedWorkOrder;
+
+  List<Map<String, dynamic>> _availableProducts = [];
+  List<Map<String, dynamic>> get availableProducts => _availableProducts;
+
+  bool _isLoadingProducts = false;
+  bool get isLoadingProducts => _isLoadingProducts;
+
+
+  void setSelectedWorkOrder(String? value) {
+    print('🔄 setSelectedWorkOrder called with value: $value');
+
+    if (_selectedWorkOrder != value) {
+      _selectedWorkOrder = value;
+
+      _availableProducts.clear();
+      _products.clear();
+      _error = null;
+
+      print('🧹 Cleared previous state');
+
+      if (value != null && value.isNotEmpty) {
+        print('🔍 Looking for work order details for: $value');
+
+        final selectedWO = _workOrderDetails.firstWhere(
+          (e) => e['work_order_number']?.toString() == value,
+        );
+
+        print('📋 Found work order details: $selectedWO');
+
+        final workOrderId =
+            selectedWO['id']?.toString() ?? selectedWO['_id']?.toString();
+        print('🆔 Extracted work order ID: $workOrderId');
+
+        if (workOrderId != null && workOrderId.isNotEmpty) {
+          print('🚀 Loading products for work order ID: $workOrderId');
+
+          loadProductsByWorkOrder(workOrderId)
+              .then((_) {
+                print(
+                  '✅ Products loaded, available products count: ${_availableProducts.length}',
+                );
+                if (_products.isEmpty) {
+                  addProductSection();
+                  print('➕ Added empty product section');
+                }
+              })
+              .catchError((error) {
+                print('❌ Error loading products: $error');
+                if (_products.isEmpty) {
+                  addProductSection();
+                }
+              });
+        } else {
+          print(
+            '⚠️ No valid work order ID found, adding empty product section',
+          );
+          addProductSection();
+        }
+      } else {
+        print('⚠️ No work order selected, adding empty product section');
+        addProductSection();
+      }
+
+      notifyListeners();
+      print('🔔 notifyListeners called');
+    } else {
+      print('🔄 Same work order selected, no change needed');
+    }
+  }
+
+  void addProductSection() {
+    _products.add({});
+    print('➕ Product section added. Total sections: ${_products.length}');
+    notifyListeners();
+  }
+
+  void removeProductSection(int index) {
+    if (index >= 0 && index < _products.length) {
+      _products.removeAt(index);
+      print(
+        '➖ Product section removed at index $index. Remaining: ${_products.length}',
+      );
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadWorkOrderDetails() async {
+    print('🔄 Loading work order details...');
     _isLoadingWorkOrderNumbers = true;
-    _workOrderNumbersError = null;
+    _error = null;
     notifyListeners();
 
     try {
-      final result = await _repository.fetchWorkOrder2Numbers();
-      _workOrderNumbers = result;
-      _workOrderNumbersError = null;
+      _workOrderDetails = await _repository.fetchWorkOrderDetailsRaw();
+      print('📋 Loaded ${_workOrderDetails.length} work order details');
+
+      _workOrderNumbers = _workOrderDetails
+          .map((e) => e['work_order_number']?.toString())
+          .where((v) => v != null && v.isNotEmpty)
+          .cast<String>()
+          .toList();
+
+      print('📝 Extracted work order numbers: $_workOrderNumbers');
+      _error = null;
     } catch (e) {
+      print('❌ Error loading work order details: $e');
+      _workOrderDetails = [];
       _workOrderNumbers = [];
-      _workOrderNumbersError = e.toString();
+      _error = _getErrorMessage(e);
     }
 
     _isLoadingWorkOrderNumbers = false;
     notifyListeners();
+    print('✅ Work order details loading completed');
+  }
+
+  Future<void> loadProductsByWorkOrder(String workOrderId) async {
+    print('🚀 loadProductsByWorkOrder called with ID: $workOrderId');
+
+    _isLoadingProducts = true;
+    _error = null;
+    notifyListeners();
+    print('🔄 Set loading state to true');
+
+    try {
+      print('📡 Calling repository to fetch products...');
+      _availableProducts = await _repository.fetchProductsByWorkOrder(
+        workOrderId,
+      );
+      print('✅ Repository returned ${_availableProducts.length} products');
+
+      // Debug log each product
+      for (int i = 0; i < _availableProducts.length; i++) {
+        final product = _availableProducts[i];
+        print(
+          '🎯 Product $i: ${product['description']} - ${product['material_code']}',
+        );
+      }
+
+      _error = null;
+    } catch (e) {
+      print('❌ Error in loadProductsByWorkOrder: $e');
+      _availableProducts = [];
+      _error = _getErrorMessage(e);
+    }
+
+    _isLoadingProducts = false;
+    notifyListeners();
+    print(
+      '🏁 loadProductsByWorkOrder completed. Loading: false, Products: ${_availableProducts.length}',
+    );
   }
 
   // Getters
@@ -75,7 +215,7 @@ class JobOrderProvider with ChangeNotifier {
       if (refresh) {
         _jobOrders.clear();
       }
-      _jobOrders = response.data; // Directly assign the response data
+      _jobOrders = response.data;
       _error = null;
     } catch (e) {
       _error = _getErrorMessage(e);

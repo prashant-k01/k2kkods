@@ -42,6 +42,10 @@ class AppUrl {
   static const String deleteProjectDetailsUrl =
       '$baseUrl/konkreteKlinkers/helpers/projects/delete';
 
+  //inventory
+  static const String getinventory =
+      'http://3.6.6.231/api/konkreteKlinkers/inventories';
+
   //Products's Urls
   static const String createproductUrl =
       '$baseUrl/konkreteKlinkers/helpers/products';

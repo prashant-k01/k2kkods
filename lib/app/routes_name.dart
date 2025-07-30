@@ -9,6 +9,7 @@ class RouteNames {
   static const String clients = '/clients';
   //plants
   static const String plants = '/plants';
+  static const String inventory = '/inventory';
   static const String plantsadd = '/plantsadd';
   static const String plantsedit = '/plants/edit/:plantId';
   //projects

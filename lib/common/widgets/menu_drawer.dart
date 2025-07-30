@@ -168,7 +168,7 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
         MenuItem(
           title: 'Inventory',
           icon: Icons.shopping_cart_outlined,
-          route: '/cart',
+          route: RouteNames.inventory,
         ),
         MenuItem(
           title: 'Stock Management',

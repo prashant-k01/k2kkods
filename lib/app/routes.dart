@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/dashboard/view/dashboard_screen.dart';
+import 'package:k2k/konkrete_klinkers/inventory/view/inventory_list.dart';
 import 'package:k2k/konkrete_klinkers/job_order/view/job_order_add.dart';
 import 'package:k2k/konkrete_klinkers/job_order/view/job_order_screen_list.dart';
 import 'package:k2k/konkrete_klinkers/master_data/clients/view/clients_add.dart';
@@ -35,6 +36,13 @@ class AppRoutes {
         name: RouteNames.plants,
         builder: (BuildContext context, GoRouterState state) {
           return PlantsListView();
+        },
+      ),
+      GoRoute(
+        path: RouteNames.inventory,
+        name: RouteNames.inventory,
+        builder: (BuildContext context, GoRouterState state) {
+          return InventoryListScreen();
         },
       ),
       GoRoute(
