@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
@@ -31,7 +33,6 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
     'batch_number': FocusNode(),
   };
 
-  // Product-related Focus Nodes managed locally because provider does not manage FocusNodes well
   final List<Map<String, FocusNode>> _productFocusNodes = [];
 
   @override
@@ -42,19 +43,12 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
       final provider = context.read<JobOrderProvider>();
       provider.loadWorkOrderDetails();
 
-      // Initialize products if empty
       if (provider.products.isEmpty) {
         provider.addProductSection();
       }
 
       _initializeProductFocusNodes(provider.products.length);
     });
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // No longer needed: loading handled in initState post frame callback.
   }
 
   @override
@@ -68,7 +62,6 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
   }
 
   void _initializeProductFocusNodes(int count) {
-    // Clear previous nodes
     for (var map in _productFocusNodes) {
       map.forEach((_, node) => node.dispose());
     }
@@ -115,9 +108,9 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
             behavior: HitTestBehavior.opaque,
             child: ListView(
               controller: _scrollController,
-              padding: EdgeInsets.all(
-                24.w,
-              ).copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 24.h),
+              padding: EdgeInsets.all(24.w).copyWith(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
+              ),
               children: [_buildFormCard(context, provider)],
             ),
           ),
@@ -193,7 +186,6 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
             ),
             SizedBox(height: 24.h),
 
-            // Work Order Dropdown with Dynamic Data & Selection Handling
             Builder(
               builder: (context) {
                 if (provider.isLoadingWorkOrderNumbers) {
@@ -259,7 +251,6 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
 
             SizedBox(height: 12.h),
 
-            // Client & Project info container shown after work order is selected
             if (provider.selectedWorkOrder != null)
               Builder(
                 builder: (context) {
@@ -308,7 +299,6 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Heading
                         Text(
                           'Client Details',
                           style: TextStyle(
@@ -318,8 +308,6 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
                           ),
                         ),
                         SizedBox(height: 12.h),
-
-                        // Client Section
                         Container(
                           padding: EdgeInsets.symmetric(
                             horizontal: 12.w,
@@ -375,10 +363,7 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
                             ],
                           ),
                         ),
-
                         SizedBox(height: 12.h),
-
-                        // Project Section
                         Container(
                           padding: EdgeInsets.symmetric(
                             horizontal: 12.w,
@@ -484,11 +469,9 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
               name: 'date_range',
               labelText: 'Date Range (from & to)',
               hintText: 'Select Date Range (from & to)',
-              
             ),
             SizedBox(height: 24.h),
 
-            // Products
             ...provider.products.asMap().entries.map((entry) {
               final index = entry.key;
               return _buildProductSection(context, index, provider);
@@ -504,358 +487,535 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
     );
   }
 
-Widget _buildProductSection(
-  BuildContext context,
-  int index,
-  JobOrderProvider provider,
-) {
-  // Ensure _productFocusNodes length matches provider's product count
-  if (_productFocusNodes.length < provider.products.length) {
-    _initializeProductFocusNodes(provider.products.length);
-  }
+  Widget _buildProductSection(
+    BuildContext context,
+    int index,
+    JobOrderProvider provider,
+  ) {
+    if (_productFocusNodes.length < provider.products.length) {
+      _initializeProductFocusNodes(provider.products.length);
+    }
 
-  return Container(
-    margin: EdgeInsets.only(bottom: 24.h),
-    padding: EdgeInsets.all(16.w),
-    decoration: BoxDecoration(
-      color: Colors.grey.shade50,
-      borderRadius: BorderRadius.circular(12.r),
-      border: Border.all(color: Colors.grey.shade200),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Product ${index + 1}',
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF334155),
+    return Container(
+      margin: EdgeInsets.only(bottom: 24.h),
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Product ${index + 1}',
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF334155),
+                ),
               ),
-            ),
-            if (provider.products.length > 1)
-              IconButton(
-                icon: Icon(
-                  Icons.delete_outline,
-                  size: 20.sp,
-                  color: const Color(0xFFF43F5E),
+              if (provider.products.length > 1)
+                IconButton(
+                  icon: Icon(
+                    Icons.delete_outline,
+                    size: 20.sp,
+                    color: const Color(0xFFF43F5E),
+                  ),
+                  onPressed: () {
+                    provider.removeProductSection(index);
+                    _initializeProductFocusNodes(provider.products.length);
+                  },
+                  tooltip: 'Remove Product',
                 ),
-                onPressed: () {
-                  provider.removeProductSection(index);
-                  _initializeProductFocusNodes(provider.products.length);
-                },
-                tooltip: 'Remove Product',
-              ),
-          ],
-        ),
-        SizedBox(height: 16.h),
-        
-        // Product Dropdown Section
-        Builder(
-          builder: (context) {
-            // Check if no work order is selected
-            if (provider.selectedWorkOrder == null) {
-              return Container(
-                padding: EdgeInsets.all(16.w),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(8.r),
-                  border: Border.all(color: Colors.orange.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.orange.shade700, size: 20.sp),
-                    SizedBox(width: 8.w),
-                    Expanded(
-                      child: Text(
-                        'Please select a work order first to view available products',
-                        style: TextStyle(
-                          color: Colors.orange.shade700,
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
+            ],
+          ),
+          SizedBox(height: 16.h),
 
-            // Loading state
-            if (provider.isLoadingProducts) {
-              return Container(
-                padding: EdgeInsets.symmetric(vertical: 20.h),
-                child: Center(
-                  child: Column(
+          Builder(
+            builder: (context) {
+              if (provider.selectedWorkOrder == null) {
+                return Container(
+                  padding: EdgeInsets.all(16.w),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8.r),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Row(
                     children: [
-                      CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          const Color(0xFF3B82F6),
-                        ),
+                      Icon(
+                        Icons.info_outline,
+                        color: Colors.orange.shade700,
+                        size: 20.sp,
                       ),
-                      SizedBox(height: 12.h),
-                      Text(
-                        'Loading products...',
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          color: Colors.grey.shade600,
+                      SizedBox(width: 8.w),
+                      Expanded(
+                        child: Text(
+                          'Please select a work order first to view available products',
+                          style: TextStyle(
+                            color: Colors.orange.shade700,
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
-              );
-            }
+                );
+              }
 
-            // Error state
-            if (provider.error != null) {
-              return Container(
-                padding: EdgeInsets.all(16.w),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(8.r),
-                  border: Border.all(color: Colors.red.shade200),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              if (provider.isLoadingProducts) {
+                return Container(
+                  padding: EdgeInsets.symmetric(vertical: 20.h),
+                  child: Center(
+                    child: Column(
                       children: [
-                        Icon(Icons.error_outline, color: Colors.red.shade700, size: 20.sp),
-                        SizedBox(width: 8.w),
-                        Expanded(
-                          child: Text(
-                            'Failed to load products',
-                            style: TextStyle(
-                              color: Colors.red.shade700,
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w600,
-                            ),
+                        CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            const Color(0xFF3B82F6),
+                          ),
+                        ),
+                        SizedBox(height: 12.h),
+                        Text(
+                          'Loading products...',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Colors.grey.shade600,
                           ),
                         ),
                       ],
                     ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      provider.error!,
-                      style: TextStyle(
-                        color: Colors.red.shade600,
-                        fontSize: 13.sp,
-                      ),
-                    ),
-                    SizedBox(height: 12.h),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        if (provider.selectedWorkOrder != null) {
-                          final selectedWO = provider.workOrderDetails.firstWhere(
-                            (e) => e['work_order_number'] == provider.selectedWorkOrder,
-                            orElse: () => {},
-                          );
-                          final workOrderId = selectedWO['id']?.toString();
-                          if (workOrderId != null) {
-                            provider.loadProductsByWorkOrder(workOrderId);
-                          }
-                        }
-                      },
-                      icon: Icon(Icons.refresh, size: 16.sp),
-                      label: Text('Retry'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red.shade100,
-                        foregroundColor: Colors.red.shade700,
-                        elevation: 0,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
+                  ),
+                );
+              }
 
-            // No products available
-            if (provider.availableProducts.isEmpty) {
-              return Container(
-                padding: EdgeInsets.all(16.w),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8.r),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.inventory_outlined, color: Colors.grey.shade600, size: 20.sp),
-                    SizedBox(width: 8.w),
-                    Expanded(
-                      child: Text(
-                        'No products available for this work order',
+              if (provider.error != null) {
+                return Container(
+                  padding: EdgeInsets.all(16.w),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8.r),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            color: Colors.red.shade700,
+                            size: 20.sp,
+                          ),
+                          SizedBox(width: 8.w),
+                          Expanded(
+                            child: Text(
+                              'Failed to load products',
+                              style: TextStyle(
+                                color: Colors.red.shade700,
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        provider.error!.contains('500')
+                            ? 'Server error occurred while loading products. Please try again.'
+                            : provider.error!,
                         style: TextStyle(
-                          fontSize: 14.sp,
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w500,
+                          color: Colors.red.shade600,
+                          fontSize: 13.sp,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            // Debug: Print available products
-            print('Available products count: ${provider.availableProducts.length}');
-            for (var product in provider.availableProducts) {
-              print('Product: ${product['description']} - ${product['material_code']}');
-            }
-
-            // Products available - show dropdown
-            return CustomSearchableDropdownFormField(
-              name: 'product_$index',
-              labelText: 'Product',
-              hintText: 'Select Product',
-              prefixIcon: Icons.inventory_2,
-              options: provider.availableProducts
-                  .map((product) {
-                    final description = product['description']?.toString() ?? 'No Description';
-                    final materialCode = product['material_code']?.toString() ?? 'No Code';
-                    return '$description - $materialCode';
-                  })
-                  .toList(),
-              fillColor: const Color(0xFFF8FAFC),
-              borderColor: Colors.grey.shade300,
-              focusedBorderColor: const Color(0xFF3B82F6),
-              borderRadius: 12.r,
-              validators: [
-                FormBuilderValidators.required(
-                  errorText: 'Please select a product',
-                ),
-              ],
-              onChanged: (value) {
-                print('Selected product option: $value');
-                
-                // Find the selected product
-                final selectedProduct = provider.availableProducts.firstWhere(
-                  (product) {
-                    final description = product['description']?.toString() ?? 'No Description';
-                    final materialCode = product['material_code']?.toString() ?? 'No Code';
-                    return '$description - $materialCode' == value;
-                  },
-                  orElse: () => {},
+                      SizedBox(height: 12.h),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          if (provider.selectedWorkOrder != null) {
+                            final selectedWO = provider.workOrderDetails
+                                .firstWhere(
+                                  (e) =>
+                                      e['work_order_number'] ==
+                                      provider.selectedWorkOrder,
+                                  orElse: () => {},
+                                );
+                            final workOrderId = selectedWO['id']?.toString();
+                            if (workOrderId != null) {
+                              provider.loadProductsByWorkOrder(workOrderId);
+                            }
+                          }
+                        },
+                        icon: Icon(Icons.refresh, size: 16.sp),
+                        label: Text('Retry'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade100,
+                          foregroundColor: Colors.red.shade700,
+                          elevation: 0,
+                        ),
+                      ),
+                    ],
+                  ),
                 );
-                
-                print('Found selected product: $selectedProduct');
-                
-                // Update the provider's products list with the selected product's details
-                if (selectedProduct.isNotEmpty) {
-                  provider.products[index] = {
-                    'product_id': selectedProduct['product_id'],
-                    'description': selectedProduct['description'],
-                    'material_code': selectedProduct['material_code'],
-                    'uom': selectedProduct['uom'],
-                  };
-                  print('Updated provider.products[$index]: ${provider.products[index]}');
-                  provider.notifyListeners();
-                }
-              },
-            );
-          },
-        ),
-        
-        SizedBox(height: 18.h),
-        
-        // Machine Name Dropdown
-        CustomSearchableDropdownFormField(
-          name: 'machine_name_$index',
-          labelText: 'Machine Name',
-          hintText: 'Select Machine Name',
-          prefixIcon: Icons.build,
-          options: [
-            'Machine 1',
-            'Machine 2',
-            'Machine 3',
-          ], // Update with dynamic machine names if needed
-          fillColor: const Color(0xFFF8FAFC),
-          borderColor: Colors.grey.shade300,
-          focusedBorderColor: const Color(0xFF3B82F6),
-          borderRadius: 12.r,
-          validators: [
-            FormBuilderValidators.required(
-              errorText: 'Please select a machine',
-            ),
-          ],
-        ),
-        
-        SizedBox(height: 18.h),
-        
-        // UOM Dropdown
-        CustomDropdownFormField<String>(
-          name: 'uom_$index',
-          labelText: 'UOM',
-          initialValue: provider.products.length > index && provider.products[index]['uom'] != null 
-              ? provider.products[index]['uom'] 
-              : 'Square Meter/No',
-          items: ['Square Meter/No', 'Meter/No']
-              .map(
-                (item) => DropdownMenuItem<String>(value: item, child: Text(item)),
-              )
-              .toList(),
-          hintText: 'Select UOM',
-          prefixIcon: Icons.workspaces,
-          validators: [FormBuilderValidators.required()],
-          fillColor: const Color(0xFFF8FAFC),
-          borderColor: Colors.grey.shade300,
-          focusedBorderColor: const Color(0xFF3B82F6),
-          borderRadius: 12.r,
-        ),
-        
-        SizedBox(height: 18.h),
-        
-        // Planned Quantity Field
-        CustomTextFormField(
-          name: 'planned_quantity_$index',
-          keyboardType: TextInputType.number,
-          labelText: 'Planned Quantity',
-          hintText: 'Enter Planned Quantity',
-          focusNode: _productFocusNodes.length > index 
-              ? _productFocusNodes[index]['planned_quantity']
-              : null,
-          prefixIcon: Icons.numbers,
-          validators: [
-            FormBuilderValidators.required(),
-            FormBuilderValidators.numeric(),
-            FormBuilderValidators.min(
-              0,
-              errorText: 'Quantity must be positive',
-            ),
-          ],
-          fillColor: const Color(0xFFF8FAFC),
-          borderColor: Colors.grey.shade300,
-          focusedBorderColor: const Color(0xFF3B82F6),
-          borderRadius: 12.r,
-          onTap: () => _scrollToFocusedField(
-            context,
-            _productFocusNodes.length > index 
-                ? _productFocusNodes[index]['planned_quantity']!
-                : FocusNode(),
+              }
+
+              if (provider.availableProducts.isEmpty) {
+                return Container(
+                  padding: EdgeInsets.all(16.w),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8.r),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.inventory_outlined,
+                        color: Colors.grey.shade600,
+                        size: 20.sp,
+                      ),
+                      SizedBox(width: 8.w),
+                      Expanded(
+                        child: Text(
+                          'No products available for this work order',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Colors.grey.shade600,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return CustomSearchableDropdownFormField(
+                name: 'product_$index',
+                labelText: 'Product',
+                hintText: 'Select Product',
+                prefixIcon: Icons.inventory_2,
+                initialValue:
+                    provider.products.length > index &&
+                        provider.products[index]['description'] != null &&
+                        provider.products[index]['material_code'] != null
+                    ? '${provider.products[index]['description']} - ${provider.products[index]['material_code']}'
+                    : null,
+                options: provider.availableProducts.map((product) {
+                  final description =
+                      product['description']?.toString() ?? 'No Description';
+                  final materialCode =
+                      product['material_code']?.toString() ?? 'No Code';
+                  return '$description - $materialCode';
+                }).toList(),
+                fillColor: const Color(0xFFF8FAFC),
+                borderColor: Colors.grey.shade300,
+                focusedBorderColor: const Color(0xFF3B82F6),
+                borderRadius: 12.r,
+                validators: [
+                  FormBuilderValidators.required(
+                    errorText: 'Please select a product',
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value == null) return;
+
+                  final selectedProduct = provider.availableProducts.firstWhere(
+                    (product) {
+                      final description =
+                          product['description']?.toString() ??
+                          'No Description';
+                      final materialCode =
+                          product['material_code']?.toString() ?? 'No Code';
+                      return '$description - $materialCode' == value;
+                    },
+                    orElse: () => {},
+                  );
+
+                  if (selectedProduct.isNotEmpty) {
+                    final updatedProducts = List<Map<String, dynamic>>.from(
+                      provider.products,
+                    );
+
+                    while (updatedProducts.length <= index) {
+                      updatedProducts.add({});
+                    }
+
+                    updatedProducts[index] = {
+                      'product_id': selectedProduct['product_id'],
+                      'description': selectedProduct['description'],
+                      'material_code': selectedProduct['material_code'],
+                      'uom': selectedProduct['uom'],
+                      'quantity_in_no': selectedProduct['quantity_in_no'],
+                    };
+
+                    provider.updateProducts(updatedProducts);
+
+                    final quantityInNo = selectedProduct['quantity_in_no']
+                        ?.toString();
+                    final uom = selectedProduct['uom']?.toString();
+                    final mappedUom = uom == 'sqmt'
+                        ? 'Square Meter/No'
+                        : uom == 'meter'
+                        ? 'Meter/No'
+                        : null;
+
+                    _formKey.currentState?.fields['planned_quantity_$index']
+                        ?.didChange(quantityInNo);
+                    _formKey.currentState?.fields['uom_$index']?.didChange(
+                      mappedUom,
+                    );
+
+                    final productId = selectedProduct['product_id']?.toString();
+                    if (productId != null && productId.isNotEmpty) {
+                      provider.loadMachineNamesByProductId(index, productId);
+                    } else {
+                      provider.updateMachineNames(index, []);
+                    }
+                  }
+                },
+              );
+            },
           ),
-        ),
-        
-        SizedBox(height: 18.h),
-        
-        // Planned Date Field
-        ReusableDateFormField(
-          name: 'planned_date_$index',
-          hintText: 'Schedule Date',
-          inputType: InputType.date,
-          fillColor: const Color(0xFFF8FAFC),
-          borderColor: Colors.grey.shade300,
-          focusedBorderColor: const Color(0xFF3B82F6),
-          borderRadius: 12.r,
-        ),
-      ],
-    ),
-  );
-}
+
+          SizedBox(height: 18.h),
+
+          Builder(
+            builder: (context) {
+              final machineNames = provider.getMachineNamesForProduct(index);
+              final isLoadingMachines = provider.isLoadingMachineNames(index);
+
+              if (isLoadingMachines) {
+                return Container(
+                  padding: EdgeInsets.symmetric(vertical: 20.h),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            const Color(0xFF3B82F6),
+                          ),
+                        ),
+                        SizedBox(height: 12.h),
+                        Text(
+                          'Loading machines...',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              if (provider.error != null && machineNames.isEmpty) {
+                return Container(
+                  padding: EdgeInsets.all(16.w),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8.r),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            color: Colors.red.shade700,
+                            size: 20.sp,
+                          ),
+                          SizedBox(width: 8.w),
+                          Expanded(
+                            child: Text(
+                              'Failed to load machines',
+                              style: TextStyle(
+                                color: Colors.red.shade700,
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        provider.error!.contains('500')
+                            ? 'Server error occurred while loading machines. Please try again or contact support.'
+                            : provider.error!.contains('400')
+                            ? 'Invalid material code. Please select a valid product or contact support.'
+                            : provider.error!,
+                        style: TextStyle(
+                          color: Colors.red.shade600,
+                          fontSize: 13.sp,
+                        ),
+                      ),
+                      SizedBox(height: 12.h),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          final productId = provider.products.length > index
+                              ? provider.products[index]['product_id']
+                                    ?.toString()
+                              : null;
+                          if (productId != null) {
+                            provider.loadMachineNamesByProductId(
+                              index,
+                              productId,
+                            );
+                          }
+                        },
+                        icon: Icon(Icons.refresh, size: 16.sp),
+                        label: Text('Retry'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade100,
+                          foregroundColor: Colors.red.shade700,
+                          elevation: 0,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              if (machineNames.isEmpty) {
+                return Container(
+                  padding: EdgeInsets.all(16.w),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8.r),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.build,
+                        color: Colors.grey.shade600,
+                        size: 20.sp,
+                      ),
+                      SizedBox(width: 8.w),
+                      Expanded(
+                        child: Text(
+                          'No machines available for this product',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Colors.grey.shade600,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return CustomSearchableDropdownFormField(
+                name: 'machine_name_$index',
+                labelText: 'Machine Name',
+                hintText: 'Select Machine Name',
+                prefixIcon: Icons.build,
+                options: machineNames,
+                fillColor: const Color(0xFFF8FAFC),
+                borderColor: Colors.grey.shade300,
+                focusedBorderColor: const Color(0xFF3B82F6),
+                borderRadius: 12.r,
+                validators: [
+                  FormBuilderValidators.required(
+                    errorText: 'Please select a machine',
+                  ),
+                ],
+              );
+            },
+          ),
+
+          SizedBox(height: 18.h),
+
+          CustomDropdownFormField<String>(
+            name: 'uom_$index',
+            labelText: 'UOM',
+            items: ['Square Meter/No', 'Meter/No']
+                .map(
+                  (item) =>
+                      DropdownMenuItem<String>(value: item, child: Text(item)),
+                )
+                .toList(),
+            hintText: 'Select UOM',
+            prefixIcon: Icons.workspaces,
+            validators: [FormBuilderValidators.required()],
+            fillColor: const Color(0xFFF8FAFC),
+            borderColor: Colors.grey.shade300,
+            focusedBorderColor: const Color(0xFF3B82F6),
+            borderRadius: 12.r,
+            initialValue:
+                provider.products.length > index &&
+                    provider.products[index]['uom'] != null
+                ? (provider.products[index]['uom'] == 'sqmt'
+                      ? 'Square Meter/No'
+                      : provider.products[index]['uom'] == 'meter'
+                      ? 'Meter/No'
+                      : null)
+                : null,
+          ),
+          SizedBox(height: 18.h),
+          CustomTextFormField(
+            name: 'planned_quantity_$index',
+            keyboardType: TextInputType.number,
+            labelText: 'Planned Quantity',
+            hintText: 'Enter Planned Quantity',
+            focusNode: _productFocusNodes.length > index
+                ? _productFocusNodes[index]['planned_quantity']
+                : null,
+            prefixIcon: Icons.numbers,
+            initialValue:
+                provider.products.length > index &&
+                    provider.products[index]['quantity_in_no'] != null
+                ? provider.products[index]['quantity_in_no'].toString()
+                : null,
+            validators: [
+              FormBuilderValidators.required(),
+              FormBuilderValidators.numeric(),
+              FormBuilderValidators.min(
+                0,
+                errorText: 'Quantity must be positive',
+              ),
+            ],
+            fillColor: const Color(0xFFF8FAFC),
+            borderColor: Colors.grey.shade300,
+            focusedBorderColor: const Color(0xFF3B82F6),
+            borderRadius: 12.r,
+            onTap: () => _scrollToFocusedField(
+              context,
+              _productFocusNodes.length > index
+                  ? _productFocusNodes[index]['planned_quantity']!
+                  : FocusNode(),
+            ),
+          ),
+
+          SizedBox(height: 18.h),
+
+          ReusableDateFormField(
+            name: 'planned_date_$index',
+            hintText: 'Schedule Date',
+            inputType: InputType.date,
+            fillColor: const Color(0xFFF8FAFC),
+            borderColor: Colors.grey.shade300,
+            focusedBorderColor: const Color(0xFF3B82F6),
+            borderRadius: 12.r,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAddProductButton(JobOrderProvider provider) {
     return Container(
       decoration: BoxDecoration(
@@ -926,26 +1086,155 @@ Widget _buildProductSection(
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {
+          onTap: () async {
             if (_formKey.currentState?.saveAndValidate() ?? false) {
               final formData = _formKey.currentState!.value;
+
+              // Find the selected work order's ID
+              final selectedWO = provider.workOrderDetails.firstWhere(
+                (e) => e['work_order_number'] == formData['work_order'],
+                orElse: () => {},
+              );
+              final workOrderId =
+                  selectedWO['id']?.toString() ?? selectedWO['_id']?.toString();
+
+              // Validate workOrderId
+              if (workOrderId == null || workOrderId.isEmpty) {
+                context.showWarningSnackbar("Invalid work order selected.");
+                return;
+              }
 
               // Construct products list payload
               final products = provider.products.asMap().entries.map((entry) {
                 final index = entry.key;
+                final productData = provider.products[index];
+                final productValue = formData['product_$index'];
+                final selectedProduct = provider.availableProducts.firstWhere((
+                  product,
+                ) {
+                  final description =
+                      product['description']?.toString() ?? 'No Description';
+                  final materialCode =
+                      product['material_code']?.toString() ?? 'No Code';
+                  return '$description - $materialCode' == productValue;
+                }, orElse: () => {});
+
+                // Validate product_id
+                final productId =
+                    productData['product_id']?.toString() ??
+                    selectedProduct['product_id']?.toString();
+                if (productId == null || productId.isEmpty) {
+                  throw Exception(
+                    'Invalid product ID for product ${index + 1}',
+                  );
+                }
+
+                // Get machine ID instead of machine name
+                final machineDisplayName = formData['machine_name_$index']
+                    ?.toString();
+                if (machineDisplayName == null || machineDisplayName.isEmpty) {
+                  throw Exception(
+                    'Invalid machine name for product ${index + 1}',
+                  );
+                }
+
+                // Find the machine ID from the available machines for this product
+                final availableMachines = provider.getMachineNamesForProduct(
+                  index,
+                );
+                final machineData = provider.getMachineDataForProduct(
+                  index,
+                ); // You'll need to add this method
+
+                String? machineId;
+                if (machineData != null && machineData.isNotEmpty) {
+                  final selectedMachine = machineData.firstWhere(
+                    (machine) =>
+                        machine['name']?.toString() == machineDisplayName ||
+                        machine['machine_name']?.toString() ==
+                            machineDisplayName,
+                    orElse: () => {},
+                  );
+                  machineId =
+                      selectedMachine['id']?.toString() ??
+                      selectedMachine['_id']?.toString();
+                }
+
+                if (machineId == null || machineId.isEmpty) {
+                  throw Exception(
+                    'Invalid machine ID for product ${index + 1}',
+                  );
+                }
+
+                // Ensure scheduled_date is in ISO 8601 format with Z suffix
+                final scheduledDate = formData['planned_date_$index'];
+                final formattedScheduledDate = scheduledDate is DateTime
+                    ? '${scheduledDate.toIso8601String()}Z'
+                    : scheduledDate?.toString() ?? '';
+                if (formattedScheduledDate.isEmpty) {
+                  throw Exception(
+                    'Invalid scheduled date for product ${index + 1}',
+                  );
+                }
+
+                // Map UOM to backend format
+                final uom = formData['uom_$index'];
+                final formattedUom = uom == 'Square Meter/No'
+                    ? 'sqmt'
+                    : uom == 'Meter/No'
+                    ? 'meter'
+                    : null;
+
                 return {
-                  'product': formData['product_$index'],
-                  'machine_name': formData['machine_name_$index'],
-                  'uom': formData['uom_$index'],
-                  'planned_quantity': formData['planned_quantity_$index'],
-                  'planned_date': formData['planned_date_$index'],
+                  'product': productId,
+                  'machine_name':
+                      machineId, // Send machine ID, not display name
+                  'planned_quantity':
+                      int.tryParse(
+                        formData['planned_quantity_$index']?.toString() ?? '0',
+                      ) ??
+                      0,
+                  'scheduled_date': formattedScheduledDate,
+                  'uom': formattedUom, // Include UOM field
                 };
               }).toList();
 
-              // TODO: Send 'formData' and 'products' to provider/repository for submission here
+              // Validate products
+              if (products.isEmpty) {
+                context.showWarningSnackbar(
+                  "At least one product is required.",
+                );
+                return;
+              }
 
-              context.showSuccessSnackbar("Job Order submitted successfully");
-              context.go(RouteNames.jobOrder);
+              // Construct the full payload
+              final dateRange = formData['date_range'] as DateTimeRange;
+              final payload = {
+                'work_order': workOrderId,
+                'sales_order_number':
+                    formData['sales_order_number']?.toString() ?? '',
+                'batch_number':
+                    int.tryParse(formData['batch_number']?.toString() ?? '0') ??
+                    0,
+                'date': {
+                  'from': '${dateRange.start.toIso8601String()}Z',
+                  'to': '${dateRange.end.toIso8601String()}Z',
+                },
+                'products': products,
+              };
+
+              // Log the payload for debugging
+              print('Submitting Job Order Payload: ${jsonEncode(payload)}');
+
+              try {
+                // Call the repository to create the job order
+                await provider.createJobOrder(payload);
+                context.showSuccessSnackbar("Job Order submitted successfully");
+                context.go(RouteNames.jobOrder);
+              } catch (e) {
+                context.showWarningSnackbar("Failed to submit Job Order: $e");
+                print('Submission Error: $e');
+              }
             } else {
               context.showWarningSnackbar(
                 "Please fill in all required fields correctly.",

@@ -27,6 +27,7 @@ class AppUrl {
       '$baseUrl/konkreteKlinkers/helpers/clients';
   static const String fetchClientDetailsUrl =
       '$baseUrl/konkreteKlinkers/helpers/clients';
+
   static const String updateClientDetailsUrl =
       '$baseUrl/konkreteKlinkers/helpers/clients';
   static const String deleteClientDetailsUrl =

@@ -86,25 +86,16 @@ class JobOrderRepository {
     }
   }
 
-  // Add this method to your JobOrderRepository class
-
   Future<List<Map<String, dynamic>>> fetchProductDetailsByIds(
     List<String> productIds,
   ) async {
     try {
       final authHeaders = await headers;
-
-      // Construct URL for fetching product details by IDs
-      // This might be a POST request or a GET with query parameters
-      // Adjust the URL according to your API specification
-      final uri = Uri.parse(
-        '${AppUrl.baseUrl}/products/details',
-      ); // Adjust this URL
+      final uri = Uri.parse('${AppUrl.baseUrl}/products/details');
 
       print('🔗 Fetching product details from: $uri');
       print('🆔 Product IDs: $productIds');
 
-      // Use POST request to send product IDs in body
       final response = await http
           .post(
             uri,
@@ -134,15 +125,11 @@ class JobOrderRepository {
     }
   }
 
-  // Alternative: If you don't have a bulk product details API,
-  // modify the existing method to handle the work order ID correctly
   Future<List<Map<String, dynamic>>> fetchProductsByWorkOrder(
     String workOrderId,
   ) async {
     try {
       final authHeaders = await headers;
-
-      // Construct the full URL with the work order ID
       final fullUrl = '${AppUrl.getproductsbyworkOrder}$workOrderId';
       final uri = Uri.parse(fullUrl);
 
@@ -163,7 +150,6 @@ class JobOrderRepository {
         final List<dynamic> dataList = jsonData['data'] ?? [];
         print('📋 Data List Length: ${dataList.length}');
 
-        // Debug each product
         for (int i = 0; i < dataList.length; i++) {
           final product = dataList[i];
           print('🎯 Product $i: $product');
@@ -186,6 +172,84 @@ class JobOrderRepository {
       print('💥 Error in fetchProductsByWorkOrder: $e');
       throw Exception('Error fetching products: $e');
     }
+  }
+
+  Future<List<String>> fetchMachineNamesByProductId(String productId) async {
+    if (productId.isEmpty) {
+      print('❌ Invalid product_id: empty or null');
+      throw Exception('Product ID cannot be empty');
+    }
+
+    const maxRetries = 3;
+    int retryCount = 0;
+    const baseDelay = Duration(seconds: 1);
+
+    while (retryCount < maxRetries) {
+      try {
+        final authHeaders = await headers;
+        final uri = Uri.parse(
+          'http://3.6.6.231/api/konkreteKlinkers/joborder-getMachine?material_code=$productId',
+        );
+
+        print(
+          '🔗 Fetching machine names from: $uri (Attempt ${retryCount + 1}/$maxRetries)',
+        );
+
+        final response = await http
+            .get(uri, headers: authHeaders)
+            .timeout(const Duration(seconds: 30));
+
+        print('📱 Response Status: ${response.statusCode}');
+        print('📄 Response Body: ${response.body}');
+
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> jsonData = json.decode(response.body);
+          final List<dynamic> dataList = jsonData['data'] ?? [];
+          final machineNames = dataList
+              .map((item) => item['name']?.toString())
+              .where((name) => name != null && name.isNotEmpty)
+              .cast<String>()
+              .toList();
+
+          print('✅ Retrieved ${machineNames.length} machine names');
+          return machineNames;
+        } else {
+          final errorMessage =
+              'Failed to fetch machine names: ${response.statusCode} - ${response.body}';
+          print('❌ $errorMessage');
+          if (response.statusCode >= 500 && retryCount < maxRetries - 1) {
+            retryCount++;
+            final delay = baseDelay * (1 << retryCount);
+            print('⏳ Retrying after ${delay.inMilliseconds}ms...');
+            await Future.delayed(delay);
+            continue;
+          } else if (response.statusCode == 401) {
+            throw Exception('Unauthorized: Invalid or expired token');
+          } else if (response.statusCode == 404) {
+            throw Exception('No machines found for product ID: $productId');
+          }
+          throw Exception(errorMessage);
+        }
+      } on SocketException catch (e) {
+        print('❌ Network error: $e');
+        if (retryCount < maxRetries - 1) {
+          retryCount++;
+          final delay = baseDelay * (1 << retryCount);
+          print('⏳ Retrying after ${delay.inMilliseconds}ms...');
+          await Future.delayed(delay);
+          continue;
+        }
+        throw Exception('No internet connection: $e');
+      } on FormatException catch (e) {
+        print('❌ Invalid response format: $e');
+        throw Exception('Invalid response format: $e');
+      } catch (e) {
+        print('❌ Error in fetchMachineNamesByProductId: $e');
+        throw Exception('Error fetching machine names: $e');
+      }
+    }
+
+    throw Exception('Failed to fetch machine names after $maxRetries attempts');
   }
 
   Future<List<Map<String, dynamic>>> fetchWorkOrderDetailsRaw() async {
@@ -211,31 +275,18 @@ class JobOrderRepository {
     }
   }
 
-  Future<JobOrderModel> createJobOrder({
-    required String plantId,
-    required String materialCode,
-    required String description,
-    required List<String> uom,
-    required Map<String, double> areas,
-    required int noOfPiecesPerPunch,
-    required int qtyInBundle,
-  }) async {
+  Future<JobOrderModel> createJobOrder(Map<String, dynamic> payload) async {
     isAddJobOrderLoading = true;
     try {
       final authHeaders = await headers;
       final url = AppUrl.createJoborder;
-      final Map<String, dynamic> body = {
-        "plant": plantId,
-        "material_code": materialCode,
-        "description": description,
-        "uom": uom,
-        "areas": areas,
-        "no_of_pieces_per_punch": noOfPiecesPerPunch,
-        "qty_in_bundle": qtyInBundle,
-      };
 
       final response = await http
-          .post(Uri.parse(url), headers: authHeaders, body: json.encode(body))
+          .post(
+            Uri.parse(url),
+            headers: authHeaders,
+            body: json.encode(payload),
+          )
           .timeout(const Duration(seconds: 30));
 
       print('Create JobOrder Response: ${response.body}');
