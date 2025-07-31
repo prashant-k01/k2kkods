@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
@@ -453,9 +452,16 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
               hintText: 'Enter Batch Number',
               focusNode: _focusNodes['batch_number'],
               prefixIcon: Icons.numbers,
+              keyboardType: TextInputType.number,
               validators: [
                 FormBuilderValidators.required(),
-                FormBuilderValidators.minLength(2),
+                FormBuilderValidators.numeric(
+                  errorText: 'Batch number must be a number',
+                ),
+                FormBuilderValidators.min(
+                  1,
+                  errorText: 'Batch number must be positive',
+                ),
               ],
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
@@ -1010,6 +1016,52 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
             borderColor: Colors.grey.shade300,
             focusedBorderColor: const Color(0xFF3B82F6),
             borderRadius: 12.r,
+            validators: [
+              FormBuilderValidators.required(
+                errorText: 'Please select a schedule date for product ${index + 1}',
+              ),
+              (value) {
+                if (value == null) return null;
+                final dateRange = _formKey.currentState?.fields['date_range']?.value as DateTimeRange?;
+                if (dateRange == null) {
+                  return 'Please select a date range first';
+                }
+                final selectedDate = value is DateTime ? value : DateTime.tryParse(value.toString());
+                if (selectedDate == null) {
+                  return 'Invalid date format for product ${index + 1}';
+                }
+                // Strip time part to compare only dates
+                final selectedDateOnly = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+                final startDateOnly = DateTime(dateRange.start.year, dateRange.start.month, dateRange.start.day);
+                final endDateOnly = DateTime(dateRange.end.year, dateRange.end.month, dateRange.end.day);
+                if (selectedDateOnly.isBefore(startDateOnly) || selectedDateOnly.isAfter(endDateOnly)) {
+                  return 'Schedule date for product ${index + 1} must be between ${startDateOnly.day}/${startDateOnly.month}/${startDateOnly.year} and ${endDateOnly.day}/${endDateOnly.month}/${endDateOnly.year}';
+                }
+                return null;
+              },
+            ],
+            onChanged: (value) {
+              if (value == null) return;
+              final dateRange = _formKey.currentState?.fields['date_range']?.value as DateTimeRange?;
+              if (dateRange == null) {
+                context.showWarningSnackbar('Please select a date range first.');
+                return;
+              }
+              final selectedDate = value is DateTime ? value : DateTime.tryParse(value.toString());
+              if (selectedDate == null) {
+                context.showWarningSnackbar('Invalid date format for product ${index + 1}.');
+                return;
+              }
+              // Strip time part to compare only dates
+              final selectedDateOnly = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+              final startDateOnly = DateTime(dateRange.start.year, dateRange.start.month, dateRange.start.day);
+              final endDateOnly = DateTime(dateRange.end.year, dateRange.end.month, dateRange.end.day);
+              if (selectedDateOnly.isBefore(startDateOnly) || selectedDateOnly.isAfter(endDateOnly)) {
+                context.showWarningSnackbar(
+                  'Schedule date for product ${index + 1} must be between ${startDateOnly.day}/${startDateOnly.month}/${startDateOnly.year} and ${endDateOnly.day}/${endDateOnly.month}/${endDateOnly.year}.',
+                );
+              }
+            },
           ),
         ],
       ),
@@ -1090,143 +1142,187 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
             if (_formKey.currentState?.saveAndValidate() ?? false) {
               final formData = _formKey.currentState!.value;
 
-              // Find the selected work order's ID
-              final selectedWO = provider.workOrderDetails.firstWhere(
-                (e) => e['work_order_number'] == formData['work_order'],
-                orElse: () => {},
-              );
-              final workOrderId =
-                  selectedWO['id']?.toString() ?? selectedWO['_id']?.toString();
-
-              // Validate workOrderId
-              if (workOrderId == null || workOrderId.isEmpty) {
-                context.showWarningSnackbar("Invalid work order selected.");
-                return;
-              }
-
-              // Construct products list payload
-              final products = provider.products.asMap().entries.map((entry) {
-                final index = entry.key;
-                final productData = provider.products[index];
-                final productValue = formData['product_$index'];
-                final selectedProduct = provider.availableProducts.firstWhere((
-                  product,
-                ) {
-                  final description =
-                      product['description']?.toString() ?? 'No Description';
-                  final materialCode =
-                      product['material_code']?.toString() ?? 'No Code';
-                  return '$description - $materialCode' == productValue;
-                }, orElse: () => {});
-
-                // Validate product_id
-                final productId =
-                    productData['product_id']?.toString() ??
-                    selectedProduct['product_id']?.toString();
-                if (productId == null || productId.isEmpty) {
-                  throw Exception(
-                    'Invalid product ID for product ${index + 1}',
-                  );
-                }
-
-                // Get machine ID instead of machine name
-                final machineDisplayName = formData['machine_name_$index']
-                    ?.toString();
-                if (machineDisplayName == null || machineDisplayName.isEmpty) {
-                  throw Exception(
-                    'Invalid machine name for product ${index + 1}',
-                  );
-                }
-
-                // Find the machine ID from the available machines for this product
-                final availableMachines = provider.getMachineNamesForProduct(
-                  index,
+              try {
+                // Find the selected work order's ID
+                final selectedWO = provider.workOrderDetails.firstWhere(
+                  (e) => e['work_order_number'] == formData['work_order'],
+                  orElse: () => {},
                 );
-                final machineData = provider.getMachineDataForProduct(
-                  index,
-                ); // You'll need to add this method
+                final workOrderId =
+                    selectedWO['id']?.toString() ??
+                    selectedWO['_id']?.toString();
 
-                String? machineId;
-                if (machineData != null && machineData.isNotEmpty) {
-                  final selectedMachine = machineData.firstWhere(
-                    (machine) =>
-                        machine['name']?.toString() == machineDisplayName ||
-                        machine['machine_name']?.toString() ==
-                            machineDisplayName,
+                // Validate workOrderId
+                if (workOrderId == null || workOrderId.isEmpty) {
+                  context.showWarningSnackbar("Invalid work order selected.");
+                  return;
+                }
+
+                // Construct products list payload
+                final products = <Map<String, dynamic>>[];
+
+                for (int index = 0; index < provider.products.length; index++) {
+                  final productData = provider.products[index];
+                  final productValue = formData['product_$index'];
+
+                  // Find the selected product
+                  final selectedProduct = provider.availableProducts.firstWhere(
+                    (product) {
+                      final description =
+                          product['description']?.toString() ??
+                          'No Description';
+                      final materialCode =
+                          product['material_code']?.toString() ?? 'No Code';
+                      return '$description - $materialCode' == productValue;
+                    },
                     orElse: () => {},
                   );
-                  machineId =
+
+                  // Validate product_id
+                  final productId =
+                      productData['product_id']?.toString() ??
+                      selectedProduct['product_id']?.toString();
+                  if (productId == null || productId.isEmpty) {
+                    throw Exception(
+                      'Invalid product ID for product ${index + 1}',
+                    );
+                  }
+
+                  // Get machine ID from the machine data
+                  final machineDisplayName = formData['machine_name_$index']
+                      ?.toString();
+                  if (machineDisplayName == null ||
+                      machineDisplayName.isEmpty) {
+                    throw Exception(
+                      'Please select a machine for product ${index + 1}',
+                    );
+                  }
+
+                  // Find the machine ID from the stored machine data
+                  final machineData = provider.getMachineDataForProduct(index);
+                  if (machineData == null || machineData.isEmpty) {
+                    throw Exception(
+                      'No machine data available for product ${index + 1}',
+                    );
+                  }
+
+                  final selectedMachine = machineData.firstWhere(
+                    (machine) =>
+                        machine['name']?.toString() == machineDisplayName,
+                    orElse: () => {},
+                  );
+
+                  final machineId =
                       selectedMachine['id']?.toString() ??
                       selectedMachine['_id']?.toString();
+
+                  if (machineId == null || machineId.isEmpty) {
+                    throw Exception(
+                      'Invalid machine ID for product ${index + 1}',
+                    );
+                  }
+
+                  // Format scheduled date
+                  final scheduledDate = formData['planned_date_$index'];
+                  String formattedScheduledDate = '';
+                  if (scheduledDate is DateTime) {
+                    formattedScheduledDate =
+                        '${scheduledDate.toIso8601String()}Z';
+                  } else if (scheduledDate != null) {
+                    // Try to parse if it's a string
+                    try {
+                      final parsedDate = DateTime.parse(
+                        scheduledDate.toString(),
+                      );
+                      formattedScheduledDate =
+                          '${parsedDate.toIso8601String()}Z';
+                    } catch (e) {
+                      throw Exception(
+                        'Invalid scheduled date format for product ${index + 1}',
+                      );
+                    }
+                  } else {
+                    throw Exception(
+                      'Scheduled date is required for product ${index + 1}',
+                    );
+                  }
+
+                  // Map UOM to backend format
+                  final uom = formData['uom_$index'];
+                  final formattedUom = uom == 'Square Meter/No'
+                      ? 'sqmt'
+                      : uom == 'Meter/No'
+                      ? 'meter'
+                      : null;
+
+                  if (formattedUom == null) {
+                    throw Exception(
+                      'Invalid UOM selected for product ${index + 1}',
+                    );
+                  }
+
+                  // Parse planned quantity
+                  final plannedQuantityStr =
+                      formData['planned_quantity_$index']?.toString() ?? '0';
+                  final plannedQuantity = int.tryParse(plannedQuantityStr) ?? 0;
+
+                  if (plannedQuantity <= 0) {
+                    throw Exception(
+                      'Planned quantity must be greater than 0 for product ${index + 1}',
+                    );
+                  }
+
+                  products.add({
+                    'product': productId,
+                    'machine_name': machineId, // This is actually machine ID
+                    'planned_quantity': plannedQuantity,
+                    'scheduled_date': formattedScheduledDate,
+                    'uom': formattedUom,
+                  });
                 }
 
-                if (machineId == null || machineId.isEmpty) {
-                  throw Exception(
-                    'Invalid machine ID for product ${index + 1}',
+                // Validate products
+                if (products.isEmpty) {
+                  context.showWarningSnackbar(
+                    "At least one product is required.",
                   );
+                  return;
                 }
 
-                // Ensure scheduled_date is in ISO 8601 format with Z suffix
-                final scheduledDate = formData['planned_date_$index'];
-                final formattedScheduledDate = scheduledDate is DateTime
-                    ? '${scheduledDate.toIso8601String()}Z'
-                    : scheduledDate?.toString() ?? '';
-                if (formattedScheduledDate.isEmpty) {
-                  throw Exception(
-                    'Invalid scheduled date for product ${index + 1}',
+                // Construct the full payload
+                final dateRange = formData['date_range'] as DateTimeRange?;
+                if (dateRange == null) {
+                  context.showWarningSnackbar("Please select a date range.");
+                  return;
+                }
+
+                // Parse batch number
+                final batchNumberStr =
+                    formData['batch_number']?.toString() ?? '0';
+                final batchNumber = int.tryParse(batchNumberStr) ?? 0;
+
+                if (batchNumber <= 0) {
+                  context.showWarningSnackbar(
+                    "Please enter a valid batch number.",
                   );
+                  return;
                 }
 
-                // Map UOM to backend format
-                final uom = formData['uom_$index'];
-                final formattedUom = uom == 'Square Meter/No'
-                    ? 'sqmt'
-                    : uom == 'Meter/No'
-                    ? 'meter'
-                    : null;
-
-                return {
-                  'product': productId,
-                  'machine_name':
-                      machineId, // Send machine ID, not display name
-                  'planned_quantity':
-                      int.tryParse(
-                        formData['planned_quantity_$index']?.toString() ?? '0',
-                      ) ??
-                      0,
-                  'scheduled_date': formattedScheduledDate,
-                  'uom': formattedUom, // Include UOM field
+                final payload = {
+                  'work_order': workOrderId,
+                  'sales_order_number':
+                      formData['sales_order_number']?.toString() ?? '',
+                  'batch_number': batchNumber,
+                  'date': {
+                    'from': '${dateRange.start.toIso8601String()}Z',
+                    'to': '${dateRange.end.toIso8601String()}Z',
+                  },
+                  'products': products,
                 };
-              }).toList();
 
-              // Validate products
-              if (products.isEmpty) {
-                context.showWarningSnackbar(
-                  "At least one product is required.",
-                );
-                return;
-              }
+                // Log the payload for debugging
+                print('Submitting Job Order Payload: ${jsonEncode(payload)}');
 
-              // Construct the full payload
-              final dateRange = formData['date_range'] as DateTimeRange;
-              final payload = {
-                'work_order': workOrderId,
-                'sales_order_number':
-                    formData['sales_order_number']?.toString() ?? '',
-                'batch_number':
-                    int.tryParse(formData['batch_number']?.toString() ?? '0') ??
-                    0,
-                'date': {
-                  'from': '${dateRange.start.toIso8601String()}Z',
-                  'to': '${dateRange.end.toIso8601String()}Z',
-                },
-                'products': products,
-              };
-
-              // Log the payload for debugging
-              print('Submitting Job Order Payload: ${jsonEncode(payload)}');
-
-              try {
                 // Call the repository to create the job order
                 await provider.createJobOrder(payload);
                 context.showSuccessSnackbar("Job Order submitted successfully");

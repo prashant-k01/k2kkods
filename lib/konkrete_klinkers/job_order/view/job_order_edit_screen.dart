@@ -1,141 +1,253 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/date_picker.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
-import 'package:k2k/common/widgets/dropdown.dart';
+import 'package:k2k/common/widgets/ranger_date_pciker.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
-import 'package:k2k/common/widgets/snackbar.dart';
+import 'package:k2k/common/widgets/dropdown.dart';
 import 'package:k2k/common/widgets/textfield.dart';
-import 'package:k2k/konkrete_klinkers/master_data/plants/provider/plants_provider.dart';
-import 'package:k2k/konkrete_klinkers/master_data/products/provider/product_provider.dart';
+import 'package:k2k/common/widgets/snackbar.dart';
+import 'package:k2k/konkrete_klinkers/job_order/provider/job_order_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class EditProductFormScreen extends StatelessWidget {
-  final String productId;
+class JobOrderEditFormScreen extends StatefulWidget {
+  final String mongoId;
 
-  const EditProductFormScreen({super.key, required this.productId});
+  const JobOrderEditFormScreen({super.key, required this.mongoId});
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ProductProvider()..initializeEditForm(productId),
-      child: Consumer<ProductProvider>(
-        builder: (context, provider, _) {
-          return _EditProductFormContent(productId: productId);
-        },
-      ),
-    );
-  }
+  _JobOrderEditFormScreenState createState() => _JobOrderEditFormScreenState();
 }
 
-class _EditProductFormContent extends StatelessWidget {
-  final String productId;
+class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
   final ScrollController _scrollController = ScrollController();
+  bool _isLoading = true;
+  String? _errorMessage;
 
-  _EditProductFormContent({required this.productId});
+  final Map<String, FocusNode> _focusNodes = {
+    'work_order': FocusNode(),
+    'sales_order_number': FocusNode(),
+    'batch_number': FocusNode(),
+  };
+
+  final List<Map<String, FocusNode>> _productFocusNodes = [];
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.mongoId.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.showWarningSnackbar('Invalid job order ID.');
+        context.go(RouteNames.jobOrder);
+      });
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = context.read<JobOrderProvider>();
+      provider
+          .loadWorkOrderDetails()
+          .then((_) {
+            provider
+                .getJobOrder(widget.mongoId)
+                .then((jobOrder) {
+                  if (jobOrder != null) {
+                    print('Fetched JobOrder: ${jsonEncode(jobOrder.toJson())}');
+
+                    // Use the actualWorkOrderNumber getter
+                    final workOrderNumber = jobOrder.actualWorkOrderNumber;
+
+                    if (workOrderNumber.isEmpty) {
+                      setState(() {
+                        _isLoading = false;
+                        _errorMessage =
+                            'Work order number not found in job order data.';
+                      });
+                      return;
+                    }
+
+                    provider.setSelectedWorkOrder(workOrderNumber);
+                    final workOrder = provider.workOrderDetails.firstWhere(
+                      (e) => e['work_order_number'] == workOrderNumber,
+                      orElse: () => {},
+                    );
+
+                    final workOrderId =
+                        workOrder['id']?.toString() ??
+                        workOrder['_id']?.toString();
+
+                    if (workOrderId != null && workOrderId.isNotEmpty) {
+                      provider
+                          .loadProductsByWorkOrder(workOrderId)
+                          .then((_) {
+                            final updatedProducts = jobOrder.jobOrders.map((
+                              item,
+                            ) {
+                              final product = provider.availableProducts
+                                  .firstWhere(
+                                    (p) =>
+                                        p['product_id']?.toString() ==
+                                            item.product ||
+                                        p['_id']?.toString() == item.product,
+                                    orElse: () => {},
+                                  );
+                              return {
+                                'product_id': item.product,
+                                'description':
+                                    item.description ??
+                                    product['description'] ??
+                                    'No Description',
+                                'material_code':
+                                    item.materialCode ??
+                                    product['material_code'] ??
+                                    'No Code',
+                                'quantity_in_no': item.plannedQuantity,
+                                'machine_name': item.machineName,
+                                'scheduled_date': item.scheduledDate,
+                              };
+                            }).toList();
+                            provider.updateProducts(updatedProducts);
+                            _initializeProductFocusNodes(
+                              provider.products.length,
+                            );
+                            for (int i = 0; i < provider.products.length; i++) {
+                              final productId = provider
+                                  .products[i]['product_id']
+                                  ?.toString();
+                              if (productId != null && productId.isNotEmpty) {
+                                provider.loadMachineNamesByProductId(
+                                  i,
+                                  productId,
+                                );
+                              }
+                            }
+                            setState(() {
+                              _isLoading = false;
+                              _errorMessage = null;
+                            });
+                          })
+                          .catchError((e) {
+                            setState(() {
+                              _isLoading = false;
+                              _errorMessage = 'Failed to load products: $e';
+                            });
+                          });
+                    } else {
+                      setState(() {
+                        _isLoading = false;
+                        _errorMessage =
+                            'Failed to find work order ID for $workOrderNumber.';
+                      });
+                    }
+                  } else {
+                    setState(() {
+                      _isLoading = false;
+                      _errorMessage = provider.error ?? 'Invalid Job Order ID.';
+                    });
+                  }
+                })
+                .catchError((e) {
+                  setState(() {
+                    _isLoading = false;
+                    _errorMessage = 'Failed to fetch job order: $e';
+                  });
+                });
+          })
+          .catchError((e) {
+            setState(() {
+              _isLoading = false;
+              _errorMessage = 'Failed to load work orders: $e';
+            });
+          });
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _focusNodes.forEach((_, node) => node.dispose());
+    for (var product in _productFocusNodes) {
+      product.forEach((_, node) => node.dispose());
+    }
+    super.dispose();
+  }
+
+  void _initializeProductFocusNodes(int count) {
+    for (var map in _productFocusNodes) {
+      map.forEach((_, node) => node.dispose());
+    }
+    _productFocusNodes.clear();
+    for (var i = 0; i < count; i++) {
+      _productFocusNodes.add({
+        'product': FocusNode(),
+        'machine_name': FocusNode(),
+        'planned_quantity': FocusNode(),
+      });
+    }
+  }
+
+  void _scrollToFocusedField(BuildContext context, FocusNode focusNode) {
+    if (focusNode.hasFocus) {
+      final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+      if (renderBox != null) {
+        _scrollController.animateTo(
+          _scrollController.offset + renderBox.localToGlobal(Offset.zero).dy,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final productProvider = Provider.of<ProductProvider>(context);
-    final plantProvider = Provider.of<PlantProvider>(context, listen: false);
-
-    if (!productProvider.isInitialized) {
-      return const Scaffold(
-        backgroundColor: Color(0xFFF8FAFC),
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (productProvider.errorMessage != null) {
-      return _buildErrorScreen(context, productProvider.errorMessage!);
-    }
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      resizeToAvoidBottomInset: true,
-      appBar: AppBars(
-        title: _buildLogoAndTitle(),
-        leading: _buildBackButton(context),
-        action: [],
-      ),
-      body: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(),
-        behavior: HitTestBehavior.opaque,
-        child: ListView.builder(
-          controller: _scrollController,
-          padding: EdgeInsets.all(24.w).copyWith(
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
+    return Consumer<JobOrderProvider>(
+      builder: (context, provider, _) {
+        return Scaffold(
+          backgroundColor: const Color(0xFFF8FAFC),
+          resizeToAvoidBottomInset: true,
+          appBar: AppBars(
+            title: _buildLogoAndTitle(),
+            leading: _buildBackButton(),
+            action: [],
           ),
-          itemCount: 1,
-          itemBuilder: (context, index) => _buildFormCard(context, productProvider, plantProvider),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorScreen(BuildContext context, String errorMessage) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBars(
-        title: _buildLogoAndTitle(),
-        leading: _buildBackButton(context),
-        action: [],
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64.sp,
-              color: const Color(0xFFF43F5E),
-            ),
-            SizedBox(height: 16.h),
-            Text(
-              'Error Loading Product',
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF334155),
-              ),
-            ),
-            SizedBox(height: 8.h),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.w),
-              child: Text(
-                errorMessage,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  color: const Color(0xFF64748B),
+          body: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _errorMessage != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _errorMessage!,
+                        style: TextStyle(fontSize: 16.sp, color: Colors.red),
+                      ),
+                      SizedBox(height: 16.h),
+                      ElevatedButton(
+                        onPressed: () => context.go(RouteNames.jobOrder),
+                        child: const Text('Back to Job Orders'),
+                      ),
+                    ],
+                  ),
+                )
+              : GestureDetector(
+                  onTap: () => FocusScope.of(context).unfocus(),
+                  behavior: HitTestBehavior.opaque,
+                  child: ListView(
+                    controller: _scrollController,
+                    padding: EdgeInsets.all(24.w).copyWith(
+                      bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
+                    ),
+                    children: [_buildFormCard(context, provider)],
+                  ),
                 ),
-              ),
-            ),
-            SizedBox(height: 16.h),
-            ElevatedButton(
-              onPressed: () => context.go(RouteNames.products),
-              child: Text(
-                'Back to Products',
-                style: TextStyle(fontSize: 16.sp),
-              ),
-            ),
-            SizedBox(height: 8.h),
-            ElevatedButton(
-              onPressed: () {
-                Provider.of<ProductProvider>(context, listen: false).initializeEditForm(productId);
-              },
-              child: Text(
-                'Retry',
-                style: TextStyle(fontSize: 16.sp),
-              ),
-            ),
-          ],
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -144,7 +256,7 @@ class _EditProductFormContent extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          'Edit Product',
+          'Edit Job Order',
           style: TextStyle(
             fontSize: 18.sp,
             fontWeight: FontWeight.w600,
@@ -155,19 +267,27 @@ class _EditProductFormContent extends StatelessWidget {
     );
   }
 
-  Widget _buildBackButton(BuildContext context) {
+  Widget _buildBackButton() {
     return IconButton(
       icon: Icon(
         Icons.arrow_back_ios,
         size: 24.sp,
         color: const Color(0xFF334155),
       ),
-      onPressed: () => context.go(RouteNames.products),
+      onPressed: () => context.go(RouteNames.jobOrder),
     );
   }
 
-  Widget _buildFormCard(
-      BuildContext context, ProductProvider productProvider, PlantProvider plantProvider) {
+  Widget _buildFormCard(BuildContext context, JobOrderProvider provider) {
+    final jobOrder = provider.jobOrder;
+    if (jobOrder == null) {
+      return Center(
+        child: Text(
+          'Failed to load job order details.',
+          style: TextStyle(fontSize: 16.sp, color: Colors.red),
+        ),
+      );
+    }
     return Container(
       padding: EdgeInsets.all(24.w),
       decoration: BoxDecoration(
@@ -183,12 +303,11 @@ class _EditProductFormContent extends StatelessWidget {
       ),
       child: FormBuilder(
         key: _formKey,
-        initialValue: productProvider.initialValues,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Product Details',
+              'Job Order Details',
               style: TextStyle(
                 fontSize: 18.sp,
                 fontWeight: FontWeight.w600,
@@ -197,38 +316,260 @@ class _EditProductFormContent extends StatelessWidget {
             ),
             SizedBox(height: 8.h),
             Text(
-              'Edit the required information below',
+              'Edit the information below',
               style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
             ),
             SizedBox(height: 24.h),
-            Consumer<PlantProvider>(
-              builder: (context, plantProvider, _) {
-                final plants = plantProvider.allPlants;
-                final plantNames = plants.map((plant) => plant.plantName).toList();
-
+            Builder(
+              builder: (context) {
+                if (provider.isLoadingWorkOrderNumbers) {
+                  return Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                    child: const Center(child: CircularProgressIndicator()),
+                  );
+                }
+                if (provider.error != null) {
+                  return Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Failed to load work orders: ${provider.error}',
+                          style: TextStyle(color: Colors.red, fontSize: 14.sp),
+                        ),
+                        SizedBox(height: 8.h),
+                        ElevatedButton(
+                          onPressed: () => provider.loadWorkOrderDetails(),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                if (provider.workOrderNumbers.isEmpty) {
+                  return Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                    child: Text(
+                      'No work orders available',
+                      style: TextStyle(fontSize: 14.sp, color: Colors.grey),
+                    ),
+                  );
+                }
                 return CustomSearchableDropdownFormField(
-                  name: 'plant',
-                  labelText: 'Plant',
-                  hintText: 'Select Plant',
-                  prefixIcon: Icons.factory,
-                  options: plantNames.isEmpty ? ['No plants available'] : plantNames,
+                  name: 'work_order',
+                  labelText: 'Work Order',
+                  hintText: 'Select Work Order',
+                  prefixIcon: Icons.work,
+                  initialValue:
+                      provider.selectedWorkOrder ??
+                      jobOrder.actualWorkOrderNumber,
+                  options: provider.workOrderNumbers,
                   fillColor: const Color(0xFFF8FAFC),
                   borderColor: Colors.grey.shade300,
                   focusedBorderColor: const Color(0xFF3B82F6),
                   borderRadius: 12.r,
                   validators: [
-                    FormBuilderValidators.required(errorText: 'Please select a plant'),
+                    FormBuilderValidators.required(
+                      errorText: 'Please select a work order',
+                    ),
                   ],
-                  enabled: plantNames.isNotEmpty,
+                  onChanged: (value) {
+                    provider.setSelectedWorkOrder(value as String?);
+                    final workOrder = provider.workOrderDetails.firstWhere(
+                      (e) => e['work_order_number'] == value,
+                      orElse: () => {},
+                    );
+                    final workOrderId =
+                        workOrder['id']?.toString() ??
+                        workOrder['_id']?.toString();
+                    if (workOrderId != null) {
+                      provider.loadProductsByWorkOrder(workOrderId);
+                    }
+                  },
                 );
               },
             ),
+            SizedBox(height: 12.h),
+            if (provider.selectedWorkOrder != null)
+              Builder(
+                builder: (context) {
+                  final selectedWO = provider.workOrderDetails.firstWhere(
+                    (e) => e['work_order_number'] == provider.selectedWorkOrder,
+                    orElse: () => {},
+                  );
+                  if (selectedWO.isEmpty) return const SizedBox.shrink();
+                  final clientName =
+                      selectedWO['client_id']?['name'] ?? 'Unknown Client';
+                  final projectName =
+                      selectedWO['project_id']?['name'] ?? 'Unknown Project';
+                  return Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 20.w,
+                      vertical: 16.h,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Colors.white, Colors.grey.shade50],
+                      ),
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(
+                        color: Colors.grey.shade200,
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.06),
+                          blurRadius: 12.0,
+                          offset: const Offset(0, 4),
+                          spreadRadius: -2,
+                        ),
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 6.0,
+                          offset: const Offset(0, 2),
+                          spreadRadius: -1,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Client Details',
+                          style: TextStyle(
+                            fontSize: 17.sp,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        SizedBox(height: 12.h),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12.w,
+                            vertical: 8.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(8.r),
+                            border: Border.all(
+                              color: Colors.blue.shade100,
+                              width: 1,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: EdgeInsets.all(4.w),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.shade100,
+                                      borderRadius: BorderRadius.circular(6.r),
+                                    ),
+                                    child: Icon(
+                                      Icons.business_center,
+                                      size: 14.sp,
+                                      color: Colors.blue.shade700,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8.w),
+                                  Text(
+                                    'CLIENT',
+                                    style: TextStyle(
+                                      fontSize: 11.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.blue.shade700,
+                                      letterSpacing: 1.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 6.h),
+                              Text(
+                                clientName,
+                                style: TextStyle(
+                                  fontSize: 15.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.grey.shade900,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: 12.h),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12.w,
+                            vertical: 8.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(8.r),
+                            border: Border.all(
+                              color: Colors.green.shade100,
+                              width: 1,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: EdgeInsets.all(4.w),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.shade100,
+                                      borderRadius: BorderRadius.circular(6.r),
+                                    ),
+                                    child: Icon(
+                                      Icons.work_outline,
+                                      size: 14.sp,
+                                      color: Colors.green.shade700,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8.w),
+                                  Text(
+                                    'PROJECT',
+                                    style: TextStyle(
+                                      fontSize: 11.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.green.shade700,
+                                      letterSpacing: 1.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 6.h),
+                              Text(
+                                projectName,
+                                style: TextStyle(
+                                  fontSize: 15.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.grey.shade900,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
             SizedBox(height: 18.h),
             CustomTextFormField(
-              name: 'material_code',
-              labelText: 'Material Code',
-              hintText: 'Enter Material Code',
-              prefixIcon: Icons.business,
+              name: 'sales_order_number',
+              labelText: 'Sales Order Number',
+              hintText: 'Enter Sales Order Number',
+              focusNode: _focusNodes['sales_order_number'],
+              prefixIcon: Icons.receipt,
+              initialValue: jobOrder.salesOrderNumber,
               validators: [
                 FormBuilderValidators.required(),
                 FormBuilderValidators.minLength(2),
@@ -237,125 +578,668 @@ class _EditProductFormContent extends StatelessWidget {
               borderColor: Colors.grey.shade300,
               focusedBorderColor: const Color(0xFF3B82F6),
               borderRadius: 12.r,
-            ),
-            SizedBox(height: 18.h),
-            CustomTextFormField(
-              name: 'description',
-              labelText: 'Description (e.g. 600X300X100MM)',
-              hintText: 'Enter description (e.g. 600X300X100MM)',
-              prefixIcon: Icons.description,
-              validators: [FormBuilderValidators.required()],
-              fillColor: const Color(0xFFF8FAFC),
-              borderColor: Colors.grey.shade300,
-              focusedBorderColor: const Color(0xFF3B82F6),
-              borderRadius: 12.r,
-              onChanged: (value) {
-                if (value != null && productProvider.showAreaPerUnit) {
-                  final area = productProvider.calculateArea(value);
-                  if (area != null) {
-                    _formKey.currentState?.fields['area_per_unit']
-                        ?.didChange(area.toStringAsFixed(4));
-                  }
-                }
-              },
-            ),
-            SizedBox(height: 18.h),
-            CustomTextFormField(
-              name: 'no_of_pieces_per_punch',
-              keyboardType: TextInputType.number,
-              labelText: 'No Of Pieces Per Punch',
-              hintText: 'Enter No Of Pieces Per Punch',
-              prefixIcon: Icons.numbers,
-              validators: [
-                FormBuilderValidators.required(),
-                FormBuilderValidators.numeric(),
-                FormBuilderValidators.min(0, errorText: 'Quantity must be positive'),
-              ],
-              fillColor: const Color(0xFFF8FAFC),
-              borderColor: Colors.grey.shade300,
-              focusedBorderColor: const Color(0xFF3B82F6),
-              borderRadius: 12.r,
-            ),
-            SizedBox(height: 18.h),
-            CustomDropdownFormField<String>(
-              name: 'uom',
-              labelText: 'UOM',
-              items: ["Square Meter/No", "Meter/No"]
-                  .map((item) => DropdownMenuItem<String>(value: item, child: Text(item)))
-                  .toList(),
-              hintText: 'Select UOM',
-              prefixIcon: Icons.workspaces,
-              validators: [FormBuilderValidators.required()],
-              fillColor: const Color(0xFFF8FAFC),
-              borderColor: Colors.grey.shade300,
-              focusedBorderColor: const Color(0xFF3B82F6),
-              borderRadius: 12.r,
-              onChanged: (value) {
-                productProvider.setShowAreaPerUnit(value == "Square Meter/No");
-                if (!productProvider.showAreaPerUnit) {
-                  _formKey.currentState?.fields['area_per_unit']?.didChange('');
-                } else {
-                  final description = _formKey.currentState?.fields['description']?.value;
-                  if (description != null && description.isNotEmpty) {
-                    final area = productProvider.calculateArea(description);
-                    if (area != null) {
-                      _formKey.currentState?.fields['area_per_unit']
-                          ?.didChange(area.toStringAsFixed(4));
-                    }
-                  }
-                }
-              },
-            ),
-            SizedBox(height: 18.h),
-            if (productProvider.showAreaPerUnit)
-              CustomTextFormField(
-                name: 'area_per_unit',
-                labelText: 'Area per unit (Sqmt)',
-                hintText: 'Enter or adjust area per unit',
-                prefixIcon: Icons.area_chart,
-                keyboardType: TextInputType.number,
-                validators: [
-                  FormBuilderValidators.required(),
-                  FormBuilderValidators.numeric(),
-                  FormBuilderValidators.min(0, errorText: 'Area must be positive'),
-                ],
-                fillColor: const Color(0xFFF8FAFC),
-                borderColor: Colors.grey.shade300,
-                focusedBorderColor: const Color(0xFF3B82F6),
-                borderRadius: 12.r,
+              onTap: () => _scrollToFocusedField(
+                context,
+                _focusNodes['sales_order_number']!,
               ),
+            ),
             SizedBox(height: 18.h),
             CustomTextFormField(
-              name: 'qty_in_bundle',
+              name: 'batch_number',
+              labelText: 'Batch Number',
+              hintText: 'Enter Batch Number',
+              focusNode: _focusNodes['batch_number'],
+              prefixIcon: Icons.numbers,
               keyboardType: TextInputType.number,
-              labelText: 'Quantity in bundle',
-              hintText: 'Enter quantity in bundle',
-              prefixIcon: Icons.inventory,
+              initialValue: jobOrder.batchNumber.toString(),
               validators: [
                 FormBuilderValidators.required(),
-                FormBuilderValidators.numeric(),
-                FormBuilderValidators.min(0, errorText: 'Quantity must be positive'),
+                FormBuilderValidators.numeric(
+                  errorText: 'Batch number must be a number',
+                ),
+                FormBuilderValidators.min(
+                  1,
+                  errorText: 'Batch number must be positive',
+                ),
               ],
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
               focusedBorderColor: const Color(0xFF3B82F6),
               borderRadius: 12.r,
+              onTap: () =>
+                  _scrollToFocusedField(context, _focusNodes['batch_number']!),
             ),
+            SizedBox(height: 18.h),
+            CustomRangeDatePicker(
+              name: 'date_range',
+              labelText: 'Date Range (from & to)',
+              hintText: 'Select Date Range (from & to)',
+              initialValue:
+                  jobOrder.date.from.isNotEmpty && jobOrder.date.to.isNotEmpty
+                  ? DateTimeRange(
+                      start: DateTime.parse(jobOrder.date.from),
+                      end: DateTime.parse(jobOrder.date.to),
+                    )
+                  : null,
+            ),
+            SizedBox(height: 24.h),
+            ...provider.products.asMap().entries.map((entry) {
+              final index = entry.key;
+              return _buildProductSection(context, index, provider);
+            }).toList(),
+            SizedBox(height: 18.h),
+            _buildAddProductButton(provider),
             SizedBox(height: 40.h),
-            SizedBox(
-              width: double.infinity,
-              height: 56.h,
-              child: _buildSubmitButton(context, productProvider),
-            ),
+            _buildSubmitButton(context, provider),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSubmitButton(BuildContext context, ProductProvider provider) {
-    final isLoading = provider.isUpdateProductLoading;
+  Widget _buildProductSection(
+    BuildContext context,
+    int index,
+    JobOrderProvider provider,
+  ) {
+    if (_productFocusNodes.length < provider.products.length) {
+      _initializeProductFocusNodes(provider.products.length);
+    }
+    return Container(
+      margin: EdgeInsets.only(bottom: 24.h),
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Product ${index + 1}',
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF334155),
+                ),
+              ),
+              if (provider.products.length > 1)
+                IconButton(
+                  icon: Icon(
+                    Icons.delete_outline,
+                    size: 20.sp,
+                    color: const Color(0xFFF43F5E),
+                  ),
+                  onPressed: () {
+                    provider.removeProductSection(index);
+                    _initializeProductFocusNodes(provider.products.length);
+                    setState(() {});
+                  },
+                  tooltip: 'Remove Product',
+                ),
+            ],
+          ),
+          SizedBox(height: 16.h),
+          Builder(
+            builder: (context) {
+              if (provider.selectedWorkOrder == null) {
+                return Container(
+                  padding: EdgeInsets.all(16.w),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8.r),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        color: Colors.orange.shade700,
+                        size: 20.sp,
+                      ),
+                      SizedBox(width: 8.w),
+                      Expanded(
+                        child: Text(
+                          'Please select a work order first to view available products',
+                          style: TextStyle(
+                            color: Colors.orange.shade700,
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              if (provider.isLoadingProducts) {
+                return Container(
+                  padding: EdgeInsets.symmetric(vertical: 20.h),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            Color(0xFF3B82F6),
+                          ),
+                        ),
+                        SizedBox(height: 12.h),
+                        Text(
+                          'Loading products...',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              if (provider.error != null) {
+                return Container(
+                  padding: EdgeInsets.all(16.w),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8.r),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            color: Colors.red.shade700,
+                            size: 20.sp,
+                          ),
+                          SizedBox(width: 8.w),
+                          Expanded(
+                            child: Text(
+                              'Failed to load products',
+                              style: TextStyle(
+                                color: Colors.red.shade700,
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        provider.error!.contains('500')
+                            ? 'Server error occurred while loading products. Please try again.'
+                            : provider.error!,
+                        style: TextStyle(
+                          color: Colors.red.shade600,
+                          fontSize: 13.sp,
+                        ),
+                      ),
+                      SizedBox(height: 12.h),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          if (provider.selectedWorkOrder != null) {
+                            final selectedWO = provider.workOrderDetails
+                                .firstWhere(
+                                  (e) =>
+                                      e['work_order_number'] ==
+                                      provider.selectedWorkOrder,
+                                  orElse: () => {},
+                                );
+                            final workOrderId =
+                                selectedWO['id']?.toString() ??
+                                selectedWO['_id']?.toString();
+                            if (workOrderId != null) {
+                              provider.loadProductsByWorkOrder(workOrderId);
+                            }
+                          }
+                        },
+                        icon: Icon(Icons.refresh, size: 16.sp),
+                        label: const Text('Retry'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade100,
+                          foregroundColor: Colors.red.shade700,
+                          elevation: 0,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              if (provider.availableProducts.isEmpty) {
+                return Container(
+                  padding: EdgeInsets.all(16.w),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8.r),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.inventory_outlined,
+                        color: Colors.grey.shade600,
+                        size: 20.sp,
+                      ),
+                      SizedBox(width: 8.w),
+                      Expanded(
+                        child: Text(
+                          'No products available for this work order',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Colors.grey.shade600,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return CustomSearchableDropdownFormField(
+                name: 'product_$index',
+                labelText: 'Product',
+                hintText: 'Select Product',
+                prefixIcon: Icons.inventory_2,
+                initialValue:
+                    provider.products.length > index &&
+                        provider.products[index]['description'] != null &&
+                        provider.products[index]['material_code'] != null
+                    ? '${provider.products[index]['description']} - ${provider.products[index]['material_code']}'
+                    : null,
+                options: provider.availableProducts.map((product) {
+                  final description =
+                      product['description']?.toString() ?? 'No Description';
+                  final materialCode =
+                      product['material_code']?.toString() ?? 'No Code';
+                  return '$description - $materialCode';
+                }).toList(),
+                fillColor: const Color(0xFFF8FAFC),
+                borderColor: Colors.grey.shade300,
+                focusedBorderColor: const Color(0xFF3B82F6),
+                borderRadius: 12.r,
+                validators: [
+                  FormBuilderValidators.required(
+                    errorText: 'Please select a product',
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value == null) return;
+                  final selectedProduct = provider.availableProducts.firstWhere(
+                    (product) {
+                      final description =
+                          product['description']?.toString() ??
+                          'No Description';
+                      final materialCode =
+                          product['material_code']?.toString() ?? 'No Code';
+                      return '$description - $materialCode' == value;
+                    },
+                    orElse: () => {},
+                  );
+                  if (selectedProduct.isNotEmpty) {
+                    final updatedProducts = List<Map<String, dynamic>>.from(
+                      provider.products,
+                    );
+                    while (updatedProducts.length <= index) {
+                      updatedProducts.add({});
+                    }
+                    updatedProducts[index] = {
+                      'product_id':
+                          selectedProduct['product_id']?.toString() ??
+                          selectedProduct['_id']?.toString(),
+                      'description': selectedProduct['description'],
+                      'material_code': selectedProduct['material_code'],
+                      'uom': selectedProduct['uom'],
+                      'quantity_in_no': selectedProduct['quantity_in_no'],
+                    };
+                    provider.updateProducts(updatedProducts);
+                    final quantityInNo = selectedProduct['quantity_in_no']
+                        ?.toString();
+                    final uom = selectedProduct['uom']?.toString();
+                    final mappedUom = uom == 'sqmt'
+                        ? 'Square Meter/No'
+                        : uom == 'meter'
+                        ? 'Meter/No'
+                        : null;
+                    _formKey.currentState?.fields['planned_quantity_$index']
+                        ?.didChange(quantityInNo);
+                    _formKey.currentState?.fields['uom_$index']?.didChange(
+                      mappedUom,
+                    );
+                    final productId =
+                        selectedProduct['product_id']?.toString() ??
+                        selectedProduct['_id']?.toString();
+                    if (productId != null && productId.isNotEmpty) {
+                      provider.loadMachineNamesByProductId(index, productId);
+                    } else {
+                      provider.updateMachineNames(index, []);
+                    }
+                  }
+                },
+              );
+            },
+          ),
+          SizedBox(height: 18.h),
+          Builder(
+            builder: (context) {
+              final machineNames = provider.getMachineNamesForProduct(index);
+              final isLoadingMachines = provider.isLoadingMachineNames(index);
+              if (isLoadingMachines) {
+                return Container(
+                  padding: EdgeInsets.symmetric(vertical: 20.h),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            Color(0xFF3B82F6),
+                          ),
+                        ),
+                        SizedBox(height: 12.h),
+                        Text(
+                          'Loading machines...',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              if (provider.error != null && machineNames.isEmpty) {
+                return Container(
+                  padding: EdgeInsets.all(16.w),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8.r),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            color: Colors.red.shade700,
+                            size: 20.sp,
+                          ),
+                          SizedBox(width: 8.w),
+                          Expanded(
+                            child: Text(
+                              'Failed to load machines',
+                              style: TextStyle(
+                                color: Colors.red.shade700,
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        provider.error!.contains('500')
+                            ? 'Server error occurred while loading machines. Please try again or contact support.'
+                            : provider.error!.contains('400')
+                            ? 'Invalid material code. Please select a valid product or contact support.'
+                            : provider.error!,
+                        style: TextStyle(
+                          color: Colors.red.shade600,
+                          fontSize: 13.sp,
+                        ),
+                      ),
+                      SizedBox(height: 12.h),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          final productId = provider.products.length > index
+                              ? provider.products[index]['product_id']
+                                    ?.toString()
+                              : null;
+                          if (productId != null) {
+                            provider.loadMachineNamesByProductId(
+                              index,
+                              productId,
+                            );
+                          }
+                        },
+                        icon: Icon(Icons.refresh, size: 16.sp),
+                        label: const Text('Retry'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade100,
+                          foregroundColor: Colors.red.shade700,
+                          elevation: 0,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              if (machineNames.isEmpty) {
+                return Container(
+                  padding: EdgeInsets.all(16.w),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8.r),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.build,
+                        color: Colors.grey.shade600,
+                        size: 20.sp,
+                      ),
+                      SizedBox(width: 8.w),
+                      Expanded(
+                        child: Text(
+                          'No machines available for this product',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Colors.grey.shade600,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return CustomSearchableDropdownFormField(
+                name: 'machine_name_$index',
+                labelText: 'Machine Name',
+                hintText: 'Select Machine Name',
+                prefixIcon: Icons.build,
+                initialValue:
+                    provider.products.length > index &&
+                        provider.products[index]['machine_name'] != null
+                    ? provider.products[index]['machine_name']
+                    : null,
+                options: machineNames,
+                fillColor: const Color(0xFFF8FAFC),
+                borderColor: Colors.grey.shade300,
+                focusedBorderColor: const Color(0xFF3B82F6),
+                borderRadius: 12.r,
+                validators: [
+                  FormBuilderValidators.required(
+                    errorText: 'Please select a machine',
+                  ),
+                ],
+              );
+            },
+          ),
+          SizedBox(height: 18.h),
+          CustomDropdownFormField<String>(
+            name: 'uom_$index',
+            labelText: 'UOM',
+            items: ['Square Meter/No', 'Meter/No']
+                .map(
+                  (item) =>
+                      DropdownMenuItem<String>(value: item, child: Text(item)),
+                )
+                .toList(),
+            hintText: 'Select UOM',
+            prefixIcon: Icons.workspaces,
+            fillColor: const Color(0xFFF8FAFC),
+            borderColor: Colors.grey.shade300,
+            focusedBorderColor: const Color(0xFF3B82F6),
+            borderRadius: 12.r,
+            initialValue:
+                provider.products.length > index &&
+                    provider.products[index]['uom'] != null
+                ? (provider.products[index]['uom'] == 'sqmt'
+                      ? 'Square Meter/No'
+                      : provider.products[index]['uom'] == 'meter'
+                      ? 'Meter/No'
+                      : null)
+                : null,
+          ),
+          SizedBox(height: 18.h),
+          CustomTextFormField(
+            name: 'planned_quantity_$index',
+            keyboardType: TextInputType.number,
+            labelText: 'Planned Quantity',
+            hintText: 'Enter Planned Quantity',
+            focusNode: _productFocusNodes.length > index
+                ? _productFocusNodes[index]['planned_quantity']
+                : null,
+            prefixIcon: Icons.numbers,
+            initialValue:
+                provider.products.length > index &&
+                    provider.products[index]['quantity_in_no'] != null
+                ? provider.products[index]['quantity_in_no'].toString()
+                : null,
+            validators: [
+              FormBuilderValidators.required(),
+              FormBuilderValidators.numeric(),
+              FormBuilderValidators.min(
+                0,
+                errorText: 'Quantity must be positive',
+              ),
+            ],
+            fillColor: const Color(0xFFF8FAFC),
+            borderColor: Colors.grey.shade300,
+            focusedBorderColor: const Color(0xFF3B82F6),
+            borderRadius: 12.r,
+            onTap: () => _scrollToFocusedField(
+              context,
+              _productFocusNodes.length > index
+                  ? _productFocusNodes[index]['planned_quantity']!
+                  : FocusNode(),
+            ),
+          ),
+          SizedBox(height: 18.h),
+          ReusableDateFormField(
+            name: 'planned_date_$index',
+            hintText: 'Schedule Date',
+            inputType: InputType.date,
+            fillColor: const Color(0xFFF8FAFC),
+            borderColor: Colors.grey.shade300,
+            focusedBorderColor: const Color(0xFF3B82F6),
+            borderRadius: 12.r,
+            initialValue:
+                provider.products.length > index &&
+                    provider.products[index]['scheduled_date'] != null
+                ? DateTime.tryParse(provider.products[index]['scheduled_date'])
+                : null,
+            validators: [
+              FormBuilderValidators.required(
+                errorText:
+                    'Please select a schedule date for product ${index + 1}',
+              ),
+              (value) {
+                if (value == null) return null;
+                final dateRange =
+                    _formKey.currentState?.fields['date_range']?.value
+                        as DateTimeRange?;
+                if (dateRange == null)
+                  return 'Please select a date range first';
+                final selectedDate = value is DateTime
+                    ? value
+                    : DateTime.tryParse(value.toString());
+                if (selectedDate == null)
+                  return 'Invalid date format for product ${index + 1}';
+                final selectedDateOnly = DateTime(
+                  selectedDate.year,
+                  selectedDate.month,
+                  selectedDate.day,
+                );
+                final startDateOnly = DateTime(
+                  dateRange.start.year,
+                  dateRange.start.month,
+                  dateRange.start.day,
+                );
+                final endDateOnly = DateTime(
+                  dateRange.end.year,
+                  dateRange.end.month,
+                  dateRange.end.day,
+                );
+                if (selectedDateOnly.isBefore(startDateOnly) ||
+                    selectedDateOnly.isAfter(endDateOnly)) {
+                  return 'Schedule date for product ${index + 1} must be between ${startDateOnly.day}/${startDateOnly.month}/${startDateOnly.year} and ${endDateOnly.day}/${endDateOnly.month}/${endDateOnly.year}';
+                }
+                return null;
+              },
+            ],
+            onChanged: (value) {
+              if (value == null) return;
+              final dateRange =
+                  _formKey.currentState?.fields['date_range']?.value
+                      as DateTimeRange?;
+              if (dateRange == null) {
+                context.showWarningSnackbar(
+                  'Please select a date range first.',
+                );
+                return;
+              }
+              final selectedDate = value is DateTime
+                  ? value
+                  : DateTime.tryParse(value.toString());
+              if (selectedDate == null) {
+                context.showWarningSnackbar(
+                  'Invalid date format for product ${index + 1}.',
+                );
+                return;
+              }
+              final selectedDateOnly = DateTime(
+                selectedDate.year,
+                selectedDate.month,
+                selectedDate.day,
+              );
+              final startDateOnly = DateTime(
+                dateRange.start.year,
+                dateRange.start.month,
+                dateRange.start.day,
+              );
+              final endDateOnly = DateTime(
+                dateRange.end.year,
+                dateRange.end.month,
+                dateRange.end.day,
+              );
+              if (selectedDateOnly.isBefore(startDateOnly) ||
+                  selectedDateOnly.isAfter(endDateOnly)) {
+                context.showWarningSnackbar(
+                  'Schedule date for product ${index + 1} must be between ${startDateOnly.day}/${startDateOnly.month}/${startDateOnly.year} and ${endDateOnly.day}/${endDateOnly.month}/${endDateOnly.year}.',
+                );
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
 
+  Widget _buildAddProductButton(JobOrderProvider provider) {
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -375,49 +1259,30 @@ class _EditProductFormContent extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: isLoading ? null : () => _submitForm(context, provider),
+          onTap: () {
+            provider.addProductSection();
+            _initializeProductFocusNodes(provider.products.length);
+            setState(() {});
+          },
           borderRadius: BorderRadius.circular(12.r),
           child: Center(
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: 16.h),
-              child: isLoading
-                  ? Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        ),
-                        SizedBox(width: 12.w),
-                        Text(
-                          'Updating Product...',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.edit, color: Colors.white, size: 20.sp),
-                        SizedBox(width: 8.w),
-                        Text(
-                          'Update Product',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.add_circle, color: Colors.white, size: 20.sp),
+                  SizedBox(width: 8.w),
+                  Text(
+                    'Add Another Product',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w600,
                     ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -425,87 +1290,311 @@ class _EditProductFormContent extends StatelessWidget {
     );
   }
 
-  Future<void> _submitForm(BuildContext context, ProductProvider provider) async {
-    if (_formKey.currentState?.saveAndValidate() ?? false) {
-      final formData = _formKey.currentState!.value;
-      final plantProvider = Provider.of<PlantProvider>(context, listen: false);
+  Widget _buildSubmitButton(BuildContext context, JobOrderProvider provider) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
+        ),
+        borderRadius: BorderRadius.circular(12.r),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF3B82F6).withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () async {
+            if (_formKey.currentState?.saveAndValidate() ?? false) {
+              final formData = _formKey.currentState!.value;
+              try {
+                // Validate mongoId
+                final mongoId = widget.mongoId;
+                final isValidMongoId = RegExp(
+                  r'^[0-9a-fA-F]{24}$',
+                ).hasMatch(mongoId);
+                if (!isValidMongoId) {
+                  context.showWarningSnackbar("Invalid job order ID format.");
+                  print('❌ Invalid mongoId: $mongoId');
+                  return;
+                }
+                print('🔍 Mongo ID: $mongoId');
 
-      final selectedPlantName = formData['plant'] as String?;
-      if (selectedPlantName == null) {
-        context.showErrorSnackbar("Please select a plant.");
-        return;
-      }
+                // Convert DateTime and DateTimeRange to JSON-encodable format for logging
+                final loggableFormData = Map<String, dynamic>.from(formData);
+                if (loggableFormData['date_range'] is DateTimeRange) {
+                  final dateRange =
+                      loggableFormData['date_range'] as DateTimeRange;
+                  loggableFormData['date_range'] = {
+                    'from': dateRange.start.toUtc().toIso8601String(),
+                    'to': dateRange.end.toUtc().toIso8601String(),
+                  };
+                }
+                for (int index = 0; index < provider.products.length; index++) {
+                  final plannedDateKey = 'planned_date_$index';
+                  if (loggableFormData[plannedDateKey] is DateTime) {
+                    loggableFormData[plannedDateKey] =
+                        (loggableFormData[plannedDateKey] as DateTime)
+                            .toUtc()
+                            .toIso8601String();
+                  } else if (loggableFormData[plannedDateKey] != null) {
+                    try {
+                      loggableFormData[plannedDateKey] = DateTime.parse(
+                        loggableFormData[plannedDateKey].toString(),
+                      ).toUtc().toIso8601String();
+                    } catch (e) {
+                      print(
+                        '❌ Failed to parse planned_date_$index for logging: $e',
+                      );
+                    }
+                  }
+                }
+                print('📝 Form Data: ${jsonEncode(loggableFormData)}');
+                print('📝 Original Form Data: ${formData.toString()}');
 
-      final selectedPlant = plantProvider.allPlants.firstWhere(
-        (plant) => plant.plantName == selectedPlantName,
-      );
+                final selectedWO = provider.workOrderDetails.firstWhere(
+                  (e) => e['work_order_number'] == formData['work_order'],
+                  orElse: () => {},
+                );
+                final workOrderId =
+                    selectedWO['id']?.toString() ??
+                    selectedWO['_id']?.toString();
+                if (workOrderId == null ||
+                    workOrderId.isEmpty ||
+                    !RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(workOrderId)) {
+                  context.showWarningSnackbar("Invalid work order selected.");
+                  print('❌ Invalid work order ID: $workOrderId');
+                  return;
+                }
+                print('✅ Selected Work Order ID: $workOrderId');
 
-      if (selectedPlant.id.isEmpty) {
-        context.showErrorSnackbar("Selected plant not found. Please try again.");
-        return;
-      }
+                final products = <Map<String, dynamic>>[];
+                for (int index = 0; index < provider.products.length; index++) {
+                  final productData = provider.products[index];
+                  final productValue = formData['product_$index'];
+                  print('🔍 Processing Product $index: $productValue');
 
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => Center(
-          child: Container(
-            padding: EdgeInsets.all(24.w),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16.r),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const CircularProgressIndicator(color: Color(0xFF3B82F6)),
-                SizedBox(height: 16.h),
-                Text(
-                  'Updating Product...',
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF334155),
+                  final selectedProduct = provider.availableProducts.firstWhere(
+                    (product) {
+                      final description =
+                          product['description']?.toString() ??
+                          'No Description';
+                      final materialCode =
+                          product['material_code']?.toString() ?? 'No Code';
+                      return '$description - $materialCode' == productValue;
+                    },
+                    orElse: () => {},
+                  );
+                  final productId =
+                      productData['product_id']?.toString() ??
+                      selectedProduct['product_id']?.toString() ??
+                      selectedProduct['_id']?.toString();
+                  if (productId == null ||
+                      productId.isEmpty ||
+                      !RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(productId)) {
+                    context.showWarningSnackbar(
+                      "Invalid product ID for product ${index + 1}.",
+                    );
+                    print(
+                      '❌ Invalid product ID for product ${index + 1}: $productId',
+                    );
+                    return;
+                  }
+                  print('✅ Product ID: $productId');
+
+                  final machineDisplayName = formData['machine_name_$index']
+                      ?.toString();
+                  if (machineDisplayName == null ||
+                      machineDisplayName.isEmpty) {
+                    context.showWarningSnackbar(
+                      "Please select a machine for product ${index + 1}.",
+                    );
+                    print('❌ No machine selected for product ${index + 1}');
+                    return;
+                  }
+                  print('🔧 Machine Display Name: $machineDisplayName');
+
+                  final machineData = provider.getMachineDataForProduct(index);
+                  if (machineData == null || machineData.isEmpty) {
+                    context.showWarningSnackbar(
+                      "No machine data available for product ${index + 1}.",
+                    );
+                    print('❌ No machine data for product ${index + 1}');
+                    return;
+                  }
+
+                  final selectedMachine = machineData.firstWhere(
+                    (machine) =>
+                        machine['name']?.toString() == machineDisplayName,
+                    orElse: () => {},
+                  );
+                  final machineId =
+                      selectedMachine['id']?.toString() ??
+                      selectedMachine['_id']?.toString();
+                  if (machineId == null ||
+                      machineId.isEmpty ||
+                      !RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(machineId)) {
+                    context.showWarningSnackbar(
+                      "Invalid machine ID for product ${index + 1}.",
+                    );
+                    print(
+                      '❌ Invalid machine ID for product ${index + 1}: $machineId',
+                    );
+                    return;
+                  }
+                  print('✅ Machine ID: $machineId');
+
+                  final scheduledDate = formData['planned_date_$index'];
+                  String formattedScheduledDate = '';
+                  if (scheduledDate is DateTime) {
+                    formattedScheduledDate = scheduledDate
+                        .toUtc()
+                        .toIso8601String();
+                  } else if (scheduledDate != null) {
+                    try {
+                      final parsedDate = DateTime.parse(
+                        scheduledDate.toString(),
+                      ).toUtc();
+                      formattedScheduledDate = parsedDate.toIso8601String();
+                    } catch (e) {
+                      context.showWarningSnackbar(
+                        "Invalid scheduled date format for product ${index + 1}.",
+                      );
+                      print(
+                        '❌ Invalid scheduled date for product ${index + 1}: $e',
+                      );
+                      return;
+                    }
+                  } else {
+                    context.showWarningSnackbar(
+                      "Scheduled date is required for product ${index + 1}.",
+                    );
+                    print('❌ Scheduled date missing for product ${index + 1}');
+                    return;
+                  }
+                  print('📅 Scheduled Date: $formattedScheduledDate');
+
+                  final plannedQuantityStr =
+                      formData['planned_quantity_$index']?.toString() ?? '0';
+                  final plannedQuantity = int.tryParse(plannedQuantityStr) ?? 0;
+                  if (plannedQuantity <= 0) {
+                    context.showWarningSnackbar(
+                      "Planned quantity must be greater than 0 for product ${index + 1}.",
+                    );
+                    print(
+                      '❌ Invalid planned quantity for product ${index + 1}: $plannedQuantityStr',
+                    );
+                    return;
+                  }
+                  print('🔢 Planned Quantity: $plannedQuantity');
+
+                  products.add({
+                    'product': productId,
+                    'machine_name':
+                        machineId, // Changed to match server expectation
+                    'planned_quantity': plannedQuantity,
+                    'scheduled_date': formattedScheduledDate,
+                  });
+                }
+                if (products.isEmpty) {
+                  context.showWarningSnackbar(
+                    "At least one product is required.",
+                  );
+                  print('❌ No products added');
+                  return;
+                }
+                print('📦 Products: ${jsonEncode(products)}');
+
+                final dateRange = formData['date_range'] as DateTimeRange?;
+                if (dateRange == null) {
+                  context.showWarningSnackbar("Please select a date range.");
+                  print('❌ Date range missing');
+                  return;
+                }
+                print(
+                  '📅 Date Range: from ${dateRange.start.toUtc().toIso8601String()} to ${dateRange.end.toUtc().toIso8601String()}',
+                );
+
+                final batchNumberStr =
+                    formData['batch_number']?.toString() ?? '0';
+                final batchNumber = int.tryParse(batchNumberStr) ?? 0;
+                if (batchNumber <= 0) {
+                  context.showWarningSnackbar(
+                    "Please enter a valid batch number.",
+                  );
+                  print('❌ Invalid batch number: $batchNumberStr');
+                  return;
+                }
+                print('🔢 Batch Number: $batchNumber');
+
+                final payload = {
+                  'work_order': workOrderId,
+                  'sales_order_number':
+                      formData['sales_order_number']?.toString() ?? '',
+                  'batch_number': batchNumber,
+                  'date': {
+                    'from': dateRange.start.toUtc().toIso8601String(),
+                    'to': dateRange.end.toUtc().toIso8601String(),
+                  },
+                  'products': products,
+                };
+                print('📤 Submitting Payload: ${jsonEncode(payload)}');
+
+                final success = await provider.updateJobOrder(
+                  mongoId: mongoId,
+                  payload: payload,
+                );
+                if (success) {
+                  context.showSuccessSnackbar("Job Order updated successfully");
+                  print('✅ Job Order updated successfully');
+                  context.go(RouteNames.jobOrder);
+                } else {
+                  final error = provider.error ?? "Unknown error occurred";
+                  context.showWarningSnackbar(
+                    "Failed to update Job Order: $error",
+                  );
+                  print('❌ Update Failed: $error');
+                }
+              } catch (e, stackTrace) {
+                context.showWarningSnackbar("Failed to update Job Order: $e");
+                print('❌ Update Error: $e\nStackTrace: $stackTrace');
+              }
+            } else {
+              context.showWarningSnackbar(
+                "Please fill in all required fields correctly.",
+              );
+              print('❌ Form validation failed');
+            }
+          },
+          borderRadius: BorderRadius.circular(12.r),
+          child: Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 16.h),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white, size: 20.sp),
+                  SizedBox(width: 8.w),
+                  Text(
+                    'Update Job Order',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
-      );
-
-      final success = await provider.updateProduct(
-        productId: productId,
-        plantId: selectedPlant.id,
-        materialCode: formData['material_code'],
-        description: formData['description'],
-        uom: [formData['uom']],
-        areas: {
-          formData['uom']: double.tryParse(formData['area_per_unit'] ?? '0') ?? 0.0,
-        },
-        noOfPiecesPerPunch: int.tryParse(formData['no_of_pieces_per_punch'] ?? '0') ?? 0,
-        qtyInBundle: int.tryParse(formData['qty_in_bundle'] ?? '0') ?? 0,
-      );
-
-      Navigator.of(context).pop();
-
-      if (success && context.mounted) {
-        context.showSuccessSnackbar("Product successfully updated");
-        context.go(RouteNames.products);
-      } else {
-        context.showErrorSnackbar(
-          "Failed to update Product: ${provider.error?.replaceFirst('Exception: ', '') ?? 'Unknown error. Please try again.'}",
-        );
-      }
-    } else {
-      context.showWarningSnackbar("Please fill in all required fields correctly.");
-    }
+      ),
+    );
   }
 }

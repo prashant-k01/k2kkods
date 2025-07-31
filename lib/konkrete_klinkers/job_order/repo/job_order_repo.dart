@@ -54,10 +54,10 @@ class JobOrderRepository {
     }
   }
 
-  Future<JobOrderModel?> getJobOrder(String jobOrderId) async {
+  Future<JobOrderModel?> getJobOrder(String mongoId) async {
     try {
       final authHeaders = await headers;
-      final uri = Uri.parse('${AppUrl.getjoborder}/$jobOrderId');
+      final uri = Uri.parse('${AppUrl.getjoborder}/$mongoId');
 
       final response = await http
           .get(uri, headers: authHeaders)
@@ -174,7 +174,9 @@ class JobOrderRepository {
     }
   }
 
-  Future<List<String>> fetchMachineNamesByProductId(String productId) async {
+  Future<List<Map<String, dynamic>>> fetchMachineNamesByProductId(
+    String productId,
+  ) async {
     if (productId.isEmpty) {
       print('❌ Invalid product_id: empty or null');
       throw Exception('Product ID cannot be empty');
@@ -205,14 +207,15 @@ class JobOrderRepository {
         if (response.statusCode == 200) {
           final Map<String, dynamic> jsonData = json.decode(response.body);
           final List<dynamic> dataList = jsonData['data'] ?? [];
-          final machineNames = dataList
-              .map((item) => item['name']?.toString())
-              .where((name) => name != null && name.isNotEmpty)
-              .cast<String>()
+
+          final machineData = dataList
+              .where((item) => item != null && item['name'] != null)
+              .cast<Map<String, dynamic>>()
               .toList();
 
-          print('✅ Retrieved ${machineNames.length} machine names');
-          return machineNames;
+          print('✅ Retrieved ${machineData.length} machines');
+          print('🔧 Machine data: $machineData');
+          return machineData;
         } else {
           final errorMessage =
               'Failed to fetch machine names: ${response.statusCode} - ${response.body}';
@@ -292,10 +295,12 @@ class JobOrderRepository {
       print('Create JobOrder Response: ${response.body}');
 
       if (response.statusCode == 201) {
-        final responseData = json.decode(response.body);
-        final jobOrderData = (responseData is Map<String, dynamic>)
-            ? responseData['data'] ?? responseData
-            : responseData;
+        final Map<String, dynamic> responseData = json.decode(response.body);
+
+        final jobOrderData =
+            responseData['data']?['jobOrder'] ??
+            responseData['data'] ??
+            responseData;
 
         final createdJobOrder = JobOrderModel.fromJson(jobOrderData);
         _lastCreatedJobOrder = createdJobOrder;
@@ -318,68 +323,68 @@ class JobOrderRepository {
     }
   }
 
-  Future<bool> updateJobOrder({
-    required String jobOrderId,
-    required String plantId,
-    required String materialCode,
-    required String description,
-    required List<String> uom,
-    required Map<String, double> areas,
-    required int noOfPiecesPerPunch,
-    required int qtyInBundle,
-  }) async {
-    try {
-      final authHeaders = await headers;
-      final updateUrl = '${AppUrl.updatejoborder}/$jobOrderId';
+Future<bool> updateJobOrder({
+  required String mongoId,
+  required Map<String, dynamic> payload,
+}) async {
+  try {
+    final authHeaders = await headers;
+    final updateUrl = '${AppUrl.updateJobOrder}/$mongoId';
+    print('🔗 Updating JobOrder at URL: $updateUrl');
+    print('📤 Payload: ${jsonEncode(payload)}');
 
-      final Map<String, dynamic> body = {
-        "plant": plantId,
-        "material_code": materialCode,
-        "description": description,
-        "uom": uom,
-        "areas": areas,
-        "no_of_pieces_per_punch": noOfPiecesPerPunch,
-        "qty_in_bundle": qtyInBundle,
-      };
+    final response = await http
+        .put(
+          Uri.parse(updateUrl),
+          headers: authHeaders,
+          body: json.encode(payload),
+        )
+        .timeout(const Duration(seconds: 30));
 
-      final response = await http
-          .put(
-            Uri.parse(updateUrl),
-            headers: authHeaders,
-            body: json.encode(body),
-          )
-          .timeout(const Duration(seconds: 30));
+    print('📱 Update Response Status: ${response.statusCode}');
+    print('📄 Update Response Body: ${response.body}');
 
-      if (response.statusCode == 200) {
-        return true;
-      } else {
-        throw Exception(
-          'Failed to update JobOrder: ${response.statusCode} - ${response.body}',
-        );
-      }
-    } on SocketException catch (e) {
-      throw Exception('No internet connection: $e');
-    } catch (e) {
-      throw Exception('Unexpected error updating JobOrder: $e');
+    if (response.statusCode == 200) {
+      print('✅ JobOrder updated successfully');
+      return true;
+    } else {
+      final errorMessage =
+          'Failed to update JobOrder: ${response.statusCode} - ${response.body}';
+      print('❌ $errorMessage');
+      throw Exception(errorMessage);
     }
+  } on SocketException catch (e) {
+    print('❌ SocketException: $e');
+    throw Exception('No internet connection: $e');
+  } on FormatException catch (e) {
+    print('❌ FormatException: $e');
+    throw Exception('Invalid response format: $e');
+  } catch (e) {
+    print('❌ Unexpected error updating JobOrder: $e');
+    throw Exception('Unexpected error updating JobOrder: $e');
   }
-
-  Future<bool> deleteJobOrder(String jobOrderId) async {
+}
+  Future<bool> deleteJobOrder(String mongoId) async {
     try {
       final authHeaders = await headers;
       final deleteUrl = AppUrl.deleteJobOrder;
+      print('🔗 Deleting JobOrder at URL: $deleteUrl');
+      print('📤 Payload: {"ids": ["$mongoId"]}');
 
       final response = await http
           .delete(
             Uri.parse(deleteUrl),
             headers: authHeaders,
             body: jsonEncode({
-              "ids": [jobOrderId],
+              "ids": [mongoId],
             }),
           )
           .timeout(const Duration(seconds: 30));
 
-      if (response.statusCode == 200) {
+      print('📱 Delete Response Status: ${response.statusCode}');
+      print('📄 Delete Response Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
         return true;
       } else {
         throw Exception(
@@ -387,8 +392,16 @@ class JobOrderRepository {
         );
       }
     } on SocketException catch (e) {
+      print('❌ SocketException: $e');
       throw Exception('No internet connection: $e');
+    } on HttpException catch (e) {
+      print('❌ HttpException: $e');
+      throw Exception('Network error occurred: $e');
+    } on FormatException catch (e) {
+      print('❌ FormatException: $e');
+      throw Exception('Invalid response format: $e');
     } catch (e) {
+      print('❌ Unexpected error deleting JobOrder: $e');
       throw Exception('Unexpected error deleting JobOrder: $e');
     }
   }

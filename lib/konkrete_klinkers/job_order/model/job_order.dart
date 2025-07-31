@@ -1,93 +1,82 @@
+import 'dart:convert';
+
 class JobOrderResponse {
   final List<JobOrderModel> data;
-  final Pagination pagination;
   final String message;
   final bool success;
 
   JobOrderResponse({
     required this.data,
-    required this.pagination,
     required this.message,
     required this.success,
   });
 
   factory JobOrderResponse.fromJson(Map<String, dynamic> json) {
     try {
+      print('Parsing JobOrderResponse with JSON: ${jsonEncode(json)}');
       final dataJson = json['data'];
+      List<JobOrderModel> jobOrders = [];
+
       if (dataJson == null) {
-        print('Error: data field is null in JSON response: $json');
+        print('Error: data field is null in JSON response');
         return JobOrderResponse(
           data: [],
-          pagination: Pagination(total: 0, page: 1, limit: 10, totalPages: 1),
           message: json['message']?.toString() ?? 'No data field in response',
           success: json['success'] as bool? ?? false,
         );
       }
 
-      // Fix: The API returns job orders directly in data array, not in data['JobOrders']
-      List<JobOrderModel> jobOrders = [];
-
-      if (dataJson is List) {
-        // If data is directly a list of job orders
+      if (dataJson is Map<String, dynamic> && dataJson['jobOrder'] != null) {
+        try {
+          print('Parsing single jobOrder: ${jsonEncode(dataJson['jobOrder'])}');
+          jobOrders = [JobOrderModel.fromJson(dataJson['jobOrder'])];
+        } catch (e) {
+          print(
+            'Error parsing single JobOrder: $e for jobOrder: ${jsonEncode(dataJson['jobOrder'])}',
+          );
+        }
+      } else if (dataJson is List) {
         jobOrders = dataJson
-            .map((item) {
+            .asMap()
+            .entries
+            .map((entry) {
+              final index = entry.key;
+              final item = entry.value;
               try {
                 if (item is Map<String, dynamic>) {
+                  print(
+                    'Parsing JobOrder at index $index: ${jsonEncode(item)}',
+                  );
                   return JobOrderModel.fromJson(item);
                 } else {
-                  print('Error: JobOrder item is not a Map: $item');
+                  print(
+                    'Error: JobOrder item at index $index is not a Map: $item',
+                  );
                   return null;
                 }
               } catch (e) {
-                print('Error parsing JobOrder: $e for item: $item');
+                print(
+                  'Error parsing JobOrder at index $index: $e for item: ${jsonEncode(item)}',
+                );
                 return null;
               }
             })
             .where((item) => item != null)
             .cast<JobOrderModel>()
             .toList();
-      } else if (dataJson is Map<String, dynamic>) {
-        // If data is an object with JobOrders array
-        final jobOrdersJson = dataJson['JobOrders'] as List<dynamic>?;
-        if (jobOrdersJson != null) {
-          jobOrders = jobOrdersJson
-              .map((item) {
-                try {
-                  if (item is Map<String, dynamic>) {
-                    return JobOrderModel.fromJson(item);
-                  } else {
-                    print('Error: JobOrder item is not a Map: $item');
-                    return null;
-                  }
-                } catch (e) {
-                  print('Error parsing JobOrder: $e for item: $item');
-                  return null;
-                }
-              })
-              .where((item) => item != null)
-              .cast<JobOrderModel>()
-              .toList();
-        }
+      } else {
+        print('Error: data field is neither a Map nor a List: $dataJson');
       }
 
       return JobOrderResponse(
         data: jobOrders,
-        pagination: dataJson is Map<String, dynamic>
-            ? Pagination.fromJson(dataJson['pagination'] ?? {})
-            : Pagination(
-                total: jobOrders.length,
-                page: 1,
-                limit: jobOrders.length,
-                totalPages: 1,
-              ),
         message: json['message']?.toString() ?? '',
         success: json['success'] as bool? ?? true,
       );
     } catch (e) {
-      print('Error parsing JobOrderResponse: $e for JSON: $json');
+      print('Error parsing JobOrderResponse: $e for JSON: ${jsonEncode(json)}');
       return JobOrderResponse(
         data: [],
-        pagination: Pagination(total: 0, page: 1, limit: 10, totalPages: 1),
         message: 'Failed to parse response: $e',
         success: false,
       );
@@ -97,162 +86,141 @@ class JobOrderResponse {
   Map<String, dynamic> toJson() {
     return {
       'data': data.map((item) => item.toJson()).toList(),
-      'pagination': pagination.toJson(),
       'message': message,
       'success': success,
     };
   }
 }
 
-class Pagination {
-  final int total;
-  final int page;
-  final int limit;
-  final int totalPages;
-
-  Pagination({
-    required this.total,
-    required this.page,
-    required this.limit,
-    required this.totalPages,
-  });
-
-  factory Pagination.fromJson(Map<String, dynamic> json) {
-    return Pagination(
-      total: json['total'] is num ? (json['total'] as num).toInt() : 0,
-      page: json['page'] is num ? (json['page'] as num).toInt() : 1,
-      limit: json['limit'] is num ? (json['limit'] as num).toInt() : 10,
-      totalPages: json['totalPages'] is num
-          ? (json['totalPages'] as num).toInt()
-          : 1,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'total': total,
-      'page': page,
-      'limit': limit,
-      'totalPages': totalPages,
-    };
-  }
-}
-
 class JobOrderModel {
-  final String workOrderNumber;
+  final String? workOrderNumber;
   final String salesOrderNumber;
   final int batchNumber;
-  final List<JobOrderItem> jobOrders; // This will contain products from API
+  final List<JobOrderItem> jobOrders;
   final DateRange date;
   final String jobOrderId;
+  final String? uom;
+  final String mongoId;
   final String status;
   final String projectName;
-
-  final String? createdBy; // Add this field
+  final String? createdBy;
+  final Map<String, dynamic>? workOrderDetails; 
 
   JobOrderModel({
-    required this.workOrderNumber,
+    this.workOrderNumber,
     required this.salesOrderNumber,
     required this.batchNumber,
     required this.jobOrders,
+    this.uom,
     required this.date,
     required this.jobOrderId,
+    required this.mongoId,
     required this.status,
     required this.projectName,
-    this.createdBy, // Add this parameter
+    this.createdBy,
+    this.workOrderDetails,
   });
 
   factory JobOrderModel.fromJson(Map<String, dynamic> json) {
     try {
-      // Fix: Map 'products' from API to JobOrders in model with null safety
+      print('Parsing JobOrderModel with JSON: ${jsonEncode(json)}');
       List<JobOrderItem> jobOrderItems = [];
 
       final productsJson = json['products'];
       if (productsJson != null && productsJson is List) {
         jobOrderItems = productsJson
-            .map((item) {
+            .asMap()
+            .entries
+            .map((entry) {
+              final index = entry.key;
+              final item = entry.value;
               try {
                 if (item != null && item is Map<String, dynamic>) {
+                  print(
+                    'Parsing JobOrderItem at index $index: ${jsonEncode(item)}',
+                  );
                   return JobOrderItem.fromJson(item);
                 } else {
-                  print('Warning: Product item is null or not a Map: $item');
+                  print(
+                    'Warning: Product item at index $index is null or not a Map: $item',
+                  );
                   return null;
                 }
               } catch (e) {
-                print('Error parsing JobOrderItem: $e for item: $item');
+                print(
+                  'Error parsing JobOrderItem at index $index: $e for item: ${jsonEncode(item)}',
+                );
                 return null;
               }
             })
             .where((item) => item != null)
             .cast<JobOrderItem>()
             .toList();
+      } else {
+        print(
+          'Warning: products field is missing or not a list: $productsJson',
+        );
       }
 
       return JobOrderModel(
-        workOrderNumber:
-            _getStringValue(json['work_order']?['work_order_number']) ??
-            _getStringValue(json['work_order_number']) ??
-            '',
+        workOrderNumber: _getStringValue(json['work_order_number']),
         salesOrderNumber: _getStringValue(json['sales_order_number']) ?? '',
-        batchNumber: _getIntValue(json['batch_number']) ?? 0,
-        jobOrders: jobOrderItems, // Now guaranteed to be non-null
+        batchNumber: _getIntValue(json['batch_number'], 'batch_number') ?? 0,
+        jobOrders: jobOrderItems,
         date: DateRange.fromJson(json['date'] ?? {}),
-        jobOrderId:
-            _getStringValue(json['job_order_id']) ??
-            _getStringValue(json['_id']) ??
-            '',
+        uom: _getStringValue(json['uom']),
+        jobOrderId: _getStringValue(json['job_order_id']) ?? '',
+        mongoId: _getStringValue(json['_id']) ?? '',
         status: _getStringValue(json['status']) ?? 'Unknown',
         projectName: _getStringValue(json['project_name']) ?? 'N/A',
-        createdBy: _extractUsername(json['created_by']),
+        createdBy: _getStringValue(json['created_by']),
+        workOrderDetails: json['work_order_details'] as Map<String, dynamic>?,
       );
     } catch (e) {
-      print('Error parsing JobOrderModel: $e for JSON: $json');
-      return JobOrderModel(
-        workOrderNumber: '',
-        salesOrderNumber: '',
-        batchNumber: 0,
-        jobOrders: [], // Return empty list instead of null
-        date: DateRange(from: '', to: ''),
-        jobOrderId: '',
-        status: 'Unknown',
-        projectName: 'N/A',
-        createdBy: null,
-      );
+      print('Error parsing JobOrderModel: $e for JSON: ${jsonEncode(json)}');
+      rethrow;
     }
   }
 
-  // Helper method to safely extract string values
   static String? _getStringValue(dynamic value) {
     if (value == null) return null;
+    if (value is String) return value;
+    if (value is Map<String, dynamic> && value.containsKey('\$oid')) {
+      return value['\$oid']?.toString();
+    }
     return value.toString();
   }
 
-  // Helper method to extract username from created_by object
-  static String? _extractUsername(dynamic createdBy) {
-    if (createdBy == null) return null;
-
-    // If it's already a string (just username)
-    if (createdBy is String) return createdBy;
-
-    // If it's an object with username field
-    if (createdBy is Map<String, dynamic>) {
-      return createdBy['username']?.toString() ??
-          createdBy['user_name']?.toString() ??
-          createdBy['name']?.toString();
+  static int? _getIntValue(dynamic value, String fieldName) {
+    if (value == null) {
+      print('Warning: $fieldName is null');
+      return 0;
     }
-
-    return createdBy.toString();
-  }
-
-  // Helper method to safely extract int values
-  static int? _getIntValue(dynamic value) {
-    if (value == null) return null;
     if (value is int) return value;
     if (value is double) return value.toInt();
     if (value is String) {
-      return int.tryParse(value);
+      try {
+        return int.parse(value);
+      } catch (e) {
+        print(
+          'Error parsing integer from string for $fieldName: $value, error: $e',
+        );
+        return 0;
+      }
     }
-    return null;
+    print('Invalid type for $fieldName: $value (type: ${value.runtimeType})');
+    return 0;
+  }
+
+  String get actualWorkOrderNumber {
+    // Prioritize work_order_details.work_order_number if available
+    if (workOrderDetails != null &&
+        workOrderDetails!['work_order_number'] != null &&
+        workOrderDetails!['work_order_number'].toString().isNotEmpty) {
+      return workOrderDetails!['work_order_number'].toString();
+    }
+    // Fallback to workOrderNumber
+    return workOrderNumber ?? '';
   }
 
   Map<String, dynamic> toJson() {
@@ -263,9 +231,12 @@ class JobOrderModel {
       'products': jobOrders.map((item) => item.toJson()).toList(),
       'date': date.toJson(),
       'job_order_id': jobOrderId,
+      '_id': mongoId,
+      'uom': uom,
       'status': status,
       'project_name': projectName,
       'created_by': createdBy,
+      'work_order_details': workOrderDetails,
     };
   }
 }
@@ -275,41 +246,92 @@ class JobOrderItem {
   final String machineName;
   final String scheduledDate;
   final int plannedQuantity;
+  final String? id;
+  final String? description; // Added for form compatibility
+  final String? materialCode; // Added for form compatibility
+  final String? machineId;
+  final String? plantId;
+  final String? plantName;
+  final int? achievedQuantity;
+  final int? rejectedQuantity;
 
   JobOrderItem({
     required this.product,
     required this.machineName,
     required this.scheduledDate,
     required this.plannedQuantity,
+    this.id,
+    this.description,
+    this.materialCode,
+    this.machineId,
+    this.plantId,
+    this.plantName,
+    this.achievedQuantity,
+    this.rejectedQuantity,
   });
 
   factory JobOrderItem.fromJson(Map<String, dynamic> json) {
     try {
+      print('Parsing JobOrderItem with JSON: ${jsonEncode(json)}');
       return JobOrderItem(
-        product: json['product']?.toString() ?? '',
-        machineName: json['machine_name']?.toString() ?? '',
-        scheduledDate: json['scheduled_date']?.toString() ?? '',
-        plannedQuantity: _getIntValue(json['planned_quantity']),
+        product: _getStringValue(json['product']) ?? '',
+        machineName: _getStringValue(json['machine_name']) ?? '',
+        scheduledDate: _getDateValue(json['scheduled_date']) ?? '',
+        plannedQuantity:
+            _getIntValue(json['planned_quantity'], 'planned_quantity') ?? 0,
+        id: _getStringValue(json['_id']),
+        description: _getStringValue(json['description']),
+        materialCode: _getStringValue(json['material_code']),
+        machineId: _getStringValue(json['machine_id']),
+        plantId: _getStringValue(json['plant_id']),
+        plantName: _getStringValue(json['plant_name']),
+        achievedQuantity:
+            _getIntValue(json['achieved_quantity'], 'achieved_quantity'),
+        rejectedQuantity:
+            _getIntValue(json['rejected_quantity'], 'rejected_quantity'),
       );
     } catch (e) {
-      print('Error parsing JobOrderItem: $e for JSON: $json');
-      return JobOrderItem(
-        product: '',
-        machineName: '',
-        scheduledDate: '',
-        plannedQuantity: 0,
-      );
+      print('Error parsing JobOrderItem: $e for JSON: ${jsonEncode(json)}');
+      rethrow;
     }
   }
 
-  // Helper method to safely extract int values
-  static int _getIntValue(dynamic value) {
-    if (value == null) return 0;
+  static String? _getStringValue(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    if (value is Map<String, dynamic> && value.containsKey('\$oid')) {
+      return value['\$oid']?.toString();
+    }
+    return value.toString();
+  }
+
+  static String? _getDateValue(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    if (value is Map<String, dynamic> && value.containsKey('\$date')) {
+      return value['\$date']?.toString();
+    }
+    return value.toString();
+  }
+
+  static int? _getIntValue(dynamic value, String fieldName) {
+    if (value == null) {
+      print('Warning: $fieldName is null');
+      return 0;
+    }
     if (value is int) return value;
     if (value is double) return value.toInt();
     if (value is String) {
-      return int.tryParse(value) ?? 0;
+      try {
+        return int.parse(value);
+      } catch (e) {
+        print(
+          'Error parsing integer from string for $fieldName: $value, error: $e',
+        );
+        return 0;
+      }
     }
+    print('Invalid type for $fieldName: $value (type: ${value.runtimeType})');
     return 0;
   }
 
@@ -319,6 +341,14 @@ class JobOrderItem {
       'machine_name': machineName,
       'scheduled_date': scheduledDate,
       'planned_quantity': plannedQuantity,
+      '_id': id,
+      'description': description,
+      'material_code': materialCode,
+      'machine_id': machineId,
+      'plant_id': plantId,
+      'plant_name': plantName,
+      'achieved_quantity': achievedQuantity,
+      'rejected_quantity': rejectedQuantity,
     };
   }
 }
@@ -331,14 +361,24 @@ class DateRange {
 
   factory DateRange.fromJson(Map<String, dynamic> json) {
     try {
+      print('Parsing DateRange with JSON: ${jsonEncode(json)}');
       return DateRange(
-        from: json['from']?.toString() ?? '',
-        to: json['to']?.toString() ?? '',
+        from: _getDateValue(json['from']) ?? '',
+        to: _getDateValue(json['to']) ?? '',
       );
     } catch (e) {
-      print('Error parsing DateRange: $e for JSON: $json');
+      print('Error parsing DateRange: $e for JSON: ${jsonEncode(json)}');
       return DateRange(from: '', to: '');
     }
+  }
+
+  static String? _getDateValue(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    if (value is Map<String, dynamic> && value.containsKey('\$date')) {
+      return value['\$date']?.toString();
+    }
+    return value.toString();
   }
 
   Map<String, dynamic> toJson() {

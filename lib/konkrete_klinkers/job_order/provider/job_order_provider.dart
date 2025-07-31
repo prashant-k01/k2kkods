@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:k2k/konkrete_klinkers/job_order/model/job_order.dart';
 import 'package:k2k/konkrete_klinkers/job_order/repo/job_order_repo.dart';
@@ -40,13 +42,21 @@ class JobOrderProvider with ChangeNotifier {
   bool _isLoadingProducts = false;
   bool get isLoadingProducts => _isLoadingProducts;
 
+  // Store machine names per product index
   final List<List<String>> _machineNames = [];
   List<String> getMachineNamesForProduct(int index) =>
       index < _machineNames.length ? _machineNames[index] : [];
 
+  // Store full machine data per product index
+  Map<int, List<Map<String, dynamic>>> _machineDataByProduct = {};
+  List<Map<String, dynamic>>? getMachineDataForProduct(int index) {
+    return _machineDataByProduct[index];
+  }
+
   final List<bool> _isLoadingMachineNames = [];
-  bool isLoadingMachineNames(int index) =>
-      index < _isLoadingMachineNames.length ? _isLoadingMachineNames[index] : false;
+  bool isLoadingMachineNames(int index) => index < _isLoadingMachineNames.length
+      ? _isLoadingMachineNames[index]
+      : false;
 
   bool _isUpdatingProducts = false;
 
@@ -59,20 +69,22 @@ class JobOrderProvider with ChangeNotifier {
     }
   }
 
-  void updateMachineNames(int index, List<String> machineNames) {
+  void updateMachineNames(int index, List<Map<String, dynamic>> machineData) {
     while (_machineNames.length <= index) {
       _machineNames.add([]);
       _isLoadingMachineNames.add(false);
     }
-    _machineNames[index] = machineNames;
+
+    _machineDataByProduct[index] = machineData;
+
+    _machineNames[index] = machineData
+        .map((machine) => machine['name']?.toString() ?? '')
+        .where((name) => name.isNotEmpty)
+        .toList();
+
     _isLoadingMachineNames[index] = false;
     notifyListeners();
   }
-Map<int, List<Map<String, dynamic>>> _machineDataByProduct = {};
-
-List<Map<String, dynamic>>? getMachineDataForProduct(int index) {
-  return _machineDataByProduct[index];
-}
 
   Future<void> loadMachineNamesByProductId(int index, String productId) async {
     while (_machineNames.length <= index) {
@@ -84,8 +96,10 @@ List<Map<String, dynamic>>? getMachineDataForProduct(int index) {
     notifyListeners();
 
     try {
-      final machineNames = await _repository.fetchMachineNamesByProductId(productId);
-      updateMachineNames(index, machineNames);
+      final machineData = await _repository.fetchMachineNamesByProductId(
+        productId,
+      );
+      updateMachineNames(index, machineData);
     } catch (e) {
       _error = _getErrorMessage(e);
       updateMachineNames(index, []);
@@ -98,6 +112,7 @@ List<Map<String, dynamic>>? getMachineDataForProduct(int index) {
       _availableProducts.clear();
       _products.clear();
       _machineNames.clear();
+      _machineDataByProduct.clear();
       _isLoadingMachineNames.clear();
       _error = null;
 
@@ -106,17 +121,20 @@ List<Map<String, dynamic>>? getMachineDataForProduct(int index) {
           (e) => e['work_order_number']?.toString() == value,
           orElse: () => {},
         );
-        final workOrderId = selectedWO['id']?.toString() ?? selectedWO['_id']?.toString();
+        final workOrderId =
+            selectedWO['id']?.toString() ?? selectedWO['_id']?.toString();
         if (workOrderId != null && workOrderId.isNotEmpty) {
-          loadProductsByWorkOrder(workOrderId).then((_) {
-            if (_products.isEmpty) {
-              addProductSection();
-            }
-          }).catchError((error) {
-            if (_products.isEmpty) {
-              addProductSection();
-            }
-          });
+          loadProductsByWorkOrder(workOrderId)
+              .then((_) {
+                if (_products.isEmpty) {
+                  addProductSection();
+                }
+              })
+              .catchError((error) {
+                if (_products.isEmpty) {
+                  addProductSection();
+                }
+              });
         } else {
           addProductSection();
         }
@@ -140,6 +158,18 @@ List<Map<String, dynamic>>? getMachineDataForProduct(int index) {
       if (index < _machineNames.length) {
         _machineNames.removeAt(index);
         _isLoadingMachineNames.removeAt(index);
+        _machineDataByProduct.remove(index);
+
+        // Reindex the machine data map
+        final newMachineData = <int, List<Map<String, dynamic>>>{};
+        _machineDataByProduct.forEach((key, value) {
+          if (key > index) {
+            newMachineData[key - 1] = value;
+          } else if (key < index) {
+            newMachineData[key] = value;
+          }
+        });
+        _machineDataByProduct = newMachineData;
       }
       notifyListeners();
     }
@@ -174,7 +204,9 @@ List<Map<String, dynamic>>? getMachineDataForProduct(int index) {
     notifyListeners();
 
     try {
-      _availableProducts = await _repository.fetchProductsByWorkOrder(workOrderId);
+      _availableProducts = await _repository.fetchProductsByWorkOrder(
+        workOrderId,
+      );
       _error = null;
     } catch (e) {
       _availableProducts = [];
@@ -200,6 +232,113 @@ List<Map<String, dynamic>>? getMachineDataForProduct(int index) {
     } finally {
       _isAddJobOrderLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<bool> updateJobOrder({
+    required String mongoId,
+    required Map<String, dynamic> payload,
+  }) async {
+    _isUpdateJobOrderLoading = true;
+    _error = null;
+    print('🚀 Starting updateJobOrder for Mongo ID: $mongoId');
+    print('📤 Payload: ${jsonEncode(payload)}');
+    notifyListeners();
+
+    try {
+      final success = await _repository.updateJobOrder(
+        mongoId: mongoId,
+        payload: payload,
+      );
+
+      if (success) {
+        print('✅ Update successful, refreshing job orders');
+        await loadAllJobOrders(refresh: true);
+        return true;
+      } else {
+        _error = 'Failed to update JobOrder';
+        print('❌ Update failed: $_error');
+        return false;
+      }
+    } catch (e) {
+      _error = _getErrorMessage(e);
+      print('❌ Error in updateJobOrder: $_error');
+      return false;
+    } finally {
+      _isUpdateJobOrderLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> deleteJobOrder(String mongoId) async {
+    _isDeleteJobOrderLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final success = await _repository.deleteJobOrder(mongoId);
+
+      if (success) {
+        _jobOrders.removeWhere((jobOrder) => jobOrder.mongoId == mongoId);
+        await loadAllJobOrders(refresh: true);
+        return true;
+      } else {
+        _error = 'Failed to delete JobOrder';
+        return false;
+      }
+    } catch (e) {
+      _error = _getErrorMessage(e);
+      print('❌ Error in deleteJobOrder: $_error');
+      return false;
+    } finally {
+      _isDeleteJobOrderLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<JobOrderModel?> getJobOrder(String mongoId) async {
+    try {
+      print('Fetching JobOrder with Mongo ID: $mongoId');
+      _error = null;
+      final jobOrder = await _repository.getJobOrder(mongoId);
+      if (jobOrder != null) {
+        print(
+          'Successfully fetched JobOrder: ${jsonEncode(jobOrder.toJson())}',
+        );
+        _jobOrder = jobOrder;
+      } else {
+        print('JobOrder not found for Mongo ID: $mongoId');
+        _error = 'JobOrder not found';
+      }
+      notifyListeners();
+      return jobOrder;
+    } catch (e) {
+      _error = _getErrorMessage(e);
+      print('Error fetching JobOrder with Mongo ID: $mongoId, Error: $_error');
+      notifyListeners();
+      return null;
+    }
+  }
+
+  JobOrderModel? getJobOrderByIndex(int index) {
+    if (index >= 0 && index < _jobOrders.length) {
+      return _jobOrders[index];
+    }
+    return null;
+  }
+
+  void clearError() {
+    _error = null;
+    notifyListeners();
+  }
+
+  String _getErrorMessage(Object error) {
+    if (error is Exception) {
+      return error.toString().replaceFirst('Exception: ', '');
+    } else if (error is String) {
+      return error;
+    } else {
+      return 'An unexpected error occurred';
     }
   }
 
@@ -237,105 +376,6 @@ List<Map<String, dynamic>>? getMachineDataForProduct(int index) {
     } finally {
       _isLoading = false;
       notifyListeners();
-    }
-  }
-
-  Future<bool> updateJobOrder({
-    required String jobOrderId,
-    required String plantId,
-    required String materialCode,
-    required String description,
-    required List<String> uom,
-    required Map<String, double> areas,
-    required int noOfPiecesPerPunch,
-    required int qtyInBundle,
-  }) async {
-    _isUpdateJobOrderLoading = true;
-    _error = null;
-    notifyListeners();
-
-    try {
-      final success = await _repository.updateJobOrder(
-        jobOrderId: jobOrderId,
-        plantId: plantId,
-        materialCode: materialCode,
-        description: description,
-        uom: uom,
-        areas: areas,
-        noOfPiecesPerPunch: noOfPiecesPerPunch,
-        qtyInBundle: qtyInBundle,
-      );
-
-      if (success) {
-        await loadAllJobOrders(refresh: true);
-        return true;
-      } else {
-        _error = 'Failed to update JobOrder';
-        return false;
-      }
-    } catch (e) {
-      _error = _getErrorMessage(e);
-      return false;
-    } finally {
-      _isUpdateJobOrderLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<bool> deleteJobOrder(String jobOrderId) async {
-    _isDeleteJobOrderLoading = true;
-    _error = null;
-    notifyListeners();
-
-    try {
-      final success = await _repository.deleteJobOrder(jobOrderId);
-
-      if (success) {
-        await loadAllJobOrders(refresh: true);
-        return true;
-      } else {
-        _error = 'Failed to delete JobOrder';
-        return false;
-      }
-    } catch (e) {
-      _error = _getErrorMessage(e);
-      return false;
-    } finally {
-      _isDeleteJobOrderLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<JobOrderModel?> getJobOrder(String jobOrderId) async {
-    try {
-      _error = null;
-      final jobOrder = await _repository.getJobOrder(jobOrderId);
-      return jobOrder;
-    } catch (e) {
-      _error = _getErrorMessage(e);
-      return null;
-    }
-  }
-
-  JobOrderModel? getJobOrderByIndex(int index) {
-    if (index >= 0 && index < _jobOrders.length) {
-      return _jobOrders[index];
-    }
-    return null;
-  }
-
-  void clearError() {
-    _error = null;
-    notifyListeners();
-  }
-
-  String _getErrorMessage(Object error) {
-    if (error is Exception) {
-      return error.toString().replaceFirst('Exception: ', '');
-    } else if (error is String) {
-      return error;
-    } else {
-      return 'An unexpected error occurred';
     }
   }
 }

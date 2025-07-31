@@ -2,23 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
-
 class CustomRangeDatePicker extends StatelessWidget {
   final String name;
   final String labelText;
   final String hintText;
+  final DateTimeRange? initialValue;
 
   const CustomRangeDatePicker({
     super.key,
     required this.name,
     required this.labelText,
     required this.hintText,
+    this.initialValue,
   });
 
   @override
   Widget build(BuildContext context) {
     return FormBuilderDateRangePicker(
       name: name,
+      initialValue: initialValue,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
       format: DateFormat('yyyy-MM-dd'),

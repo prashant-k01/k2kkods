@@ -35,6 +35,7 @@ class CustomSearchableDropdownFormField<T> extends StatelessWidget {
   final Widget? disabledHint;
   final bool allowClear;
   final Widget? clearIcon;
+  final T? Function(T?)? valueTransformer;
 
   const CustomSearchableDropdownFormField({
     super.key,
@@ -69,10 +70,8 @@ class CustomSearchableDropdownFormField<T> extends StatelessWidget {
     this.disabledHint,
     this.allowClear = false,
     this.clearIcon,
-  }) : assert(
-          options != null,
-          'Options must be provided for searchable dropdown',
-        );
+    this.valueTransformer,
+  }) : assert(options != null, 'Options must be provided for searchable dropdown');
 
   @override
   Widget build(BuildContext context) {
@@ -87,6 +86,7 @@ class CustomSearchableDropdownFormField<T> extends StatelessWidget {
       autovalidateMode: autovalidateMode ?? AutovalidateMode.onUserInteraction,
       validator: customValidator ?? FormBuilderValidators.compose(validators ?? []),
       onSaved: onSaved,
+      valueTransformer: valueTransformer,
       builder: (FormFieldState<T> field) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -105,9 +105,7 @@ class CustomSearchableDropdownFormField<T> extends StatelessWidget {
                 ),
               ),
             GestureDetector(
-              onTap: enabled
-                  ? () => _showSearchableDropdown(context, field)
-                  : null,
+              onTap: enabled ? () => _showSearchableDropdown(context, field) : null,
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(borderRadius ?? 12.r),

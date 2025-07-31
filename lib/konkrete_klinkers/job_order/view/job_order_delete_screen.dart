@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
-import 'package:k2k/konkrete_klinkers/master_data/products/provider/product_provider.dart';
+import 'package:k2k/konkrete_klinkers/job_order/provider/job_order_provider.dart';
 import 'package:provider/provider.dart';
 
 class JobOrderDeleteHandler {
-  static void deleteProduct(
+  static void deleteJoborder(
     BuildContext context,
-    String? JobOrderId,
+    String? mongoId, // Changed parameter name to be clearer
     String? productName,
   ) {
-    if (JobOrderId == null || productName == null) return;
+    // DEBUG: Print what we received
+    print('🔍 DEBUG - Received mongoId: $mongoId');
+    print('🔍 DEBUG - Received productName: $productName');
+
+    if (mongoId == null || productName == null) {
+      context.showErrorSnackbar('Invalid Job Order or Product Name');
+      return;
+    }
 
     showDialog(
       context: context,
@@ -39,7 +46,7 @@ class JobOrderDeleteHandler {
           ],
         ),
         content: Text(
-          'Are you sure you want to delete "$productName"?',
+          'Are you sure you want to delete "$productName"?\n\ ID: $mongoId', // Show MongoDB ID for debugging
           style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
         ),
         actions: [
@@ -55,19 +62,32 @@ class JobOrderDeleteHandler {
               Navigator.pop(dialogContext);
 
               final scaffoldContext = context;
-
-              final provider = Provider.of<ProductProvider>(
+              final provider = Provider.of<JobOrderProvider>(
                 scaffoldContext,
                 listen: false,
               );
-              final success = await provider.deleteProduct(JobOrderId);
-              
 
-              context.showSuccessSnackbar(
-                success
-                    ? 'Product deleted successfully!'
-                    : 'Failed to delete Product.',
-              );
+              try {
+                // DEBUG: Print what we're sending to the provider
+                print(
+                  '🔍 DEBUG - Sending to provider.deleteJobOrder: $mongoId',
+                );
+
+                final success = await provider.deleteJobOrder(mongoId);
+
+                if (!scaffoldContext.mounted) return;
+
+                scaffoldContext.showSuccessSnackbar(
+                  success
+                      ? 'Job Order deleted successfully!'
+                      : 'Failed to delete Job Order. Please try again.',
+                );
+              } catch (e) {
+                if (!scaffoldContext.mounted) return;
+                scaffoldContext.showErrorSnackbar(
+                  'Error deleting Job Order: $e',
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFF43F5E),

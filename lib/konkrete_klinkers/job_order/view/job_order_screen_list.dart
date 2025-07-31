@@ -6,6 +6,7 @@ import 'package:k2k/common/list_helper/shimmer.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/konkrete_klinkers/job_order/model/job_order.dart';
 import 'package:k2k/konkrete_klinkers/job_order/provider/job_order_provider.dart';
+import 'package:k2k/konkrete_klinkers/job_order/view/job_order_delete_screen.dart';
 import 'package:k2k/utils/sreen_util.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -47,11 +48,11 @@ class _JobOrderListViewState extends State<JobOrderListView> {
     }
   }
 
-  void _editJobOrder(String jobOrderId) {
-    // context.goNamed(
-    //   RouteNames.JobOrderedit,
-    //   pathParameters: {'jobOrderId': jobOrderId},
-    // );
+  void _editJobOrder(String mongoId) {
+    context.goNamed(
+      RouteNames.jobOrderedit,
+      pathParameters: {'mongoId': mongoId},
+    );
   }
 
   String _formatDateTime(DateTime? dateTime) {
@@ -60,7 +61,7 @@ class _JobOrderListViewState extends State<JobOrderListView> {
   }
 
   Widget _buildJobOrderCard(JobOrderModel jobOrder) {
-    final jobOrderId = jobOrder.jobOrderId;
+    final mangoId = jobOrder.mongoId;
     final batchNumber = jobOrder.batchNumber.toString();
 
     final fromDate = DateTime.tryParse(jobOrder.date.from);
@@ -99,7 +100,7 @@ class _JobOrderListViewState extends State<JobOrderListView> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Work Order: ${jobOrder.workOrderNumber}',
+                            'Job Order NO: ${jobOrder.jobOrderId}',
                             style: TextStyle(
                               fontSize: 18.sp,
                               fontWeight: FontWeight.w600,
@@ -126,13 +127,22 @@ class _JobOrderListViewState extends State<JobOrderListView> {
                       ),
                       onSelected: (value) {
                         if (value == 'edit') {
-                          _editJobOrder(jobOrderId);
+                          _editJobOrder(mangoId);
                         } else if (value == 'delete') {
-                          // JobOrderDeleteHandler.deleteJobOrder(
-                          //   context,
-                          //   jobOrderId,
-                          //   batchNumber,
-                          // );
+                          // DEBUG: Print what you're actually passing
+                          print(
+                            '🔍 DEBUG - mongoId being passed: ${jobOrder.mongoId}',
+                          );
+                          print(
+                            '🔍 DEBUG - batchNumber being passed: $batchNumber',
+                          );
+
+                          // Pass the MongoDB ObjectId instead of job_order_id
+                          JobOrderDeleteHandler.deleteJoborder(
+                            context,
+                            jobOrder.mongoId, // Use the MongoDB _id field
+                            batchNumber.toString(), // This is just for display
+                          );
                         }
                       },
                       itemBuilder: (BuildContext context) => [

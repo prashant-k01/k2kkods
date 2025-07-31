@@ -4,6 +4,7 @@ import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/dashboard/view/dashboard_screen.dart';
 import 'package:k2k/konkrete_klinkers/inventory/view/inventory_list.dart';
 import 'package:k2k/konkrete_klinkers/job_order/view/job_order_add.dart';
+import 'package:k2k/konkrete_klinkers/job_order/view/job_order_edit_screen.dart';
 import 'package:k2k/konkrete_klinkers/job_order/view/job_order_screen_list.dart';
 import 'package:k2k/konkrete_klinkers/master_data/clients/view/clients_add.dart';
 import 'package:k2k/konkrete_klinkers/master_data/clients/view/clients_edit_screen.dart';
@@ -153,6 +154,17 @@ class AppRoutes {
             return const ClientsListView();
           }
           return EditClientFormScreen(clientId: clientId);
+        },
+      ),
+      GoRoute(
+        path: RouteNames.jobOrderedit, // '/plants/edit/:plantId'
+        name: RouteNames.jobOrderedit,
+        builder: (context, state) {
+          final mongoId = state.pathParameters['mongoId'];
+          if (mongoId == null) {
+            return const JobOrderListView();
+          }
+          return JobOrderEditFormScreen(mongoId: mongoId);
         },
       ),
       GoRoute(
