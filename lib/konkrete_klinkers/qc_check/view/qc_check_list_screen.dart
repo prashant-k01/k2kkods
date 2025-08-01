@@ -1,26 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart' hide ScreenUtil;
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/list_helper/add_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
 import 'package:k2k/common/list_helper/shimmer.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
-import 'package:k2k/konkrete_klinkers/job_order/model/job_order.dart';
-import 'package:k2k/konkrete_klinkers/job_order/provider/job_order_provider.dart';
-import 'package:k2k/konkrete_klinkers/job_order/view/job_order_delete_screen.dart';
+import 'package:k2k/konkrete_klinkers/qc_check/model/qc_check.dart';
+import 'package:k2k/konkrete_klinkers/qc_check/provider/qc_check_provider.dart';
 import 'package:k2k/utils/sreen_util.dart';
+import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
-class JobOrderListView extends StatefulWidget {
-  const JobOrderListView({super.key});
+class QcCheckListView extends StatefulWidget {
+  const QcCheckListView({super.key});
 
   @override
-  State<JobOrderListView> createState() => _JobOrderListViewState();
+  State<QcCheckListView> createState() => _QcCheckListViewState();
 }
 
-class _JobOrderListViewState extends State<JobOrderListView> {
+class _QcCheckListViewState extends State<QcCheckListView> {
   bool _isInitialized = false;
-  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -28,44 +28,38 @@ class _JobOrderListViewState extends State<JobOrderListView> {
     _initializeData();
   }
 
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _initializeData() {
+  void _initializeData() async {
     if (!_isInitialized) {
       _isInitialized = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          final provider = context.read<JobOrderProvider>();
-          if (provider.jobOrders.isEmpty && provider.error == null) {
-            provider.loadAllJobOrders(refresh: true);
+          final provider = context.read<QcCheckProvider>();
+          if (provider.qcChecks.isEmpty && provider.error == null) {
+            provider.loadQcChecks();
           }
         }
       });
     }
   }
 
-  void _editJobOrder(String mongoId) {
-    context.goNamed(
-      RouteNames.jobOrderedit,
-      pathParameters: {'mongoId': mongoId},
-    );
+  void _editQcCheck(String? qcCheckId) {
+    if (qcCheckId != null) {
+      context.goNamed(
+        RouteNames.qcCheck,
+        pathParameters: {'qcCheckId': qcCheckId},
+      );
+    }
   }
 
-  String _formatDateTime(DateTime? dateTime) {
-    if (dateTime == null) return 'N/A';
-    return '${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year}';
-  }
-
-  Widget _buildJobOrderCard(JobOrderModel jobOrder) {
-    final mangoId = jobOrder.mongoId;
-    final batchNumber = jobOrder.batchNumber.toString();
-
-    final fromDate = DateTime.tryParse(jobOrder.date.from);
-    final toDate = DateTime.tryParse(jobOrder.date.to);
+  Widget _buildQcCheckCard(QcCheckModel qcCheck) {
+    final qcCheckId = qcCheck.id;
+    final rejectedQuantity = qcCheck.rejectedQuantity.toString();
+    final recycledQuantity = qcCheck.recycledQuantity.toString();
+    final remarks = qcCheck.displayRemarks;
+    final createdBy = qcCheck.displayCreatedBy;
+    final createdAt = qcCheck.displayCreatedAt;
+    final workOrderNumber = qcCheck.displayWorkOrder;
+    final jobOrder = qcCheck.displayJobOrder;
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
@@ -91,7 +85,6 @@ class _JobOrderListViewState extends State<JobOrderListView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header row with batch number and menu
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -99,21 +92,13 @@ class _JobOrderListViewState extends State<JobOrderListView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Job Order NO: ${jobOrder.jobOrderId}',
-                            style: TextStyle(
-                              fontSize: 18.sp,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF334155),
-                            ),
-                          ),
                           SizedBox(height: 4.h),
                           Text(
-                            'Project: ${jobOrder.projectName}',
+                            'Work Order: $workOrderNumber',
                             style: TextStyle(
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w500,
-                              color: const Color(0xFF64748B),
+                              fontSize: 18.sp,
+                              color: AppTheme.primaryBlue,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
@@ -127,25 +112,14 @@ class _JobOrderListViewState extends State<JobOrderListView> {
                       ),
                       onSelected: (value) {
                         if (value == 'edit') {
-                          _editJobOrder(mangoId);
+                          _editQcCheck(qcCheckId);
                         } else if (value == 'delete') {
-                          print(
-                            '🔍 DEBUG - mongoId being passed: ${jobOrder.mongoId}',
-                          );
-                          print(
-                            '🔍 DEBUG - batchNumber being passed: $batchNumber',
-                          );
-                          JobOrderDeleteHandler.deleteJoborder(
-                            context,
-                            jobOrder.mongoId,
-                            batchNumber.toString(),
-                          );
-                        } else if (value == 'view') {
-                          context.goNamed(
-                            RouteNames.jobOrderView,
-                            pathParameters: {'mongoId': mangoId},
-                            extra: jobOrder,
-                          );
+                          // QcCheckDeleteHandler.deleteQcCheck(
+                          //   context,
+                          //   qcCheckId,
+                          //   remarks,
+
+                          // );
                         }
                       },
                       itemBuilder: (BuildContext context) => [
@@ -161,26 +135,6 @@ class _JobOrderListViewState extends State<JobOrderListView> {
                               SizedBox(width: 8.w),
                               Text(
                                 'Edit',
-                                style: TextStyle(
-                                  fontSize: 14.sp,
-                                  color: const Color(0xFF334155),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        PopupMenuItem<String>(
-                          value: 'view',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.visibility_outlined,
-                                size: 20.sp,
-                                color: const Color(0xFF3B82F6),
-                              ),
-                              SizedBox(width: 8.w),
-                              Text(
-                                'View',
                                 style: TextStyle(
                                   fontSize: 14.sp,
                                   color: const Color(0xFF334155),
@@ -214,18 +168,16 @@ class _JobOrderListViewState extends State<JobOrderListView> {
                   ],
                 ),
                 SizedBox(height: 16.h),
-
-                // Work Order Number
                 Row(
                   children: [
                     Icon(
-                      Icons.assignment_outlined,
+                      Icons.warning_amber_outlined,
                       size: 16.sp,
                       color: const Color(0xFF64748B),
                     ),
                     SizedBox(width: 8.w),
                     Text(
-                      'Batch No:$batchNumber',
+                      'Rejected: $rejectedQuantity',
                       style: TextStyle(
                         fontSize: 14.sp,
                         color: const Color(0xFF64748B),
@@ -234,18 +186,16 @@ class _JobOrderListViewState extends State<JobOrderListView> {
                   ],
                 ),
                 SizedBox(height: 8.h),
-
-                // Sales Order Number
                 Row(
                   children: [
                     Icon(
-                      Icons.receipt_outlined,
+                      Icons.recycling_outlined,
                       size: 16.sp,
                       color: const Color(0xFF64748B),
                     ),
                     SizedBox(width: 8.w),
                     Text(
-                      'Sales Order: ${jobOrder.salesOrderNumber}',
+                      'Recycled: $recycledQuantity',
                       style: TextStyle(
                         fontSize: 14.sp,
                         color: const Color(0xFF64748B),
@@ -254,18 +204,16 @@ class _JobOrderListViewState extends State<JobOrderListView> {
                   ],
                 ),
                 SizedBox(height: 8.h),
-
-                // Status
                 Row(
                   children: [
                     Icon(
-                      Icons.info_outline,
+                      Icons.work_outline,
                       size: 16.sp,
                       color: const Color(0xFF64748B),
                     ),
                     SizedBox(width: 8.w),
                     Text(
-                      'Status: ${jobOrder.status}',
+                      'Job Order: $jobOrder',
                       style: TextStyle(
                         fontSize: 14.sp,
                         color: const Color(0xFF64748B),
@@ -274,114 +222,62 @@ class _JobOrderListViewState extends State<JobOrderListView> {
                   ],
                 ),
                 SizedBox(height: 8.h),
-
-                SizedBox(height: 16.h),
-
-                Container(
-                  padding: EdgeInsets.all(16.w),
-                  decoration: BoxDecoration(
-                    color: Colors.blueAccent.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12.r),
-                    border: Border.all(
-                      color: const Color(0xFFE2E8F0),
-                      width: 1,
+                Row(
+                  children: [
+                    Icon(
+                      Icons.comment_outlined,
+                      size: 16.sp,
+                      color: const Color(0xFF64748B),
                     ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Schedule Period',
+                    SizedBox(width: 8.w),
+                    Expanded(
+                      child: Text(
+                        'Remarks: $remarks',
                         style: TextStyle(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF334155),
+                          fontSize: 14.sp,
+                          color: const Color(0xFF64748B),
                         ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      SizedBox(height: 12.h),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.play_arrow_outlined,
-                                      size: 16.sp,
-                                      color: const Color(0xFF10B981),
-                                    ),
-                                    SizedBox(width: 6.w),
-                                    Text(
-                                      'From:',
-                                      style: TextStyle(
-                                        fontSize: 12.sp,
-                                        fontWeight: FontWeight.w500,
-                                        color: const Color(0xFF64748B),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 4.h),
-                                Text(
-                                  _formatDateTime(fromDate),
-                                  style: TextStyle(
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF334155),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            height: 40.h,
-                            width: 1,
-                            color: const Color(0xFFE2E8F0),
-                          ),
-                          SizedBox(width: 16.w),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.stop_outlined,
-                                      size: 16.sp,
-                                      color: const Color(0xFFF59E0B),
-                                    ),
-                                    SizedBox(width: 6.w),
-                                    Text(
-                                      'To:',
-                                      style: TextStyle(
-                                        fontSize: 12.sp,
-                                        fontWeight: FontWeight.w500,
-                                        color: const Color(0xFF64748B),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 4.h),
-                                Text(
-                                  _formatDateTime(toDate),
-                                  style: TextStyle(
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF334155),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-
-                // Show machine info if available
+                SizedBox(height: 8.h),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.person_outline,
+                      size: 16.sp,
+                      color: const Color(0xFF64748B),
+                    ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'Created by: $createdBy',
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8.h),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.access_time_outlined,
+                      size: 16.sp,
+                      color: const Color(0xFF64748B),
+                    ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'Created: $createdAt',
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -395,7 +291,7 @@ class _JobOrderListViewState extends State<JobOrderListView> {
       children: [
         SizedBox(width: 8.w),
         Text(
-          'Job Orders',
+          'QC Checks',
           style: TextStyle(
             fontSize: 18.sp,
             fontWeight: FontWeight.w600,
@@ -424,14 +320,14 @@ class _JobOrderListViewState extends State<JobOrderListView> {
       padding: EdgeInsets.only(right: 16.w),
       child: TextButton(
         onPressed: () {
-          context.goNamed(RouteNames.joborderadd);
+          context.goNamed(RouteNames.qcCheckAdd);
         },
         child: Row(
           children: [
             Icon(Icons.add, size: 20.sp, color: const Color(0xFF3B82F6)),
             SizedBox(width: 4.w),
             Text(
-              'Add Job Order',
+              'Add QC Check',
               style: TextStyle(
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
@@ -450,37 +346,29 @@ class _JobOrderListViewState extends State<JobOrderListView> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.local_florist_outlined,
+            Icons.check_circle_outline,
             size: 64.sp,
             color: const Color(0xFF3B82F6),
           ),
           SizedBox(height: 16.h),
           Text(
-            'No Job Orders Found',
+            'No QC Checks Found',
             style: TextStyle(
               fontSize: 18.sp,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF334155),
+              color: const Color(0xFF334155),
             ),
           ),
           SizedBox(height: 8.h),
           Text(
-            'Tap the button below to add your first Job Order!',
+            'Tap the button below to add your first QC check!',
             style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
           ),
           SizedBox(height: 16.h),
-          ElevatedButton(
-            onPressed: () {
-              context.goNamed(RouteNames.joborderadd);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF3B82F6),
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-            ),
-            child: Text(
-              'Add Job Order',
-              style: TextStyle(fontSize: 16.sp, color: Colors.white),
-            ),
+          AddButton(
+            text: 'Add QC Check',
+            icon: Icons.add,
+            route: RouteNames.qcCheck,
           ),
         ],
       ),
@@ -498,9 +386,9 @@ class _JobOrderListViewState extends State<JobOrderListView> {
         leading: _buildBackButton(),
         action: [_buildActionButtons()],
       ),
-      body: Consumer<JobOrderProvider>(
+      body: Consumer<QcCheckProvider>(
         builder: (context, provider, child) {
-          if (provider.error != null) {
+          if (provider.error != null && provider.qcChecks.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -512,7 +400,7 @@ class _JobOrderListViewState extends State<JobOrderListView> {
                   ),
                   SizedBox(height: 16.h),
                   Text(
-                    'Error Loading Job Orders',
+                    'Error Loading QC Checks',
                     style: TextStyle(
                       fontSize: 18.sp,
                       fontWeight: FontWeight.w600,
@@ -536,8 +424,8 @@ class _JobOrderListViewState extends State<JobOrderListView> {
                     text: 'Retry',
                     icon: Icons.refresh,
                     onTap: () {
-                      provider.error;
-                      provider.loadAllJobOrders(refresh: true);
+                      provider.clearError();
+                      provider.loadQcChecks(refresh: true);
                     },
                   ),
                 ],
@@ -547,23 +435,36 @@ class _JobOrderListViewState extends State<JobOrderListView> {
 
           return RefreshIndicator(
             onRefresh: () async {
-              await provider.loadAllJobOrders(refresh: true);
+              await context.read<QcCheckProvider>().loadQcChecks(refresh: true);
             },
             color: const Color(0xFF3B82F6),
             backgroundColor: Colors.white,
-            child: provider.isLoading && provider.jobOrders.isEmpty
+            child: provider.isLoading && provider.qcChecks.isEmpty
                 ? ListView.builder(
                     itemCount: 5,
                     itemBuilder: (context, index) => buildShimmerCard(),
                   )
-                : provider.jobOrders.isEmpty
+                : provider.qcChecks.isEmpty
                 ? _buildEmptyState()
                 : ListView.builder(
-                    controller: _scrollController,
-                    padding: EdgeInsets.only(bottom: 16.h),
-                    itemCount: provider.jobOrders.length,
+                    padding: EdgeInsets.only(bottom: 80.h),
+                    itemCount:
+                        provider.qcChecks.length + (provider.isLoading ? 1 : 0),
                     itemBuilder: (context, index) {
-                      return _buildJobOrderCard(provider.jobOrders[index]);
+                      if (index == provider.qcChecks.length &&
+                          provider.isLoading) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Color(0xFF3B82F6),
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                      return _buildQcCheckCard(provider.qcChecks[index]);
                     },
                   ),
           );

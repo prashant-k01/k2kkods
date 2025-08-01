@@ -3,9 +3,11 @@ import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/dashboard/view/dashboard_screen.dart';
 import 'package:k2k/konkrete_klinkers/inventory/view/inventory_list.dart';
+import 'package:k2k/konkrete_klinkers/job_order/model/job_order.dart';
 import 'package:k2k/konkrete_klinkers/job_order/view/job_order_add.dart';
 import 'package:k2k/konkrete_klinkers/job_order/view/job_order_edit_screen.dart';
 import 'package:k2k/konkrete_klinkers/job_order/view/job_order_screen_list.dart';
+import 'package:k2k/konkrete_klinkers/job_order/view/job_order_view.dart';
 import 'package:k2k/konkrete_klinkers/master_data/clients/view/clients_add.dart';
 import 'package:k2k/konkrete_klinkers/master_data/clients/view/clients_edit_screen.dart';
 import 'package:k2k/konkrete_klinkers/master_data/clients/view/clients_screen_list.dart';
@@ -18,6 +20,8 @@ import 'package:k2k/konkrete_klinkers/master_data/products/view/product_screen_l
 import 'package:k2k/konkrete_klinkers/master_data/projects/view/projects_add.dart';
 import 'package:k2k/konkrete_klinkers/master_data/projects/view/projects_edit_screen.dart';
 import 'package:k2k/konkrete_klinkers/master_data/projects/view/projects_screen_list.dart';
+import 'package:k2k/konkrete_klinkers/qc_check/view/qc_add_screen.dart';
+import 'package:k2k/konkrete_klinkers/qc_check/view/qc_check_list_screen.dart';
 import 'package:k2k/login/view/login_screen.dart';
 import 'package:k2k/splashscreen/splash_screen.dart';
 
@@ -51,6 +55,20 @@ class AppRoutes {
         name: RouteNames.projects,
         builder: (BuildContext context, GoRouterState state) {
           return ProjectsListView();
+        },
+      ),
+      GoRoute(
+        path: RouteNames.qcCheck,
+        name: RouteNames.qcCheck,
+        builder: (BuildContext context, GoRouterState state) {
+          return QcCheckListView();
+        },
+      ),
+      GoRoute(
+        path: RouteNames.qcCheckAdd,
+        name: RouteNames.qcCheckAdd,
+        builder: (BuildContext context, GoRouterState state) {
+          return QcCheckFormScreen();
         },
       ),
       GoRoute(
@@ -165,6 +183,14 @@ class AppRoutes {
             return const JobOrderListView();
           }
           return JobOrderEditFormScreen(mongoId: mongoId);
+        },
+      ),
+      GoRoute(
+        name: RouteNames.jobOrderView,
+        path: '/job-order/view/:mongoId',
+        builder: (context, state) {
+          final jobOrder = state.extra as JobOrderModel;
+          return JobOrderViewScreen(jobOrder: jobOrder);
         },
       ),
       GoRoute(

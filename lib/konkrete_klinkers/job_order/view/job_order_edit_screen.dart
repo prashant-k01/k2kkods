@@ -27,16 +27,6 @@ class JobOrderEditFormScreen extends StatefulWidget {
 class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
   final ScrollController _scrollController = ScrollController();
-  bool _isLoading = true;
-  String? _errorMessage;
-
-  final Map<String, FocusNode> _focusNodes = {
-    'work_order': FocusNode(),
-    'sales_order_number': FocusNode(),
-    'batch_number': FocusNode(),
-  };
-
-  final List<Map<String, FocusNode>> _productFocusNodes = [];
 
   @override
   void initState() {
@@ -49,159 +39,14 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
       return;
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<JobOrderProvider>();
-      provider
-          .loadWorkOrderDetails()
-          .then((_) {
-            provider
-                .getJobOrder(widget.mongoId)
-                .then((jobOrder) {
-                  if (jobOrder != null) {
-                    print('Fetched JobOrder: ${jsonEncode(jobOrder.toJson())}');
-
-                    // Use the actualWorkOrderNumber getter
-                    final workOrderNumber = jobOrder.actualWorkOrderNumber;
-
-                    if (workOrderNumber.isEmpty) {
-                      setState(() {
-                        _isLoading = false;
-                        _errorMessage =
-                            'Work order number not found in job order data.';
-                      });
-                      return;
-                    }
-
-                    provider.setSelectedWorkOrder(workOrderNumber);
-                    final workOrder = provider.workOrderDetails.firstWhere(
-                      (e) => e['work_order_number'] == workOrderNumber,
-                      orElse: () => {},
-                    );
-
-                    final workOrderId =
-                        workOrder['id']?.toString() ??
-                        workOrder['_id']?.toString();
-
-                    if (workOrderId != null && workOrderId.isNotEmpty) {
-                      provider
-                          .loadProductsByWorkOrder(workOrderId)
-                          .then((_) {
-                            final updatedProducts = jobOrder.jobOrders.map((
-                              item,
-                            ) {
-                              final product = provider.availableProducts
-                                  .firstWhere(
-                                    (p) =>
-                                        p['product_id']?.toString() ==
-                                            item.product ||
-                                        p['_id']?.toString() == item.product,
-                                    orElse: () => {},
-                                  );
-                              return {
-                                'product_id': item.product,
-                                'description':
-                                    item.description ??
-                                    product['description'] ??
-                                    'No Description',
-                                'material_code':
-                                    item.materialCode ??
-                                    product['material_code'] ??
-                                    'No Code',
-                                'quantity_in_no': item.plannedQuantity,
-                                'machine_name': item.machineName,
-                                'scheduled_date': item.scheduledDate,
-                              };
-                            }).toList();
-                            provider.updateProducts(updatedProducts);
-                            _initializeProductFocusNodes(
-                              provider.products.length,
-                            );
-                            for (int i = 0; i < provider.products.length; i++) {
-                              final productId = provider
-                                  .products[i]['product_id']
-                                  ?.toString();
-                              if (productId != null && productId.isNotEmpty) {
-                                provider.loadMachineNamesByProductId(
-                                  i,
-                                  productId,
-                                );
-                              }
-                            }
-                            setState(() {
-                              _isLoading = false;
-                              _errorMessage = null;
-                            });
-                          })
-                          .catchError((e) {
-                            setState(() {
-                              _isLoading = false;
-                              _errorMessage = 'Failed to load products: $e';
-                            });
-                          });
-                    } else {
-                      setState(() {
-                        _isLoading = false;
-                        _errorMessage =
-                            'Failed to find work order ID for $workOrderNumber.';
-                      });
-                    }
-                  } else {
-                    setState(() {
-                      _isLoading = false;
-                      _errorMessage = provider.error ?? 'Invalid Job Order ID.';
-                    });
-                  }
-                })
-                .catchError((e) {
-                  setState(() {
-                    _isLoading = false;
-                    _errorMessage = 'Failed to fetch job order: $e';
-                  });
-                });
-          })
-          .catchError((e) {
-            setState(() {
-              _isLoading = false;
-              _errorMessage = 'Failed to load work orders: $e';
-            });
-          });
+      context.read<JobOrderProvider>().initializeForm(widget.mongoId);
     });
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
-    _focusNodes.forEach((_, node) => node.dispose());
-    for (var product in _productFocusNodes) {
-      product.forEach((_, node) => node.dispose());
-    }
     super.dispose();
-  }
-
-  void _initializeProductFocusNodes(int count) {
-    for (var map in _productFocusNodes) {
-      map.forEach((_, node) => node.dispose());
-    }
-    _productFocusNodes.clear();
-    for (var i = 0; i < count; i++) {
-      _productFocusNodes.add({
-        'product': FocusNode(),
-        'machine_name': FocusNode(),
-        'planned_quantity': FocusNode(),
-      });
-    }
-  }
-
-  void _scrollToFocusedField(BuildContext context, FocusNode focusNode) {
-    if (focusNode.hasFocus) {
-      final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
-      if (renderBox != null) {
-        _scrollController.animateTo(
-          _scrollController.offset + renderBox.localToGlobal(Offset.zero).dy,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
-      }
-    }
   }
 
   @override
@@ -216,15 +61,15 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
             leading: _buildBackButton(),
             action: [],
           ),
-          body: _isLoading
+          body: provider.isFormLoading
               ? const Center(child: CircularProgressIndicator())
-              : _errorMessage != null
+              : provider.formError != null
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        _errorMessage!,
+                        provider.formError!,
                         style: TextStyle(fontSize: 16.sp, color: Colors.red),
                       ),
                       SizedBox(height: 16.h),
@@ -243,6 +88,7 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
                     padding: EdgeInsets.all(24.w).copyWith(
                       bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
                     ),
+                    physics: const ClampingScrollPhysics(),
                     children: [_buildFormCard(context, provider)],
                   ),
                 ),
@@ -376,16 +222,6 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
                   ],
                   onChanged: (value) {
                     provider.setSelectedWorkOrder(value as String?);
-                    final workOrder = provider.workOrderDetails.firstWhere(
-                      (e) => e['work_order_number'] == value,
-                      orElse: () => {},
-                    );
-                    final workOrderId =
-                        workOrder['id']?.toString() ??
-                        workOrder['_id']?.toString();
-                    if (workOrderId != null) {
-                      provider.loadProductsByWorkOrder(workOrderId);
-                    }
                   },
                 );
               },
@@ -567,7 +403,7 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
               name: 'sales_order_number',
               labelText: 'Sales Order Number',
               hintText: 'Enter Sales Order Number',
-              focusNode: _focusNodes['sales_order_number'],
+              focusNode: provider.getFocusNode('sales_order_number'),
               prefixIcon: Icons.receipt,
               initialValue: jobOrder.salesOrderNumber,
               validators: [
@@ -578,9 +414,10 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
               borderColor: Colors.grey.shade300,
               focusedBorderColor: const Color(0xFF3B82F6),
               borderRadius: 12.r,
-              onTap: () => _scrollToFocusedField(
+              onTap: () => provider.scrollToFocusedField(
                 context,
-                _focusNodes['sales_order_number']!,
+                _scrollController,
+                'sales_order_number',
               ),
             ),
             SizedBox(height: 18.h),
@@ -588,7 +425,7 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
               name: 'batch_number',
               labelText: 'Batch Number',
               hintText: 'Enter Batch Number',
-              focusNode: _focusNodes['batch_number'],
+              focusNode: provider.getFocusNode('batch_number'),
               prefixIcon: Icons.numbers,
               keyboardType: TextInputType.number,
               initialValue: jobOrder.batchNumber.toString(),
@@ -606,8 +443,11 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
               borderColor: Colors.grey.shade300,
               focusedBorderColor: const Color(0xFF3B82F6),
               borderRadius: 12.r,
-              onTap: () =>
-                  _scrollToFocusedField(context, _focusNodes['batch_number']!),
+              onTap: () => provider.scrollToFocusedField(
+                context,
+                _scrollController,
+                'batch_number',
+              ),
             ),
             SizedBox(height: 18.h),
             CustomRangeDatePicker(
@@ -642,9 +482,6 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
     int index,
     JobOrderProvider provider,
   ) {
-    if (_productFocusNodes.length < provider.products.length) {
-      _initializeProductFocusNodes(provider.products.length);
-    }
     return Container(
       margin: EdgeInsets.only(bottom: 24.h),
       padding: EdgeInsets.all(16.w),
@@ -674,11 +511,7 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
                     size: 20.sp,
                     color: const Color(0xFFF43F5E),
                   ),
-                  onPressed: () {
-                    provider.removeProductSection(index);
-                    _initializeProductFocusNodes(provider.products.length);
-                    setState(() {});
-                  },
+                  onPressed: () => provider.removeProductSection(index),
                   tooltip: 'Remove Product',
                 ),
             ],
@@ -854,13 +687,12 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
                         provider.products[index]['material_code'] != null
                     ? '${provider.products[index]['description']} - ${provider.products[index]['material_code']}'
                     : null,
-                options: provider.availableProducts.map((product) {
-                  final description =
-                      product['description']?.toString() ?? 'No Description';
-                  final materialCode =
-                      product['material_code']?.toString() ?? 'No Code';
-                  return '$description - $materialCode';
-                }).toList(),
+                options: provider.availableProducts
+                    .map(
+                      (product) =>
+                          '${product['description']?.toString() ?? 'No Description'} - ${product['material_code']?.toString() ?? 'No Code'}',
+                    )
+                    .toList(),
                 fillColor: const Color(0xFFF8FAFC),
                 borderColor: Colors.grey.shade300,
                 focusedBorderColor: const Color(0xFF3B82F6),
@@ -870,59 +702,8 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
                     errorText: 'Please select a product',
                   ),
                 ],
-                onChanged: (value) {
-                  if (value == null) return;
-                  final selectedProduct = provider.availableProducts.firstWhere(
-                    (product) {
-                      final description =
-                          product['description']?.toString() ??
-                          'No Description';
-                      final materialCode =
-                          product['material_code']?.toString() ?? 'No Code';
-                      return '$description - $materialCode' == value;
-                    },
-                    orElse: () => {},
-                  );
-                  if (selectedProduct.isNotEmpty) {
-                    final updatedProducts = List<Map<String, dynamic>>.from(
-                      provider.products,
-                    );
-                    while (updatedProducts.length <= index) {
-                      updatedProducts.add({});
-                    }
-                    updatedProducts[index] = {
-                      'product_id':
-                          selectedProduct['product_id']?.toString() ??
-                          selectedProduct['_id']?.toString(),
-                      'description': selectedProduct['description'],
-                      'material_code': selectedProduct['material_code'],
-                      'uom': selectedProduct['uom'],
-                      'quantity_in_no': selectedProduct['quantity_in_no'],
-                    };
-                    provider.updateProducts(updatedProducts);
-                    final quantityInNo = selectedProduct['quantity_in_no']
-                        ?.toString();
-                    final uom = selectedProduct['uom']?.toString();
-                    final mappedUom = uom == 'sqmt'
-                        ? 'Square Meter/No'
-                        : uom == 'meter'
-                        ? 'Meter/No'
-                        : null;
-                    _formKey.currentState?.fields['planned_quantity_$index']
-                        ?.didChange(quantityInNo);
-                    _formKey.currentState?.fields['uom_$index']?.didChange(
-                      mappedUom,
-                    );
-                    final productId =
-                        selectedProduct['product_id']?.toString() ??
-                        selectedProduct['_id']?.toString();
-                    if (productId != null && productId.isNotEmpty) {
-                      provider.loadMachineNamesByProductId(index, productId);
-                    } else {
-                      provider.updateMachineNames(index, []);
-                    }
-                  }
-                },
+                onChanged: (value) =>
+                    provider.handleProductSelection(index, value, _formKey),
               );
             },
           ),
@@ -1089,6 +870,7 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
                 )
                 .toList(),
             hintText: 'Select UOM',
+            enabled: false,
             prefixIcon: Icons.workspaces,
             fillColor: const Color(0xFFF8FAFC),
             borderColor: Colors.grey.shade300,
@@ -1110,9 +892,7 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
             keyboardType: TextInputType.number,
             labelText: 'Planned Quantity',
             hintText: 'Enter Planned Quantity',
-            focusNode: _productFocusNodes.length > index
-                ? _productFocusNodes[index]['planned_quantity']
-                : null,
+            focusNode: provider.getProductFocusNode(index, 'planned_quantity'),
             prefixIcon: Icons.numbers,
             initialValue:
                 provider.products.length > index &&
@@ -1131,11 +911,10 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
             borderColor: Colors.grey.shade300,
             focusedBorderColor: const Color(0xFF3B82F6),
             borderRadius: 12.r,
-            onTap: () => _scrollToFocusedField(
+            onTap: () => provider.scrollToFocusedField(
               context,
-              _productFocusNodes.length > index
-                  ? _productFocusNodes[index]['planned_quantity']!
-                  : FocusNode(),
+              _scrollController,
+              'planned_quantity_$index',
             ),
           ),
           SizedBox(height: 18.h),
@@ -1162,13 +941,15 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
                 final dateRange =
                     _formKey.currentState?.fields['date_range']?.value
                         as DateTimeRange?;
-                if (dateRange == null)
+                if (dateRange == null) {
                   return 'Please select a date range first';
+                }
                 final selectedDate = value is DateTime
                     ? value
                     : DateTime.tryParse(value.toString());
-                if (selectedDate == null)
+                if (selectedDate == null) {
                   return 'Invalid date format for product ${index + 1}';
+                }
                 final selectedDateOnly = DateTime(
                   selectedDate.year,
                   selectedDate.month,
@@ -1259,11 +1040,7 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {
-            provider.addProductSection();
-            _initializeProductFocusNodes(provider.products.length);
-            setState(() {});
-          },
+          onTap: () => provider.addProductSection(),
           borderRadius: BorderRadius.circular(12.r),
           child: Center(
             child: Padding(
@@ -1310,268 +1087,7 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () async {
-            if (_formKey.currentState?.saveAndValidate() ?? false) {
-              final formData = _formKey.currentState!.value;
-              try {
-                // Validate mongoId
-                final mongoId = widget.mongoId;
-                final isValidMongoId = RegExp(
-                  r'^[0-9a-fA-F]{24}$',
-                ).hasMatch(mongoId);
-                if (!isValidMongoId) {
-                  context.showWarningSnackbar("Invalid job order ID format.");
-                  print('❌ Invalid mongoId: $mongoId');
-                  return;
-                }
-                print('🔍 Mongo ID: $mongoId');
-
-                // Convert DateTime and DateTimeRange to JSON-encodable format for logging
-                final loggableFormData = Map<String, dynamic>.from(formData);
-                if (loggableFormData['date_range'] is DateTimeRange) {
-                  final dateRange =
-                      loggableFormData['date_range'] as DateTimeRange;
-                  loggableFormData['date_range'] = {
-                    'from': dateRange.start.toUtc().toIso8601String(),
-                    'to': dateRange.end.toUtc().toIso8601String(),
-                  };
-                }
-                for (int index = 0; index < provider.products.length; index++) {
-                  final plannedDateKey = 'planned_date_$index';
-                  if (loggableFormData[plannedDateKey] is DateTime) {
-                    loggableFormData[plannedDateKey] =
-                        (loggableFormData[plannedDateKey] as DateTime)
-                            .toUtc()
-                            .toIso8601String();
-                  } else if (loggableFormData[plannedDateKey] != null) {
-                    try {
-                      loggableFormData[plannedDateKey] = DateTime.parse(
-                        loggableFormData[plannedDateKey].toString(),
-                      ).toUtc().toIso8601String();
-                    } catch (e) {
-                      print(
-                        '❌ Failed to parse planned_date_$index for logging: $e',
-                      );
-                    }
-                  }
-                }
-                print('📝 Form Data: ${jsonEncode(loggableFormData)}');
-                print('📝 Original Form Data: ${formData.toString()}');
-
-                final selectedWO = provider.workOrderDetails.firstWhere(
-                  (e) => e['work_order_number'] == formData['work_order'],
-                  orElse: () => {},
-                );
-                final workOrderId =
-                    selectedWO['id']?.toString() ??
-                    selectedWO['_id']?.toString();
-                if (workOrderId == null ||
-                    workOrderId.isEmpty ||
-                    !RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(workOrderId)) {
-                  context.showWarningSnackbar("Invalid work order selected.");
-                  print('❌ Invalid work order ID: $workOrderId');
-                  return;
-                }
-                print('✅ Selected Work Order ID: $workOrderId');
-
-                final products = <Map<String, dynamic>>[];
-                for (int index = 0; index < provider.products.length; index++) {
-                  final productData = provider.products[index];
-                  final productValue = formData['product_$index'];
-                  print('🔍 Processing Product $index: $productValue');
-
-                  final selectedProduct = provider.availableProducts.firstWhere(
-                    (product) {
-                      final description =
-                          product['description']?.toString() ??
-                          'No Description';
-                      final materialCode =
-                          product['material_code']?.toString() ?? 'No Code';
-                      return '$description - $materialCode' == productValue;
-                    },
-                    orElse: () => {},
-                  );
-                  final productId =
-                      productData['product_id']?.toString() ??
-                      selectedProduct['product_id']?.toString() ??
-                      selectedProduct['_id']?.toString();
-                  if (productId == null ||
-                      productId.isEmpty ||
-                      !RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(productId)) {
-                    context.showWarningSnackbar(
-                      "Invalid product ID for product ${index + 1}.",
-                    );
-                    print(
-                      '❌ Invalid product ID for product ${index + 1}: $productId',
-                    );
-                    return;
-                  }
-                  print('✅ Product ID: $productId');
-
-                  final machineDisplayName = formData['machine_name_$index']
-                      ?.toString();
-                  if (machineDisplayName == null ||
-                      machineDisplayName.isEmpty) {
-                    context.showWarningSnackbar(
-                      "Please select a machine for product ${index + 1}.",
-                    );
-                    print('❌ No machine selected for product ${index + 1}');
-                    return;
-                  }
-                  print('🔧 Machine Display Name: $machineDisplayName');
-
-                  final machineData = provider.getMachineDataForProduct(index);
-                  if (machineData == null || machineData.isEmpty) {
-                    context.showWarningSnackbar(
-                      "No machine data available for product ${index + 1}.",
-                    );
-                    print('❌ No machine data for product ${index + 1}');
-                    return;
-                  }
-
-                  final selectedMachine = machineData.firstWhere(
-                    (machine) =>
-                        machine['name']?.toString() == machineDisplayName,
-                    orElse: () => {},
-                  );
-                  final machineId =
-                      selectedMachine['id']?.toString() ??
-                      selectedMachine['_id']?.toString();
-                  if (machineId == null ||
-                      machineId.isEmpty ||
-                      !RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(machineId)) {
-                    context.showWarningSnackbar(
-                      "Invalid machine ID for product ${index + 1}.",
-                    );
-                    print(
-                      '❌ Invalid machine ID for product ${index + 1}: $machineId',
-                    );
-                    return;
-                  }
-                  print('✅ Machine ID: $machineId');
-
-                  final scheduledDate = formData['planned_date_$index'];
-                  String formattedScheduledDate = '';
-                  if (scheduledDate is DateTime) {
-                    formattedScheduledDate = scheduledDate
-                        .toUtc()
-                        .toIso8601String();
-                  } else if (scheduledDate != null) {
-                    try {
-                      final parsedDate = DateTime.parse(
-                        scheduledDate.toString(),
-                      ).toUtc();
-                      formattedScheduledDate = parsedDate.toIso8601String();
-                    } catch (e) {
-                      context.showWarningSnackbar(
-                        "Invalid scheduled date format for product ${index + 1}.",
-                      );
-                      print(
-                        '❌ Invalid scheduled date for product ${index + 1}: $e',
-                      );
-                      return;
-                    }
-                  } else {
-                    context.showWarningSnackbar(
-                      "Scheduled date is required for product ${index + 1}.",
-                    );
-                    print('❌ Scheduled date missing for product ${index + 1}');
-                    return;
-                  }
-                  print('📅 Scheduled Date: $formattedScheduledDate');
-
-                  final plannedQuantityStr =
-                      formData['planned_quantity_$index']?.toString() ?? '0';
-                  final plannedQuantity = int.tryParse(plannedQuantityStr) ?? 0;
-                  if (plannedQuantity <= 0) {
-                    context.showWarningSnackbar(
-                      "Planned quantity must be greater than 0 for product ${index + 1}.",
-                    );
-                    print(
-                      '❌ Invalid planned quantity for product ${index + 1}: $plannedQuantityStr',
-                    );
-                    return;
-                  }
-                  print('🔢 Planned Quantity: $plannedQuantity');
-
-                  products.add({
-                    'product': productId,
-                    'machine_name':
-                        machineId, // Changed to match server expectation
-                    'planned_quantity': plannedQuantity,
-                    'scheduled_date': formattedScheduledDate,
-                  });
-                }
-                if (products.isEmpty) {
-                  context.showWarningSnackbar(
-                    "At least one product is required.",
-                  );
-                  print('❌ No products added');
-                  return;
-                }
-                print('📦 Products: ${jsonEncode(products)}');
-
-                final dateRange = formData['date_range'] as DateTimeRange?;
-                if (dateRange == null) {
-                  context.showWarningSnackbar("Please select a date range.");
-                  print('❌ Date range missing');
-                  return;
-                }
-                print(
-                  '📅 Date Range: from ${dateRange.start.toUtc().toIso8601String()} to ${dateRange.end.toUtc().toIso8601String()}',
-                );
-
-                final batchNumberStr =
-                    formData['batch_number']?.toString() ?? '0';
-                final batchNumber = int.tryParse(batchNumberStr) ?? 0;
-                if (batchNumber <= 0) {
-                  context.showWarningSnackbar(
-                    "Please enter a valid batch number.",
-                  );
-                  print('❌ Invalid batch number: $batchNumberStr');
-                  return;
-                }
-                print('🔢 Batch Number: $batchNumber');
-
-                final payload = {
-                  'work_order': workOrderId,
-                  'sales_order_number':
-                      formData['sales_order_number']?.toString() ?? '',
-                  'batch_number': batchNumber,
-                  'date': {
-                    'from': dateRange.start.toUtc().toIso8601String(),
-                    'to': dateRange.end.toUtc().toIso8601String(),
-                  },
-                  'products': products,
-                };
-                print('📤 Submitting Payload: ${jsonEncode(payload)}');
-
-                final success = await provider.updateJobOrder(
-                  mongoId: mongoId,
-                  payload: payload,
-                );
-                if (success) {
-                  context.showSuccessSnackbar("Job Order updated successfully");
-                  print('✅ Job Order updated successfully');
-                  context.go(RouteNames.jobOrder);
-                } else {
-                  final error = provider.error ?? "Unknown error occurred";
-                  context.showWarningSnackbar(
-                    "Failed to update Job Order: $error",
-                  );
-                  print('❌ Update Failed: $error');
-                }
-              } catch (e, stackTrace) {
-                context.showWarningSnackbar("Failed to update Job Order: $e");
-                print('❌ Update Error: $e\nStackTrace: $stackTrace');
-              }
-            } else {
-              context.showWarningSnackbar(
-                "Please fill in all required fields correctly.",
-              );
-              print('❌ Form validation failed');
-            }
-          },
+          onTap: () => provider.submitForm(context, widget.mongoId, _formKey),
           borderRadius: BorderRadius.circular(12.r),
           child: Center(
             child: Padding(

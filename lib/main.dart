@@ -7,6 +7,7 @@ import 'package:k2k/konkrete_klinkers/master_data/clients/provider/clients_provi
 import 'package:k2k/konkrete_klinkers/master_data/plants/provider/plants_provider.dart';
 import 'package:k2k/konkrete_klinkers/master_data/products/provider/product_provider.dart';
 import 'package:k2k/konkrete_klinkers/master_data/projects/provider/projects_provider.dart';
+import 'package:k2k/konkrete_klinkers/qc_check/provider/qc_check_provider.dart';
 import 'package:k2k/login/provider/login_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -33,12 +34,13 @@ class MyApp extends StatelessWidget {
             ChangeNotifierProvider(create: (_) => ProductProvider()),
             ChangeNotifierProvider(create: (_) => JobOrderProvider()),
             ChangeNotifierProvider(create: (_) => InventoryProvider()),
+            ChangeNotifierProvider(create: (_) => QcCheckProvider()),
           ],
           child: Consumer<LoginProvider>(
             builder: (context, value, child) {
               return MaterialApp.router(
                 debugShowCheckedModeBanner: false,
-                routerConfig: AppRoutes.router, // <-- GoRouter config
+                routerConfig: AppRoutes.router,
               );
             },
           ),

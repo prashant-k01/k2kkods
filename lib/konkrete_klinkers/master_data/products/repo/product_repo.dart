@@ -28,7 +28,7 @@ class ProductRepository {
       );
 
       print('Making request to: $uri');
-      
+
       final response = await http
           .get(uri, headers: authHeaders)
           .timeout(const Duration(seconds: 120)); // Increased timeout
@@ -36,10 +36,12 @@ class ProductRepository {
       print('API Status Code: ${response.statusCode}');
       print('Response Headers: ${response.headers}');
       print('Response Length: ${response.body.length}');
-      
+
       // Only print first 500 characters to avoid truncation in logs
       if (response.body.length > 500) {
-        print('Response Preview (first 500 chars): ${response.body.substring(0, 500)}...');
+        print(
+          'Response Preview (first 500 chars): ${response.body.substring(0, 500)}...',
+        );
       } else {
         print('Full Response: ${response.body}');
       }
@@ -49,21 +51,23 @@ class ProductRepository {
           // Check if response is complete JSON
           final trimmedBody = response.body.trim();
           if (!trimmedBody.endsWith('}') && !trimmedBody.endsWith(']')) {
-            print('Warning: Response may be truncated - last 50 chars: ${trimmedBody.substring(trimmedBody.length - 50)}');
+            print(
+              'Warning: Response may be truncated - last 50 chars: ${trimmedBody.substring(trimmedBody.length - 50)}',
+            );
             // Continue parsing anyway as it might just be a logging issue
           }
 
           final jsonData = json.decode(response.body);
-          
+
           if (jsonData is Map<String, dynamic>) {
             print('Successfully parsed JSON with ${jsonData.keys.length} keys');
-            
+
             // Check if data field exists and is a list
             if (jsonData.containsKey('data') && jsonData['data'] is List) {
               final dataList = jsonData['data'] as List;
               print('Found ${dataList.length} products in response');
             }
-            
+
             return ProductResponse.fromJson(jsonData);
           } else {
             throw Exception(
@@ -73,8 +77,12 @@ class ProductRepository {
         } on FormatException catch (e) {
           print('JSON Parsing Error: $e');
           print('Response body length: ${response.body.length}');
-          print('Last 100 characters: ${response.body.substring(response.body.length - 100)}');
-          throw Exception('Invalid JSON format - response may be truncated: $e');
+          print(
+            'Last 100 characters: ${response.body.substring(response.body.length - 100)}',
+          );
+          throw Exception(
+            'Invalid JSON format - response may be truncated: $e',
+          );
         }
       } else {
         print('HTTP Error - Status: ${response.statusCode}');
@@ -98,6 +106,53 @@ class ProductRepository {
     }
   }
 
+// Fixed getPlantsForDropdown method in ProductRepository
+
+Future<List<Map<String, String>>> getPlantsForDropdown() async {
+  try {
+    final authHeaders = await headers;
+    final uri = Uri.parse(AppUrl.allPlantsUrl);
+    final response = await http
+        .get(uri, headers: authHeaders)
+        .timeout(const Duration(seconds: 30));
+
+    print('Plants API Response: ${response.statusCode} - ${response.body}');
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> responseData = json.decode(response.body);
+      final List<dynamic> data = responseData['data'] ?? [];
+      
+      print('Raw plant data: $data'); // Debug: See the actual structure
+      
+      return data.map((plant) {
+        // Try multiple possible ID field names
+        final id = plant['_id']?.toString() ?? 
+                  plant['id']?.toString() ?? 
+                  plant['plantId']?.toString() ?? 
+                  plant['plant_id']?.toString() ?? '';
+        
+        final plantName = plant['plant_name']?.toString() ?? 'Unknown';
+        final plantCode = plant['plant_code']?.toString() ?? '';
+        final display = '$plantName-$plantCode';
+        
+        print('Plant mapping - ID: "$id", Name: "$plantName", Code: "$plantCode", Display: "$display"');
+        
+        if (id.isEmpty) {
+          print('Warning: Plant with display $display has no ID. Raw plant data: $plant');
+        }
+        
+        return {'id': id, 'display': display};
+      }).where((plant) => plant['id']!.isNotEmpty).toList(); // Filter out plants without IDs
+    } else {
+      throw Exception(
+        'Failed to fetch plants: ${response.statusCode} - ${response.body}',
+      );
+    }
+  } catch (e) {
+    print('Error in getPlantsForDropdown: $e');
+    throw Exception('Failed to load plants: $e');
+  }
+}
   Future<ProductModel?> getProduct(String productId) async {
     try {
       final authHeaders = await headers;
@@ -112,8 +167,11 @@ class ProductRepository {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Check for truncated response
-        if (!response.body.trim().endsWith('}') && !response.body.trim().endsWith(']')) {
-          throw FormatException('Single product response appears to be truncated');
+        if (!response.body.trim().endsWith('}') &&
+            !response.body.trim().endsWith(']')) {
+          throw FormatException(
+            'Single product response appears to be truncated',
+          );
         }
 
         final jsonData = json.decode(response.body);
@@ -269,11 +327,7 @@ class ProductRepository {
       print('Deleting product with body: $body');
 
       final response = await http
-          .delete(
-            Uri.parse(deleteUrl),
-            headers: authHeaders,
-            body: body,
-          )
+          .delete(Uri.parse(deleteUrl), headers: authHeaders, body: body)
           .timeout(const Duration(seconds: 60)); // Increased timeout
 
       print('Delete Product Response Status: ${response.statusCode}');

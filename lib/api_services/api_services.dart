@@ -1,6 +1,4 @@
 class AppUrl {
-  //   static const String baseUrl = 'https://k2k_new-iot-backend-2.onrender.com';
-  //   static const String baseUrl = 'https://k2k-iot-backend-2.onrender.com/api/';
   static const String baseUrl = 'http://3.6.6.231/api';
 
   static const String loginUrl = '$baseUrl/users/login';
@@ -80,7 +78,7 @@ class AppUrl {
 
   static const String deleteJobOrder =
       "$baseUrl/konkreteKlinkers/joborders/delete";
-  static const String getjoborderbyId = "$baseUrl/konkreteKlinkers/joborders/";
+  static const String getjoborderbyId = "$baseUrl/konkreteKlinkers/joborders";
   static const String getJOMachinesbyProduct =
       "$baseUrl/konkreteKlinkers/joborder-getMachine?material_code=";
 
@@ -103,6 +101,7 @@ class AppUrl {
   static const String createKKQcCheckUrl = "$baseUrl/konkreteKlinkers/qc-check";
   static const String getProductByjobOrder =
       "$baseUrl/konkreteKlinkers/qc-check/products?id=";
+  static const String getDropdownJobOrder = "https://k2k.kods.work/api/dropdown/joborders";
 
   //Packing
   static const String kkpacking = "$baseUrl/konkreteKlinkers/packing";

@@ -17,6 +17,39 @@ class JobOrderRepository {
   bool isAddJobOrderLoading = false;
   JobOrderModel? _lastCreatedJobOrder;
   JobOrderModel? get lastCreatedJobOrder => _lastCreatedJobOrder;
+  Future<JobOrderModel?> getJobOrderById(String mongoId) async {
+    try {
+      final authHeaders = await headers;
+      final uri = Uri.parse('${AppUrl.getjoborderbyId}/$mongoId');
+
+      print('Raw JobOrderById Response: ${uri.toString()}');
+
+      final response = await http
+          .get(uri, headers: authHeaders)
+          .timeout(const Duration(seconds: 30));
+
+      print('Raw JobOrderById Response: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        final jobOrderData = (jsonData is Map<String, dynamic>)
+            ? jsonData['data'] ?? jsonData
+            : jsonData;
+
+        return JobOrderModel.fromJson(jobOrderData);
+      } else if (response.statusCode == 404) {
+        return null;
+      } else {
+        throw Exception(
+          'Failed to load JobOrder by ID: ${response.statusCode} - ${response.body}',
+        );
+      }
+    } on SocketException catch (e) {
+      throw Exception('No internet connection: $e');
+    } catch (e) {
+      throw Exception('Unexpected error loading JobOrder by ID: $e');
+    }
+  }
 
   Future<JobOrderResponse> getAllJobOrder() async {
     try {
@@ -323,47 +356,48 @@ class JobOrderRepository {
     }
   }
 
-Future<bool> updateJobOrder({
-  required String mongoId,
-  required Map<String, dynamic> payload,
-}) async {
-  try {
-    final authHeaders = await headers;
-    final updateUrl = '${AppUrl.updateJobOrder}/$mongoId';
-    print('🔗 Updating JobOrder at URL: $updateUrl');
-    print('📤 Payload: ${jsonEncode(payload)}');
+  Future<bool> updateJobOrder({
+    required String mongoId,
+    required Map<String, dynamic> payload,
+  }) async {
+    try {
+      final authHeaders = await headers;
+      final updateUrl = '${AppUrl.updateJobOrder}/$mongoId';
+      print('🔗 Updating JobOrder at URL: $updateUrl');
+      print('📤 Payload: ${jsonEncode(payload)}');
 
-    final response = await http
-        .put(
-          Uri.parse(updateUrl),
-          headers: authHeaders,
-          body: json.encode(payload),
-        )
-        .timeout(const Duration(seconds: 30));
+      final response = await http
+          .put(
+            Uri.parse(updateUrl),
+            headers: authHeaders,
+            body: json.encode(payload),
+          )
+          .timeout(const Duration(seconds: 30));
 
-    print('📱 Update Response Status: ${response.statusCode}');
-    print('📄 Update Response Body: ${response.body}');
+      print('📱 Update Response Status: ${response.statusCode}');
+      print('📄 Update Response Body: ${response.body}');
 
-    if (response.statusCode == 200) {
-      print('✅ JobOrder updated successfully');
-      return true;
-    } else {
-      final errorMessage =
-          'Failed to update JobOrder: ${response.statusCode} - ${response.body}';
-      print('❌ $errorMessage');
-      throw Exception(errorMessage);
+      if (response.statusCode == 200) {
+        print('✅ JobOrder updated successfully');
+        return true;
+      } else {
+        final errorMessage =
+            'Failed to update JobOrder: ${response.statusCode} - ${response.body}';
+        print('❌ $errorMessage');
+        throw Exception(errorMessage);
+      }
+    } on SocketException catch (e) {
+      print('❌ SocketException: $e');
+      throw Exception('No internet connection: $e');
+    } on FormatException catch (e) {
+      print('❌ FormatException: $e');
+      throw Exception('Invalid response format: $e');
+    } catch (e) {
+      print('❌ Unexpected error updating JobOrder: $e');
+      throw Exception('Unexpected error updating JobOrder: $e');
     }
-  } on SocketException catch (e) {
-    print('❌ SocketException: $e');
-    throw Exception('No internet connection: $e');
-  } on FormatException catch (e) {
-    print('❌ FormatException: $e');
-    throw Exception('Invalid response format: $e');
-  } catch (e) {
-    print('❌ Unexpected error updating JobOrder: $e');
-    throw Exception('Unexpected error updating JobOrder: $e');
   }
-}
+
   Future<bool> deleteJobOrder(String mongoId) async {
     try {
       final authHeaders = await headers;

@@ -14,15 +14,17 @@ class RouteNames {
   //projects
   static const String projects = '/projects';
   static const String projectsadd = '/projectsadd';
-  static const String projectsedit =
-      '/projects/edit/:projectsId'; 
+  static const String projectsedit = '/projects/edit/:projectsId';
   //products
   static const String products = '/products';
   static const String productedit = '/product/edit/:productId';
   static const String productsadd = '/productsadd';
-//job order
+  //job order
   static const String jobOrder = '/joborder';
   static const String joborderadd = '/joborderadd';
   static const String jobOrderedit = '/joborder/edit/:mongoId';
-
+  static const jobOrderView = 'job-order-view';
+  //qc check
+  static const qcCheck = '/qc-check';
+  static const String qcCheckAdd = '/qcadd';
 }

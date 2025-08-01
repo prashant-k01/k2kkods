@@ -9,7 +9,6 @@ import 'package:k2k/common/widgets/dropdown.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
-import 'package:k2k/konkrete_klinkers/master_data/plants/provider/plants_provider.dart';
 import 'package:k2k/konkrete_klinkers/master_data/products/provider/product_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -33,15 +32,31 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
     'area_per_unit': FocusNode(),
     'qty_in_bundle': FocusNode(),
   };
-  bool _showAreaPerUnit = true; // Set default to true for Square Meter/No
+  bool _showAreaPerUnit = true;
   final Debouncer _scrollDebouncer = Debouncer();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final plantProvider = Provider.of<PlantProvider>(context, listen: false);
-      plantProvider.loadAllPlantsForDropdown();
+      final productProvider = Provider.of<ProductProvider>(
+        context,
+        listen: false,
+      );
+      productProvider.initializeEditForm('').then((_) {
+        if (productProvider.plants.isEmpty ||
+            productProvider.plants.every((plant) => plant['id']!.isEmpty)) {
+          context.showErrorSnackbar(
+            "No valid plants available. Please try again later.",
+          );
+        } else {
+          _formKey.currentState?.fields['plant']?.didChange(
+            productProvider.plants.firstWhere(
+              (plant) => plant['id']!.isNotEmpty,
+            )['display'],
+          );
+        }
+      });
     });
   }
 
@@ -64,17 +79,29 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
     }
   }
 
-  // Function to scroll to the focused text field
   void _scrollToFocusedField(BuildContext context, FocusNode focusNode) {
     if (focusNode.hasFocus) {
       _scrollDebouncer.debounce(
         duration: const Duration(milliseconds: 100),
         onDebounce: () {
-          final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
-          if (renderBox != null) {
+          final RenderObject? renderObject = context.findRenderObject();
+          if (renderObject is RenderBox) {
+            final position = renderObject.localToGlobal(Offset.zero).dy;
+            final screenHeight = MediaQuery.of(context).size.height;
+            final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+
+            double targetOffset = _scrollController.offset + position;
+            if (position + 200.h > screenHeight - keyboardHeight) {
+              targetOffset =
+                  _scrollController.offset +
+                  (position - (screenHeight - keyboardHeight - 200.h));
+            }
+
             _scrollController.animateTo(
-              _scrollController.offset +
-                  renderBox.localToGlobal(Offset.zero).dy,
+              targetOffset.clamp(
+                0.0,
+                _scrollController.position.maxScrollExtent,
+              ),
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOut,
             );
@@ -93,15 +120,11 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final productProvider = Provider.of<ProductProvider>(
-      context,
-      listen: false,
-    );
-    final plantProvider = Provider.of<PlantProvider>(context);
+    final productProvider = Provider.of<ProductProvider>(context);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      resizeToAvoidBottomInset: true, // Allow resizing when keyboard appears
+      resizeToAvoidBottomInset: true,
       appBar: AppBars(
         title: _buildLogoAndTitle(),
         leading: _buildBackButton(),
@@ -109,17 +132,15 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
       ),
       body: GestureDetector(
         onTap: () {
-          FocusScope.of(context).unfocus(); // Dismiss keyboard on tap outside
+          FocusScope.of(context).unfocus();
         },
         behavior: HitTestBehavior.opaque,
-        child: ListView.builder(
+        child: SingleChildScrollView(
           controller: _scrollController,
           padding: EdgeInsets.all(
             24.w,
           ).copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 24.h),
-          itemCount: 1,
-          itemBuilder: (context, index) =>
-              _buildFormCard(context, productProvider, plantProvider),
+          child: Column(children: [_buildFormCard(context, productProvider)]),
         ),
       ),
     );
@@ -158,11 +179,7 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
     );
   }
 
-  Widget _buildFormCard(
-    BuildContext context,
-    ProductProvider productProvider,
-    PlantProvider plantProvider,
-  ) {
+  Widget _buildFormCard(BuildContext context, ProductProvider productProvider) {
     return Container(
       padding: EdgeInsets.all(24.w),
       decoration: BoxDecoration(
@@ -195,36 +212,38 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
               style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
             ),
             SizedBox(height: 24.h),
-            Consumer<PlantProvider>(
-              builder: (context, plantProvider, _) {
-                final plants = plantProvider.allPlants;
-                final plantNames = plants
-                    .map((plant) => plant.plantName)
-                    .toList();
-
-                return CustomSearchableDropdownFormField(
-                  name: 'plant',
-                  labelText: 'Plant',
-                  hintText: 'Select Plant',
-                  prefixIcon: Icons.factory,
-                  options: plantProvider.isAllPlantsLoading
-                      ? ['Loading...']
-                      : plantNames.isEmpty
-                      ? ['No plants available']
-                      : plantNames,
-                  fillColor: const Color(0xFFF8FAFC),
-                  borderColor: Colors.grey.shade300,
-                  focusedBorderColor: const Color(0xFF3B82F6),
-                  borderRadius: 12.r,
-                  validators: [
-                    FormBuilderValidators.required(
-                      errorText: 'Please select a plant',
-                    ),
-                  ],
-                  enabled:
-                      !plantProvider.isAllPlantsLoading &&
-                      plantNames.isNotEmpty,
-                );
+            CustomSearchableDropdownFormField(
+              name: 'plant',
+              labelText: 'Plant',
+              hintText: 'Select Plant',
+              prefixIcon: Icons.factory,
+              initialValue: productProvider.plants.isNotEmpty
+                  ? productProvider.plants.firstWhere(
+                      (plant) => plant['id']!.isNotEmpty,
+                      orElse: () => {'display': 'No valid plants'},
+                    )['display']
+                  : null,
+              options: productProvider.plants.isEmpty
+                  ? ['No plants available']
+                  : productProvider.plants
+                        .where((plant) => plant['id']!.isNotEmpty)
+                        .map((plant) => plant['display']!)
+                        .toList(),
+              fillColor: const Color(0xFFF8FAFC),
+              borderColor: Colors.grey.shade300,
+              focusedBorderColor: const Color(0xFF3B82F6),
+              borderRadius: 12.r,
+              validators: [
+                FormBuilderValidators.required(
+                  errorText: 'Please select a plant',
+                ),
+              ],
+              enabled: productProvider.plants.any(
+                (plant) => plant['id']!.isNotEmpty,
+              ),
+              onChanged: (value) {
+                print('Dropdown onChanged: $value');
+                _formKey.currentState?.fields['plant']?.didChange(value);
               },
             ),
             SizedBox(height: 18.h),
@@ -316,6 +335,9 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
               focusedBorderColor: const Color(0xFF3B82F6),
               borderRadius: 12.r,
               onChanged: (value) {
+                setState(() {
+                  _showAreaPerUnit = value == "Square Meter/No";
+                });
                 productProvider.setShowAreaPerUnit(value == "Square Meter/No");
                 if (!productProvider.showAreaPerUnit) {
                   _formKey.currentState?.fields['area_per_unit']?.didChange('');
@@ -478,25 +500,78 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
   ) async {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       final formData = _formKey.currentState!.value;
-      final plantProvider = Provider.of<PlantProvider>(context, listen: false);
 
-      final selectedPlantName = formData['plant'] as String?;
-      if (selectedPlantName == null) {
+      final selectedPlantDisplay = formData['plant'] as String?;
+      print('Form plant value: $selectedPlantDisplay');
+
+      // Check if plant is selected
+      if (selectedPlantDisplay == null || selectedPlantDisplay.isEmpty) {
         context.showErrorSnackbar("Please select a plant.");
         return;
       }
 
-      final selectedPlant = plantProvider.allPlants.firstWhere(
-        (plant) => plant.plantName == selectedPlantName,
-      );
-
-      if (selectedPlant.id.isEmpty) {
+      // Check if plants are available
+      if (provider.plants.isEmpty) {
         context.showErrorSnackbar(
-          "Selected plant not found. Please try again.",
+          "No plants available. Please refresh and try again.",
         );
         return;
       }
 
+      print(
+        'Available plants: ${provider.plants.map((p) => "${p['display']} (ID: ${p['id']})").toList()}',
+      );
+
+      // Find the selected plant
+      final selectedPlant = provider.plants.firstWhere(
+        (plant) => plant['display']?.trim() == selectedPlantDisplay.trim(),
+        orElse: () {
+          print('No plant found for display: $selectedPlantDisplay');
+          return {'id': '', 'display': ''};
+        },
+      );
+
+      // Validate plant ID
+      if (selectedPlant['id'] == null || selectedPlant['id']!.isEmpty) {
+        // Try to reload plants if all IDs are empty
+        try {
+          context.showInfoSnackbar("Refreshing plant data...");
+          await provider.initializeEditForm(''); // This will reload plants
+
+          if (provider.plants.isEmpty ||
+              provider.plants.every((plant) => plant['id']!.isEmpty)) {
+            context.showErrorSnackbar(
+              "All plants have invalid IDs. Please contact support or check the plant configuration.",
+            );
+            return;
+          }
+
+          // Try to find the plant again after refresh
+          final refreshedPlant = provider.plants.firstWhere(
+            (plant) => plant['display']?.trim() == selectedPlantDisplay.trim(),
+            orElse: () => {'id': '', 'display': ''},
+          );
+
+          if (refreshedPlant['id']!.isEmpty) {
+            context.showErrorSnackbar(
+              "Selected plant '$selectedPlantDisplay' has no valid ID even after refresh.",
+            );
+            return;
+          }
+
+          // Use the refreshed plant
+          selectedPlant['id'];
+        } catch (e) {
+          context.showErrorSnackbar(
+            "Failed to refresh plant data: ${e.toString()}",
+          );
+          return;
+        }
+      }
+
+      print('Selected plant ID: ${selectedPlant['id']}');
+
+      // Show loading dialog
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -533,8 +608,9 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
         ),
       );
 
+      // Create the product
       final success = await provider.createProduct(
-        plantId: selectedPlant.id,
+        plantId: selectedPlant['id']!,
         materialCode: formData['material_code'],
         description: formData['description'],
         uom: [formData['uom']],
@@ -547,6 +623,7 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
         qtyInBundle: int.tryParse(formData['qty_in_bundle'] ?? '0') ?? 0,
       );
 
+      // Close loading dialog
       Navigator.of(context).pop();
 
       if (success && context.mounted) {

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:k2k/konkrete_klinkers/master_data/products/model/product.dart';
-import 'package:k2k/konkrete_klinkers/master_data/plants/provider/plants_provider.dart';
 import 'package:k2k/konkrete_klinkers/master_data/products/repo/product_repo.dart';
 
 class ProductProvider with ChangeNotifier {
@@ -21,6 +20,7 @@ class ProductProvider with ChangeNotifier {
   ProductModel? _product;
   Map<String, dynamic> _initialValues = {};
   bool _showAreaPerUnit = true;
+  List<Map<String, String>> _plants = [];
 
   List<ProductModel> get products => _products;
   bool get isLoading => _isLoading;
@@ -35,26 +35,29 @@ class ProductProvider with ChangeNotifier {
   ProductModel? get product => _product;
   Map<String, dynamic> get initialValues => _initialValues;
   bool get showAreaPerUnit => _showAreaPerUnit;
+  List<Map<String, String>> get plants => _plants;
+
+  // Fixed initializeEditForm method in ProductProvider
 
   Future<void> initializeEditForm(String productId) async {
     _isInitialized = false;
     _errorMessage = null;
     _product = null;
     _initialValues = {};
+    _plants = [];
     notifyListeners();
 
-    final plantProvider = PlantProvider();
-    await plantProvider.loadAllPlantsForDropdown();
-
-    if (productId.isEmpty) {
-      _errorMessage = 'Invalid product ID';
-      _isInitialized = true;
-      notifyListeners();
-      return;
-    }
-
     try {
-      if (plantProvider.allPlants.isEmpty) {
+      _plants = await _repository.getPlantsForDropdown();
+
+      if (productId.isEmpty) {
+        // For add form (empty productId), just load plants
+        _isInitialized = true;
+        notifyListeners();
+        return;
+      }
+
+      if (_plants.isEmpty) {
         _errorMessage = 'No plants available';
         _isInitialized = true;
         notifyListeners();
@@ -69,28 +72,43 @@ class ProductProvider with ChangeNotifier {
         return;
       }
 
-      final selectedPlant = plantProvider.allPlants.firstWhere(
-        (plant) => plant.id == _product!.plant.id,
-        orElse: () => plantProvider.allPlants.first,
+      final selectedPlant = _plants.firstWhere(
+        (plant) => plant['id'] == _product!.plant.id,
+        orElse: () => _plants.isNotEmpty
+            ? _plants.first
+            : {'id': '', 'display': 'No Plant'},
       );
 
-      final plantName = selectedPlant.plantName.isNotEmpty
-          ? selectedPlant.plantName
+      final plantDisplay = selectedPlant['display']!.isNotEmpty
+          ? selectedPlant['display']!
           : 'Unknown Plant';
 
-      final uomValue = _product!.uom.isNotEmpty ? _product!.uom.first : 'Square Meter/No';
+      // FIXED: Normalize UOM values to match the consistent format
+      String uomValue = _product!.uom.isNotEmpty
+          ? _product!.uom.first
+          : 'Square Meter/No';
+
+      // Normalize UOM variations to consistent values
+      if (uomValue.contains('Square M')) {
+        uomValue = 'Square Meter/No';
+      } else if (uomValue.contains('Meter') && !uomValue.contains('Square')) {
+        uomValue = 'Meter/No';
+      }
 
       _initialValues = {
-        'plant': plantName,
+        'plant': plantDisplay,
         'material_code': _product!.materialCode,
         'description': _product!.description,
         'no_of_pieces_per_punch': _product!.noOfPiecesPerPunch.toString(),
         'uom': uomValue,
-        'area_per_unit': _product!.areas[uomValue]?.toStringAsFixed(4) ?? '',
+        'area_per_unit':
+            _product!.areas[_product!.uom.first]?.toStringAsFixed(4) ?? '',
         'qty_in_bundle': _product!.qtyInBundle.toString(),
       };
 
-      _showAreaPerUnit = uomValue.contains("Square Meter/No");
+      _showAreaPerUnit = uomValue.contains(
+        "Square Meter/No",
+      ); // FIXED: Consistent check
       _isInitialized = true;
       notifyListeners();
     } catch (e) {
@@ -124,48 +142,50 @@ class ProductProvider with ChangeNotifier {
     }
   }
 
-Future<void> loadAllProducts({bool refresh = false}) async {
-  if (_isLoading || (!_hasMore && !refresh)) return;
+  Future<void> loadAllProducts({bool refresh = false}) async {
+    if (_isLoading || (!_hasMore && !refresh)) return;
 
-  _isLoading = true;
-  if (refresh) {
-    _products.clear();
-    _hasMore = true;
-    _error = null;
-  }
-  notifyListeners();
-
-  try {
-    final response = await _repository.getAllProduct(
-      search: _searchQuery.isNotEmpty ? _searchQuery : null,
-    );
-
+    _isLoading = true;
     if (refresh) {
       _products.clear();
-    }
-
-    if (response.success && response.data.isNotEmpty) {
-      _products.addAll(response.data);
-      // Assume page size is 10; if fewer items are returned, no more data exists
-      _hasMore = response.data.length == 10; // Adjust based on backend page size
+      _hasMore = true;
       _error = null;
-    } else {
-      _hasMore = false; // No data or empty response means no more data
-      _error = response.success
-          ? null
-          : (response.message.isNotEmpty ? response.message : 'Failed to load products');
     }
-  } catch (e) {
-    _hasMore = false; // On error, assume no more data to prevent infinite retries
-    _error = _getErrorMessage(e);
-    if (refresh) {
-      _products.clear();
-    }
-  } finally {
-    _isLoading = false;
     notifyListeners();
+
+    try {
+      final response = await _repository.getAllProduct(
+        search: _searchQuery.isNotEmpty ? _searchQuery : null,
+      );
+
+      if (refresh) {
+        _products.clear();
+      }
+
+      if (response.success && response.data.isNotEmpty) {
+        _products.addAll(response.data);
+        _hasMore = response.data.length == 10;
+        _error = null;
+      } else {
+        _hasMore = false;
+        _error = response.success
+            ? null
+            : (response.message.isNotEmpty
+                  ? response.message
+                  : 'Failed to load products');
+      }
+    } catch (e) {
+      _hasMore = false;
+      _error = _getErrorMessage(e);
+      if (refresh) {
+        _products.clear();
+      }
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
-}
+
   Future<void> searchProducts(String query) async {
     _searchQuery = query;
     _hasMore = true;
@@ -310,19 +330,18 @@ Future<void> loadAllProducts({bool refresh = false}) async {
   String _getErrorMessage(Object error) {
     if (error is Exception) {
       String errorString = error.toString();
-      // Clean up common exception prefixes
       errorString = errorString.replaceFirst('Exception: ', '');
       errorString = errorString.replaceFirst('FormatException: ', '');
       errorString = errorString.replaceFirst('TypeError: ', '');
-      
-      // If the error string looks like JSON or is too long, provide a generic message
-      if (errorString.contains('{') || errorString.contains('[') || errorString.length > 100) {
+
+      if (errorString.contains('{') ||
+          errorString.contains('[') ||
+          errorString.length > 100) {
         return 'Unable to load products. Please check your connection and try again.';
       }
-      
+
       return errorString;
     } else if (error is String) {
-      // If it's a string but looks like JSON, provide a generic message
       if (error.contains('{') || error.contains('[') || error.length > 100) {
         return 'Unable to load products. Please check your connection and try again.';
       }

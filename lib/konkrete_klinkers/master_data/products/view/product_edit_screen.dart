@@ -8,7 +8,6 @@ import 'package:k2k/common/widgets/dropdown.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
-import 'package:k2k/konkrete_klinkers/master_data/plants/provider/plants_provider.dart';
 import 'package:k2k/konkrete_klinkers/master_data/products/provider/product_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -41,7 +40,6 @@ class _EditProductFormContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final productProvider = Provider.of<ProductProvider>(context);
-    final plantProvider = Provider.of<PlantProvider>(context, listen: false);
 
     if (!productProvider.isInitialized) {
       return const Scaffold(
@@ -52,6 +50,25 @@ class _EditProductFormContent extends StatelessWidget {
 
     if (productProvider.errorMessage != null) {
       return _buildErrorScreen(context, productProvider.errorMessage!);
+    }
+
+    // Validate and adjust initial values for 'uom'
+    final initialValues = Map<String, dynamic>.from(
+      productProvider.initialValues,
+    );
+    
+    // FIXED: Use consistent UOM values (same as add form)
+    const validUomValues = ["Square Meter/No", "Meter/No"];
+    if (initialValues['uom'] != null &&
+        !validUomValues.contains(initialValues['uom'])) {
+      // Map common variations to the correct values
+      if (initialValues['uom'].toString().contains('Square M')) {
+        initialValues['uom'] = "Square Meter/No";
+      } else if (initialValues['uom'].toString().contains('Meter')) {
+        initialValues['uom'] = "Meter/No";
+      } else {
+        initialValues['uom'] = validUomValues[0]; // Default to first valid value
+      }
     }
 
     return Scaffold(
@@ -67,11 +84,12 @@ class _EditProductFormContent extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         child: ListView.builder(
           controller: _scrollController,
-          padding: EdgeInsets.all(24.w).copyWith(
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
-          ),
+          padding: EdgeInsets.all(
+            24.w,
+          ).copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 24.h),
           itemCount: 1,
-          itemBuilder: (context, index) => _buildFormCard(context, productProvider, plantProvider),
+          itemBuilder: (context, index) =>
+              _buildFormCard(context, productProvider, initialValues),
         ),
       ),
     );
@@ -126,12 +144,12 @@ class _EditProductFormContent extends StatelessWidget {
             SizedBox(height: 8.h),
             ElevatedButton(
               onPressed: () {
-                Provider.of<ProductProvider>(context, listen: false).initializeEditForm(productId);
+                Provider.of<ProductProvider>(
+                  context,
+                  listen: false,
+                ).initializeEditForm(productId);
               },
-              child: Text(
-                'Retry',
-                style: TextStyle(fontSize: 16.sp),
-              ),
+              child: Text('Retry', style: TextStyle(fontSize: 16.sp)),
             ),
           ],
         ),
@@ -167,7 +185,10 @@ class _EditProductFormContent extends StatelessWidget {
   }
 
   Widget _buildFormCard(
-      BuildContext context, ProductProvider productProvider, PlantProvider plantProvider) {
+    BuildContext context,
+    ProductProvider productProvider,
+    Map<String, dynamic> initialValues,
+  ) {
     return Container(
       padding: EdgeInsets.all(24.w),
       decoration: BoxDecoration(
@@ -183,7 +204,7 @@ class _EditProductFormContent extends StatelessWidget {
       ),
       child: FormBuilder(
         key: _formKey,
-        initialValue: productProvider.initialValues,
+        initialValue: initialValues,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -201,27 +222,27 @@ class _EditProductFormContent extends StatelessWidget {
               style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
             ),
             SizedBox(height: 24.h),
-            Consumer<PlantProvider>(
-              builder: (context, plantProvider, _) {
-                final plants = plantProvider.allPlants;
-                final plantNames = plants.map((plant) => plant.plantName).toList();
-
-                return CustomSearchableDropdownFormField(
-                  name: 'plant',
-                  labelText: 'Plant',
-                  hintText: 'Select Plant',
-                  prefixIcon: Icons.factory,
-                  options: plantNames.isEmpty ? ['No plants available'] : plantNames,
-                  fillColor: const Color(0xFFF8FAFC),
-                  borderColor: Colors.grey.shade300,
-                  focusedBorderColor: const Color(0xFF3B82F6),
-                  borderRadius: 12.r,
-                  validators: [
-                    FormBuilderValidators.required(errorText: 'Please select a plant'),
-                  ],
-                  enabled: plantNames.isNotEmpty,
-                );
-              },
+            CustomSearchableDropdownFormField(
+              name: 'plant',
+              labelText: 'Plant',
+              hintText: 'Select Plant',
+              prefixIcon: Icons.factory,
+              options: productProvider.plants.isEmpty
+                  ? ['No plants available']
+                  : productProvider.plants
+                        .where((plant) => plant['id']!.isNotEmpty) // FIXED: Filter out plants without IDs
+                        .map((plant) => plant['display']!)
+                        .toList(),
+              fillColor: const Color(0xFFF8FAFC),
+              borderColor: Colors.grey.shade300,
+              focusedBorderColor: const Color(0xFF3B82F6),
+              borderRadius: 12.r,
+              validators: [
+                FormBuilderValidators.required(
+                  errorText: 'Please select a plant',
+                ),
+              ],
+              enabled: productProvider.plants.any((plant) => plant['id']!.isNotEmpty), // FIXED: Enable only if valid plants exist
             ),
             SizedBox(height: 18.h),
             CustomTextFormField(
@@ -253,8 +274,9 @@ class _EditProductFormContent extends StatelessWidget {
                 if (value != null && productProvider.showAreaPerUnit) {
                   final area = productProvider.calculateArea(value);
                   if (area != null) {
-                    _formKey.currentState?.fields['area_per_unit']
-                        ?.didChange(area.toStringAsFixed(4));
+                    _formKey.currentState?.fields['area_per_unit']?.didChange(
+                      area.toStringAsFixed(4),
+                    );
                   }
                 }
               },
@@ -269,7 +291,10 @@ class _EditProductFormContent extends StatelessWidget {
               validators: [
                 FormBuilderValidators.required(),
                 FormBuilderValidators.numeric(),
-                FormBuilderValidators.min(0, errorText: 'Quantity must be positive'),
+                FormBuilderValidators.min(
+                  0,
+                  errorText: 'Quantity must be positive',
+                ),
               ],
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
@@ -277,11 +302,18 @@ class _EditProductFormContent extends StatelessWidget {
               borderRadius: 12.r,
             ),
             SizedBox(height: 18.h),
+            // FIXED: Use consistent UOM values
             CustomDropdownFormField<String>(
               name: 'uom',
               labelText: 'UOM',
-              items: ["Square Meter/No", "Meter/No"]
-                  .map((item) => DropdownMenuItem<String>(value: item, child: Text(item)))
+              initialValue: initialValues['uom'] ?? "Square Meter/No",
+              items: ["Square Meter/No", "Meter/No"] // FIXED: Consistent with add form
+                  .map(
+                    (item) => DropdownMenuItem<String>(
+                      value: item,
+                      child: Text(item),
+                    ),
+                  )
                   .toList(),
               hintText: 'Select UOM',
               prefixIcon: Icons.workspaces,
@@ -291,16 +323,18 @@ class _EditProductFormContent extends StatelessWidget {
               focusedBorderColor: const Color(0xFF3B82F6),
               borderRadius: 12.r,
               onChanged: (value) {
-                productProvider.setShowAreaPerUnit(value == "Square Meter/No");
+                productProvider.setShowAreaPerUnit(value == "Square Meter/No"); // FIXED: Consistent check
                 if (!productProvider.showAreaPerUnit) {
                   _formKey.currentState?.fields['area_per_unit']?.didChange('');
                 } else {
-                  final description = _formKey.currentState?.fields['description']?.value;
+                  final description =
+                      _formKey.currentState?.fields['description']?.value;
                   if (description != null && description.isNotEmpty) {
                     final area = productProvider.calculateArea(description);
                     if (area != null) {
-                      _formKey.currentState?.fields['area_per_unit']
-                          ?.didChange(area.toStringAsFixed(4));
+                      _formKey.currentState?.fields['area_per_unit']?.didChange(
+                        area.toStringAsFixed(4),
+                      );
                     }
                   }
                 }
@@ -317,7 +351,10 @@ class _EditProductFormContent extends StatelessWidget {
                 validators: [
                   FormBuilderValidators.required(),
                   FormBuilderValidators.numeric(),
-                  FormBuilderValidators.min(0, errorText: 'Area must be positive'),
+                  FormBuilderValidators.min(
+                    0,
+                    errorText: 'Area must be positive',
+                  ),
                 ],
                 fillColor: const Color(0xFFF8FAFC),
                 borderColor: Colors.grey.shade300,
@@ -334,7 +371,10 @@ class _EditProductFormContent extends StatelessWidget {
               validators: [
                 FormBuilderValidators.required(),
                 FormBuilderValidators.numeric(),
-                FormBuilderValidators.min(0, errorText: 'Quantity must be positive'),
+                FormBuilderValidators.min(
+                  0,
+                  errorText: 'Quantity must be positive',
+                ),
               ],
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
@@ -425,26 +465,84 @@ class _EditProductFormContent extends StatelessWidget {
     );
   }
 
-  Future<void> _submitForm(BuildContext context, ProductProvider provider) async {
+  Future<void> _submitForm(
+    BuildContext context,
+    ProductProvider provider,
+  ) async {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       final formData = _formKey.currentState!.value;
-      final plantProvider = Provider.of<PlantProvider>(context, listen: false);
 
-      final selectedPlantName = formData['plant'] as String?;
-      if (selectedPlantName == null) {
+      final selectedPlantDisplay = formData['plant'] as String?;
+      print('Edit Form plant value: $selectedPlantDisplay');
+
+      // Check if plant is selected
+      if (selectedPlantDisplay == null || selectedPlantDisplay.isEmpty) {
         context.showErrorSnackbar("Please select a plant.");
         return;
       }
 
-      final selectedPlant = plantProvider.allPlants.firstWhere(
-        (plant) => plant.plantName == selectedPlantName,
-      );
-
-      if (selectedPlant.id.isEmpty) {
-        context.showErrorSnackbar("Selected plant not found. Please try again.");
+      // Check if plants are available
+      if (provider.plants.isEmpty) {
+        context.showErrorSnackbar(
+          "No plants available. Please refresh and try again.",
+        );
         return;
       }
 
+      print(
+        'Available plants: ${provider.plants.map((p) => "${p['display']} (ID: ${p['id']})").toList()}',
+      );
+
+      // Find the selected plant
+      final selectedPlant = provider.plants.firstWhere(
+        (plant) => plant['display']?.trim() == selectedPlantDisplay.trim(),
+        orElse: () {
+          print('No plant found for display: $selectedPlantDisplay');
+          return {'id': '', 'display': ''};
+        },
+      );
+
+      // Validate plant ID
+      if (selectedPlant['id'] == null || selectedPlant['id']!.isEmpty) {
+        // Try to reload plants if all IDs are empty
+        try {
+          context.showInfoSnackbar("Refreshing plant data...");
+          await provider.initializeEditForm(productId); // Reload plants
+
+          if (provider.plants.isEmpty ||
+              provider.plants.every((plant) => plant['id']!.isEmpty)) {
+            context.showErrorSnackbar(
+              "All plants have invalid IDs. Please contact support or check the plant configuration.",
+            );
+            return;
+          }
+
+          // Try to find the plant again after refresh
+          final refreshedPlant = provider.plants.firstWhere(
+            (plant) => plant['display']?.trim() == selectedPlantDisplay.trim(),
+            orElse: () => {'id': '', 'display': ''},
+          );
+
+          if (refreshedPlant['id']!.isEmpty) {
+            context.showErrorSnackbar(
+              "Selected plant '$selectedPlantDisplay' has no valid ID even after refresh.",
+            );
+            return;
+          }
+
+          // FIXED: Actually assign the refreshed plant ID
+          selectedPlant['id'] = refreshedPlant['id']!;
+        } catch (e) {
+          context.showErrorSnackbar(
+            "Failed to refresh plant data: ${e.toString()}",
+          );
+          return;
+        }
+      }
+
+      print('Selected plant ID: ${selectedPlant['id']}');
+
+      // Show loading dialog
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -481,19 +579,23 @@ class _EditProductFormContent extends StatelessWidget {
         ),
       );
 
+      // Update the product
       final success = await provider.updateProduct(
         productId: productId,
-        plantId: selectedPlant.id,
+        plantId: selectedPlant['id']!,
         materialCode: formData['material_code'],
         description: formData['description'],
         uom: [formData['uom']],
         areas: {
-          formData['uom']: double.tryParse(formData['area_per_unit'] ?? '0') ?? 0.0,
+          formData['uom']:
+              double.tryParse(formData['area_per_unit'] ?? '0') ?? 0.0,
         },
-        noOfPiecesPerPunch: int.tryParse(formData['no_of_pieces_per_punch'] ?? '0') ?? 0,
+        noOfPiecesPerPunch:
+            int.tryParse(formData['no_of_pieces_per_punch'] ?? '0') ?? 0,
         qtyInBundle: int.tryParse(formData['qty_in_bundle'] ?? '0') ?? 0,
       );
 
+      // Close loading dialog
       Navigator.of(context).pop();
 
       if (success && context.mounted) {
@@ -505,7 +607,9 @@ class _EditProductFormContent extends StatelessWidget {
         );
       }
     } else {
-      context.showWarningSnackbar("Please fill in all required fields correctly.");
+      context.showWarningSnackbar(
+        "Please fill in all required fields correctly.",
+      );
     }
   }
 }

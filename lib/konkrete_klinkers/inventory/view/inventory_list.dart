@@ -144,22 +144,64 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
 
                 SizedBox(height: 16.h),
 
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.inventory_2_outlined,
-                      size: 18.sp,
-                      color: const Color(0xFF64748B),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.inventory_2_outlined,
+                          size: 18.sp,
+                          color: Color(0xFF64748B),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Balance: $balanceQuantity',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Color(0xFF64748B),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Balance: $balanceQuantity $uom',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
-                        fontWeight: FontWeight.w600,
-                      ),
+                    SizedBox(height: 6.h),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.straighten,
+                          size: 18.sp,
+                          color: Color(0xFF64748B),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'UOM: $uom',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Color(0xFF64748B),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 6.h),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 18.sp,
+                          color: Color(0xFF64748B),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Status: $status',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Color(0xFF64748B),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

@@ -104,7 +104,7 @@ class JobOrderModel {
   final String status;
   final String projectName;
   final String? createdBy;
-  final Map<String, dynamic>? workOrderDetails; 
+  final Map<String, dynamic>? workOrderDetails;
 
   JobOrderModel({
     this.workOrderNumber,
@@ -247,8 +247,8 @@ class JobOrderItem {
   final String scheduledDate;
   final int plannedQuantity;
   final String? id;
-  final String? description; // Added for form compatibility
-  final String? materialCode; // Added for form compatibility
+  final String? description;
+  final String? materialCode;
   final String? machineId;
   final String? plantId;
   final String? plantName;
@@ -285,10 +285,14 @@ class JobOrderItem {
         machineId: _getStringValue(json['machine_id']),
         plantId: _getStringValue(json['plant_id']),
         plantName: _getStringValue(json['plant_name']),
-        achievedQuantity:
-            _getIntValue(json['achieved_quantity'], 'achieved_quantity'),
-        rejectedQuantity:
-            _getIntValue(json['rejected_quantity'], 'rejected_quantity'),
+        achievedQuantity: _getIntValue(
+          json['achieved_quantity'],
+          'achieved_quantity',
+        ),
+        rejectedQuantity: _getIntValue(
+          json['rejected_quantity'],
+          'rejected_quantity',
+        ),
       );
     } catch (e) {
       print('Error parsing JobOrderItem: $e for JSON: ${jsonEncode(json)}');

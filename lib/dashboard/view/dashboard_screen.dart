@@ -27,14 +27,7 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
 
       body: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          // gradient: LinearGradient(
-          //   begin: Alignment.topLeft,
-          //   end: Alignment.bottomRight,
-          //   colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
-          // ),
-        ),
+        decoration: const BoxDecoration(color: Colors.white),
         child: SafeArea(
           child: Column(
             children: [

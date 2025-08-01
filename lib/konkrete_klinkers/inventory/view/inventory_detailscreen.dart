@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/konkrete_klinkers/inventory/provider/inventory_provider.dart';
+import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
 
 class InventoryDetailScreen extends StatefulWidget {
@@ -13,20 +14,36 @@ class InventoryDetailScreen extends StatefulWidget {
   _InventoryDetailScreenState createState() => _InventoryDetailScreenState();
 }
 
-class _InventoryDetailScreenState extends State<InventoryDetailScreen> {
+class _InventoryDetailScreenState extends State<InventoryDetailScreen> with TickerProviderStateMixin {
+  late TabController _tabController;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<InventoryProvider>();
-      provider.fetchProductDetails(widget.productId);
+      provider.fetchProductDetails(widget.productId).then((_) {
+        setState(() {
+          _tabController = TabController(
+            length: provider.productDetails.length > 0 ? provider.productDetails.length : 1,
+            vsync: this,
+          );
+        });
+      });
     });
+    _tabController = TabController(length: 1, vsync: this); // Initial length
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Widget _buildStatusChip(String status) {
     Color backgroundColor;
     Color textColor;
-    
+
     switch (status.toLowerCase()) {
       case 'active':
       case 'completed':
@@ -189,14 +206,16 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen> {
             ),
           ),
           Expanded(
-            child: trailing ?? Text(
-              value,
-              style: TextStyle(
-                fontSize: 14.sp,
-                color: const Color(0xFF334155),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            child:
+                trailing ??
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    color: const Color(0xFF334155),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
           ),
         ],
       ),
@@ -207,14 +226,7 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen> {
     return Container(
       margin: EdgeInsets.only(bottom: 20.h),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF3B82F6),
-            const Color(0xFF1E40AF),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: AppTheme.primaryGradient,
         borderRadius: BorderRadius.circular(20.r),
         boxShadow: [
           BoxShadow(
@@ -391,46 +403,54 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen> {
     final client = detail['client'] ?? {};
     final project = detail['project'] ?? {};
 
-    return Column(
-      children: [
-        _buildProductHeader(detail),
-        _buildQuantitiesGrid(detail),
-        _buildInfoSection(
-          title: 'Work Order Details',
-          icon: Icons.work,
-          children: [
-            _buildDetailRow(
-              'WO Number:',
-              workOrder['work_order_number']?.toString() ?? 'N/A',
-            ),
-            _buildDetailRow(
-              'Status:',
-              '',
-              trailing: _buildStatusChip(workOrder['status']?.toString() ?? 'Unknown'),
-            ),
-            _buildDetailRow(
-              'Created:',
-              _formatDate(workOrder['created_at']?.toString()),
-            ),
-          ],
-        ),
-        _buildInfoSection(
-          title: 'Client Information',
-          icon: Icons.business,
-          children: [
-            _buildDetailRow('Name:', client['name']?.toString() ?? 'N/A'),
-            _buildDetailRow('Address:', client['address']?.toString() ?? 'N/A'),
-          ],
-        ),
-        _buildInfoSection(
-          title: 'Project Details',
-          icon: Icons.construction,
-          children: [
-            _buildDetailRow('Name:', project['name']?.toString() ?? 'N/A'),
-            _buildDetailRow('Address:', project['address']?.toString() ?? 'N/A'),
-          ],
-        ),
-      ],
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(24.w),
+      child: Column(
+        children: [
+          _buildProductHeader(detail),
+          _buildQuantitiesGrid(detail),
+          _buildInfoSection(
+            title: 'Work Order Details',
+            icon: Icons.work,
+            children: [
+              _buildDetailRow(
+                'WO Number:',
+                workOrder['work_order_number']?.toString() ?? 'N/A',
+              ),
+              _buildDetailRow(
+                'Status:',
+                '',
+                trailing: _buildStatusChip(
+                  workOrder['status']?.toString() ?? 'Unknown',
+                ),
+              ),
+              _buildDetailRow(
+                'Created:',
+                _formatDate(workOrder['created_at']?.toString()),
+              ),
+            ],
+          ),
+          _buildInfoSection(
+            title: 'Client Information',
+            icon: Icons.business,
+            children: [
+              _buildDetailRow('Name:', client['name']?.toString() ?? 'N/A'),
+              _buildDetailRow('Address:', client['address']?.toString() ?? 'N/A'),
+            ],
+          ),
+          _buildInfoSection(
+            title: 'Project Details',
+            icon: Icons.construction,
+            children: [
+              _buildDetailRow('Name:', project['name']?.toString() ?? 'N/A'),
+              _buildDetailRow(
+                'Address:',
+                project['address']?.toString() ?? 'N/A',
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -481,9 +501,7 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const CircularProgressIndicator(
-                    color: Color(0xFF3B82F6),
-                  ),
+                  const CircularProgressIndicator(color: Color(0xFF3B82F6)),
                   SizedBox(height: 16.h),
                   Text(
                     'Loading product details...',
@@ -571,13 +589,41 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen> {
             );
           }
 
-          return ListView.builder(
-            padding: EdgeInsets.all(24.w),
-            itemCount: provider.productDetails.length,
-            itemBuilder: (context, index) {
-              final detail = provider.productDetails[index];
-              return _buildProductDetailCard(detail);
-            },
+          return Column(
+            children: [
+              Container(
+                color: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                child: TabBar(
+                  controller: _tabController,
+                  isScrollable: true,
+                  labelColor: const Color(0xFF3B82F6),
+                  unselectedLabelColor: const Color(0xFF64748B),
+                  indicatorColor: const Color(0xFF3B82F6),
+                  indicatorWeight: 3,
+                  labelStyle: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  unselectedLabelStyle: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  tabs: List.generate(
+                    provider.productDetails.length,
+                    (index) => Tab(text: 'Products ${index + 1}'),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: provider.productDetails
+                      .map((detail) => _buildProductDetailCard(detail))
+                      .toList(),
+                ),
+              ),
+            ],
           );
         },
       ),
