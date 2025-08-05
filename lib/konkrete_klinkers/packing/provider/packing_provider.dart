@@ -15,7 +15,7 @@ class PackingProvider with ChangeNotifier {
   bool _hasMore = true;
   String? _selectedWorkOrderId;
   String? _selectedProductId;
-  int? _bundleSize; // Store the fetched bundle size
+  int? _bundleSize;
 
   List<PackingModel> get packings => _packings;
   List<Map<String, String>> get workOrders => _workOrders;
@@ -37,7 +37,6 @@ class PackingProvider with ChangeNotifier {
     _workOrders = [];
     _products = [];
     _bundleSize = null;
-
     _isLoading = false;
     _error = null;
     _hasMore = true;
@@ -108,9 +107,8 @@ class PackingProvider with ChangeNotifier {
       );
       _selectedWorkOrderId = selectedWorkOrder['id'];
       _selectedProductId = null;
-      _bundleSize = null; // Reset bundle size when work order changes
+      _bundleSize = null;
 
-      // Clear dependent fields
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (formKey.currentState != null) {
           formKey.currentState!.fields['product_id']?.didChange(null);
@@ -136,17 +134,36 @@ class PackingProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> createPacking(Map<String, dynamic> packingData) async {
+  Future<PackingModel> createPacking(Map<String, dynamic> packingData) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
       final packing = await _repository.createPacking(packingData);
-      _packings.add(packing); // Add the new packing to the list
+      _packings.add(packing);
+      _error = null;
+      return packing;
+    } catch (e) {
+      _error = _getErrorMessage(e);
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> submitQrCode(String packingId, String qrCode) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      await _repository.submitQrCode(packingId, qrCode);
       _error = null;
     } catch (e) {
       _error = _getErrorMessage(e);
+      rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -157,21 +174,21 @@ class PackingProvider with ChangeNotifier {
     String? value,
     GlobalKey<FormBuilderState> formKey,
   ) async {
-    print('selectProduct called with value: $value'); // Debug log
-    print('Current products list: $_products'); // Debug log
+    print('selectProduct called with value: $value');
+    print('Current products list: $_products');
 
     if (value != null && value.isNotEmpty) {
       final selectedProduct = _products.firstWhere(
         (product) => product['name'] == value,
         orElse: () {
-          print('No product found with name: $value'); // Debug log
+          print('No product found with name: $value');
           return {'id': '', 'name': ''};
         },
       );
 
       _selectedProductId = selectedProduct['id'];
-      print('Selected Product ID: $_selectedProductId'); // Debug log
-      print('Selected Product: $selectedProduct'); // Debug log
+      print('Selected Product ID: $_selectedProductId');
+      print('Selected Product: $selectedProduct');
 
       if (_selectedProductId != null && _selectedProductId!.isNotEmpty) {
         try {
@@ -179,13 +196,11 @@ class PackingProvider with ChangeNotifier {
           notifyListeners();
 
           _bundleSize = await _repository.getBundleSize(_selectedProductId!);
-          print('Fetched Bundle Size: $_bundleSize'); // Debug log
+          print('Fetched Bundle Size: $_bundleSize');
           _error = null;
 
-          // Update the form field with the fetched bundle size using WidgetsBinding
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (formKey.currentState != null && _bundleSize != null) {
-              // Method 1: Try patchValue first
               try {
                 formKey.currentState!.patchValue({
                   'bundle_size': _bundleSize.toString(),
@@ -195,7 +210,6 @@ class PackingProvider with ChangeNotifier {
                 );
               } catch (e) {
                 print('patchValue failed, trying didChange: $e');
-                // Method 2: Try didChange if patchValue fails
                 try {
                   formKey.currentState!.fields['bundle_size']?.didChange(
                     _bundleSize.toString(),
@@ -212,7 +226,7 @@ class PackingProvider with ChangeNotifier {
         } catch (e) {
           _error = _getErrorMessage(e);
           _bundleSize = null;
-          print('Error fetching bundle size: $_error'); // Debug log
+          print('Error fetching bundle size: $_error');
 
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (formKey.currentState != null) {
@@ -238,7 +252,7 @@ class PackingProvider with ChangeNotifier {
             }
           }
         });
-        print('No valid product ID, cleared bundle_size'); // Debug log
+        print('No valid product ID, cleared bundle_size');
       }
     } else {
       _selectedProductId = null;
@@ -252,7 +266,7 @@ class PackingProvider with ChangeNotifier {
           }
         }
       });
-      print('Product value is null, cleared bundle_size'); // Debug log
+      print('Product value is null, cleared bundle_size');
     }
     notifyListeners();
   }

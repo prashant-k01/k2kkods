@@ -21,6 +21,7 @@ class AddPackingFormScreen extends StatefulWidget {
 
 class _AddPackingFormScreenState extends State<AddPackingFormScreen> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
+  final GlobalKey<FormBuilderState> _qrFormKey = GlobalKey<FormBuilderState>();
   bool _isInitialized = false;
 
   @override
@@ -32,6 +33,86 @@ class _AddPackingFormScreenState extends State<AddPackingFormScreen> {
         context.read<PackingProvider>().loadWorkOrdersAndProducts();
       }
     });
+  }
+
+  void _showQrCodeDialog(String packingId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Enter QR Code',
+          style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w600),
+        ),
+        content: FormBuilder(
+          key: _qrFormKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CustomTextFormField(
+                name: 'qr_code',
+                labelText: 'Bundle 1',
+                hintText: 'Enter QR code',
+                prefixIcon: Icons.qr_code,
+                validators: [
+                  FormBuilderValidators.required(
+                    errorText: 'Please enter a QR code',
+                  ),
+                ],
+                fillColor: const Color(0xFFF8FAFC),
+                borderColor: Colors.grey.shade300,
+                focusedBorderColor: const Color(0xFF3B82F6),
+                borderRadius: 12.r,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (_qrFormKey.currentState?.saveAndValidate() ?? false) {
+                final qrCode = _qrFormKey.currentState!.value['qr_code'];
+                try {
+                  await context.read<PackingProvider>().submitQrCode(
+                    packingId,
+                    qrCode,
+                  );
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    context.showSuccessSnackbar(
+                      'QR code submitted successfully!',
+                    );
+                    context.go(RouteNames.packing);
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    context.showErrorSnackbar('Failed to submit QR code: $e');
+                  }
+                }
+              } else {
+                if (context.mounted) {
+                  context.showWarningSnackbar('Please enter a valid QR code');
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF3B82F6),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+            ),
+            child: Text('Submit QR Code', style: TextStyle(fontSize: 14.sp)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -316,8 +397,7 @@ class _AddPackingFormScreenState extends State<AddPackingFormScreen> {
                                 final formData = _formKey.currentState!.value;
                                 final packingData = {
                                   'work_order': provider.selectedWorkOrderId,
-                                  'product': provider
-                                      .selectedProductId, // Changed from 'product_id' to 'product'
+                                  'product': provider.selectedProductId,
                                   'product_quantity':
                                       int.tryParse(
                                         formData['product_quantity'].toString(),
@@ -331,13 +411,14 @@ class _AddPackingFormScreenState extends State<AddPackingFormScreen> {
                                 ); // Debug log
 
                                 try {
-                                  await provider.createPacking(packingData);
+                                  final packing = await provider.createPacking(
+                                    packingData,
+                                  );
                                   if (provider.error == null) {
                                     context.showSuccessSnackbar(
                                       "'Packing added successfully!'",
                                     );
-                                    // Navigate back to the packing list screen
-                                    context.go(RouteNames.packing);
+                                    _showQrCodeDialog(packing.id);
                                   } else {
                                     context.showErrorSnackbar("Error");
                                   }

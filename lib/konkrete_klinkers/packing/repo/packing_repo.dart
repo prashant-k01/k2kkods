@@ -117,7 +117,6 @@ class PackingRepository {
         final jsonData = json.decode(responseBody);
         print('Parsed Bundle Size JSON: $jsonData'); // Debug log
 
-        // More robust handling of the response
         if (jsonData is Map<String, dynamic>) {
           if (jsonData.containsKey('data') && jsonData['data'] != null) {
             final data = jsonData['data'];
@@ -187,16 +186,13 @@ class PackingRepository {
         final jsonData = json.decode(responseBody);
         print('Parsed Create Packing JSON: $jsonData'); // Debug log
 
-        // Check if the response contains a 'data' field
         final data = jsonData['data'];
         if (data == null) {
           throw Exception('No data found in response');
         }
 
-        // If the API returns a single packing object
         final packing = PackingModel.fromJson(data is List ? data[0] : data);
 
-        // Log required fields
         print('Created Packing ID: ${packing.id}');
         print('Created By: ${packing.createdBy}');
         print('Created At: ${packing.createdAt.toIso8601String()}');
@@ -217,6 +213,54 @@ class PackingRepository {
       rethrow;
     }
   }
+
+ Future<void> submitQrCode(String packingId, String qrCode) async {
+  try {
+    final token = await fetchAccessToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('Authentication token not found.');
+    }
+
+    final authHeaders = await headers;
+    final uri = Uri.parse(AppUrl.getpackingqr);
+
+    // Fix: Change 'qr_code' to 'qrCodeId' to match API expectation
+    final body = json.encode({
+      'packings': [
+        {
+          'packing_id': packingId,
+          'qrCodeId': qrCode, // Changed from 'qr_code' to 'qrCodeId'
+        }
+      ],
+    });
+
+    print('Submitting QR code with data: $body'); // Debug log
+    print('QR code request URI: $uri'); // Debug log
+
+    final response = await http
+        .post(uri, headers: authHeaders, body: body)
+        .timeout(const Duration(seconds: 30));
+
+    print('QR Code API Response Status: ${response.statusCode}'); // Debug log
+    print('QR Code API Response Body: ${response.body}'); // Debug log
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final jsonData = json.decode(response.body);
+      print('Parsed QR Code JSON: $jsonData'); // Debug log
+    } else {
+      final jsonData = json.decode(response.body);
+      throw Exception(
+        'Failed to submit QR code: ${response.statusCode} - ${jsonData['errors']?.toString() ?? response.reasonPhrase}',
+      );
+    }
+  } on SocketException {
+    print('No internet connection while submitting QR code');
+    throw Exception('No internet connection.');
+  } catch (e) {
+    print('Error in submitQrCode: $e');
+    rethrow;
+  }
+}
 
   Future<List<Map<String, String>>> getProducts(String workOrderId) async {
     try {
@@ -262,7 +306,6 @@ class PackingRepository {
           print('Item type: ${item.runtimeType}'); // Debug log
 
           if (item is Map<String, dynamic>) {
-            // Try different possible field names for ID
             String id = '';
             if (item.containsKey('_id') && item['_id'] != null) {
               id = item['_id'].toString();
@@ -276,7 +319,6 @@ class PackingRepository {
               id = item['productId'].toString();
             }
 
-            // Try different possible field names for name/code
             String name = '';
             if (item.containsKey('material_code') &&
                 item['material_code'] != null) {
