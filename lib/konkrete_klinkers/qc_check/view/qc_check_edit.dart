@@ -8,27 +8,35 @@ import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
+import 'package:k2k/konkrete_klinkers/qc_check/model/qc_check.dart';
 import 'package:k2k/konkrete_klinkers/qc_check/provider/qc_check_provider.dart';
 import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
 
-class QcCheckFormScreen extends StatefulWidget {
-  const QcCheckFormScreen({super.key});
+class QcCheckEditScreen extends StatefulWidget {
+  final String qcCheckId;
+
+  const QcCheckEditScreen({super.key, required this.qcCheckId});
 
   @override
-  _QcCheckFormScreenState createState() => _QcCheckFormScreenState();
+  _QcCheckEditScreenState createState() => _QcCheckEditScreenState();
 }
 
-class _QcCheckFormScreenState extends State<QcCheckFormScreen> {
+class _QcCheckEditScreenState extends State<QcCheckEditScreen> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
   final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    // Fetch job orders when screen initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<QcCheckProvider>(context, listen: false).loadJobOrders();
+      final provider = Provider.of<QcCheckProvider>(context, listen: false);
+      final qcCheck = provider.qcChecks.firstWhere(
+        (qc) => qc.id == widget.qcCheckId,
+        orElse: () => throw Exception('QC check not found'),
+      );
+      provider.loadWorkOrderAndProducts(qcCheck.jobOrder ?? '');
+      provider.loadJobOrders();
     });
   }
 
@@ -54,14 +62,16 @@ class _QcCheckFormScreenState extends State<QcCheckFormScreen> {
         behavior: HitTestBehavior.opaque,
         child: Consumer<QcCheckProvider>(
           builder: (context, provider, child) {
+            final qcCheck = provider.qcChecks.firstWhere(
+              (qc) => qc.id == widget.qcCheckId,
+              orElse: () => throw Exception('QC check not found'),
+            );
             return ListView(
               controller: _scrollController,
               padding: EdgeInsets.all(24.w).copyWith(
                 bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
               ),
-              children: [
-                _buildFormCard(context, provider),
-              ],
+              children: [_buildFormCard(context, provider, qcCheck)],
             );
           },
         ),
@@ -74,7 +84,7 @@ class _QcCheckFormScreenState extends State<QcCheckFormScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          'Add QC Check',
+          'Edit QC Check',
           style: TextStyle(
             fontSize: 18.sp,
             fontWeight: FontWeight.w600,
@@ -96,7 +106,8 @@ class _QcCheckFormScreenState extends State<QcCheckFormScreen> {
     );
   }
 
-  Widget _buildFormCard(BuildContext context, QcCheckProvider provider) {
+  Widget _buildFormCard(
+      BuildContext context, QcCheckProvider provider, QcCheckModel qcCheck) {
     return Container(
       padding: EdgeInsets.all(24.w),
       decoration: BoxDecoration(
@@ -112,11 +123,18 @@ class _QcCheckFormScreenState extends State<QcCheckFormScreen> {
       ),
       child: FormBuilder(
         key: _formKey,
+        initialValue: {
+          'job_order': qcCheck.jobOrderNumber,
+          'work_order': qcCheck.workOrderNumber,
+          'rejected_quantity': qcCheck.rejectedQuantity.toString(),
+          'recycled_quantity': qcCheck.recycledQuantity.toString(),
+          'rejected_reasons': qcCheck.remarks,
+        },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'QC Check Details',
+              'Edit QC Check Details',
               style: TextStyle(
                 fontSize: 18.sp,
                 fontWeight: FontWeight.w600,
@@ -125,7 +143,7 @@ class _QcCheckFormScreenState extends State<QcCheckFormScreen> {
             ),
             SizedBox(height: 8.h),
             Text(
-              'Enter the required information below',
+              'Update the required information below',
               style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
             ),
             SizedBox(height: 24.h),
@@ -136,7 +154,9 @@ class _QcCheckFormScreenState extends State<QcCheckFormScreen> {
                   ? 'Loading Job Orders...'
                   : 'Select Job Order',
               prefixIcon: Icons.work_outline,
-              options: provider.jobOrders,
+              options: provider.jobOrders
+                  .map((job) => job['job_order_id']!)
+                  .toList(),
               enabled: !provider.isJobOrdersLoading,
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
@@ -147,6 +167,14 @@ class _QcCheckFormScreenState extends State<QcCheckFormScreen> {
                   errorText: 'Please select a job order',
                 ),
               ],
+              onChanged: (value) {
+                if (value != null) {
+                  final selectedJob = provider.jobOrders.firstWhere(
+                    (job) => job['job_order_id'] == value,
+                  );
+                  provider.loadWorkOrderAndProducts(selectedJob['_id']!);
+                }
+              },
             ),
             if (provider.error != null) ...[
               SizedBox(height: 8.h),
@@ -159,13 +187,17 @@ class _QcCheckFormScreenState extends State<QcCheckFormScreen> {
             CustomSearchableDropdownFormField(
               name: 'work_order',
               labelText: 'Work Order',
-              hintText: 'Select Work Order',
+              hintText: provider.isWorkOrderAndProductsLoading
+                  ? 'Loading Work Order...'
+                  : provider.workOrder == null
+                      ? 'Select Job Order First'
+                      : 'Select Work Order',
               prefixIcon: Icons.work,
-              options: const [
-                'WO001 - Project X',
-                'WO002 - Project Y',
-                'WO003 - Project Z',
-              ], // Replace with dynamic data if needed
+              options: provider.workOrder != null
+                  ? [provider.workOrder!['work_order_number']!]
+                  : [],
+              enabled: !provider.isWorkOrderAndProductsLoading &&
+                  provider.workOrder != null,
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
               focusedBorderColor: AppTheme.primaryBlue,
@@ -177,25 +209,17 @@ class _QcCheckFormScreenState extends State<QcCheckFormScreen> {
               ],
             ),
             SizedBox(height: 18.h),
-            CustomSearchableDropdownFormField(
+            CustomTextFormField(
               name: 'product_name',
               labelText: 'Product Name',
-              hintText: 'Select Product',
+              hintText: 'Product cannot be changed',
               prefixIcon: Icons.inventory_2,
-              options: const [
-                'Product A - P001',
-                'Product B - P002',
-                'Product C - P003',
-              ], 
+              enabled: false,
+              initialValue: '',
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
               focusedBorderColor: AppTheme.primaryBlue,
               borderRadius: 12.r,
-              validators: [
-                FormBuilderValidators.required(
-                  errorText: 'Please select a product',
-                ),
-              ],
             ),
             SizedBox(height: 18.h),
             CustomTextFormField(
@@ -256,62 +280,119 @@ class _QcCheckFormScreenState extends State<QcCheckFormScreen> {
               borderRadius: 12.r,
             ),
             SizedBox(height: 40.h),
-            _buildSubmitButton(context),
+            _buildSubmitButton(context, qcCheck),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSubmitButton(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
-        ),
-        borderRadius: BorderRadius.circular(12.r),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF3B82F6).withOpacity(0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+  Widget _buildSubmitButton(BuildContext context, QcCheckModel qcCheck) {
+    return Consumer<QcCheckProvider>(
+      builder: (context, provider, child) {
+        return Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
+            ),
+            borderRadius: BorderRadius.circular(12.r),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF3B82F6).withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            if (_formKey.currentState!.saveAndValidate()) {
-              // Placeholder for form submission logic
-              context.showSuccessSnackbar("Form Submitted Successfully");
-            }
-          },
-          borderRadius: BorderRadius.circular(12.r),
-          child: Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 16.h),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.check_circle, color: Colors.white, size: 20.sp),
-                  SizedBox(width: 8.w),
-                  Text(
-                    'Submit QC Check',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w600,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: provider.isUpdateQcCheckLoading
+                  ? null
+                  : () async {
+                      if (_formKey.currentState!.saveAndValidate()) {
+                        final formData = _formKey.currentState!.value;
+                        final selectedJob = provider.jobOrders.firstWhere(
+                          (job) => job['job_order_id'] == formData['job_order'],
+                          orElse: () => {
+                            '_id': qcCheck.jobOrder ?? '',
+                            'job_order_id': formData['job_order'] ?? 'N/A'
+                          },
+                        );
+
+                        final qcCheckData = {
+                          'job_order': selectedJob['_id'],
+                          'work_order': provider.workOrder?['_id'] ??
+                              qcCheck.workOrder ??
+                              '',
+                          'product_id': qcCheck.productId ?? '',
+                          'rejected_quantity':
+                              int.parse(formData['rejected_quantity']),
+                          'recycled_quantity':
+                              int.parse(formData['recycled_quantity']),
+                          'remarks': formData['rejected_reasons'],
+                          'updated_by': qcCheck.updatedBy ?? '',
+                        };
+
+                        try {
+                          await provider.updateQcCheck(
+                              widget.qcCheckId, qcCheckData);
+                          if (provider.error == null) {
+                            context.showSuccessSnackbar(
+                              'QC Check updated successfully',
+                            );
+                            context.go(RouteNames.qcCheck);
+                          } else {
+                            context.showErrorSnackbar(provider.error!);
+                          }
+                        } catch (e) {
+                          context.showErrorSnackbar(
+                            'Failed to update QC check: $e',
+                          );
+                        }
+                      }
+                    },
+              borderRadius: BorderRadius.circular(12.r),
+              child: Container(
+                padding: EdgeInsets.symmetric(vertical: 16.h),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (provider.isUpdateQcCheckLoading)
+                      SizedBox(
+                        width: 20.sp,
+                        height: 20.sp,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.w,
+                        ),
+                      )
+                    else
+                      Icon(
+                        Icons.check_circle,
+                        color: Colors.white,
+                        size: 20.sp,
+                      ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      provider.isUpdateQcCheckLoading
+                          ? 'Updating...'
+                          : 'Update QC Check',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

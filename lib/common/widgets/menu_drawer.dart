@@ -164,7 +164,7 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
         MenuItem(
           title: 'Packing',
           icon: Icons.shopping_cart_outlined,
-          route: '/cart',
+          route: RouteNames.packing,
         ),
         MenuItem(
           title: 'Dispatch',
@@ -200,7 +200,7 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
                 SubMenuItem(
                   title: 'Machines',
                   icon: Icons.visibility,
-                  route: '/settings/plant/view-clients',
+                  route: RouteNames.machines,
                   isExpanded: false,
                 ),
               ],

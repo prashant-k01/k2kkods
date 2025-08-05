@@ -5,62 +5,148 @@ import 'package:k2k/common/list_helper/add_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
 import 'package:k2k/common/list_helper/shimmer.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
-import 'package:k2k/konkrete_klinkers/qc_check/model/qc_check.dart';
-import 'package:k2k/konkrete_klinkers/qc_check/provider/qc_check_provider.dart';
-import 'package:k2k/konkrete_klinkers/qc_check/view/qc_check_delete.dart';
+import 'package:k2k/konkrete_klinkers/master_data/machines/model/machines_model.dart';
+import 'package:k2k/konkrete_klinkers/master_data/machines/provider/machine_provider.dart';
+import 'package:k2k/konkrete_klinkers/master_data/machines/view/machine_delete_screen.dart';
 import 'package:k2k/utils/sreen_util.dart';
-import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
-class QcCheckListView extends StatefulWidget {
-  const QcCheckListView({super.key});
+class MachinesListScreen extends StatefulWidget {
+  const MachinesListScreen({super.key});
 
   @override
-  State<QcCheckListView> createState() => _QcCheckListViewState();
+  State<MachinesListScreen> createState() => _MachinesListScreenState();
 }
 
-class _QcCheckListViewState extends State<QcCheckListView> {
+class _MachinesListScreenState extends State<MachinesListScreen> {
   bool _isInitialized = false;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _initializeData();
+    _setupScrollListener();
   }
 
-  void _initializeData() async {
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _initializeData() {
     if (!_isInitialized) {
       _isInitialized = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          final provider = context.read<QcCheckProvider>();
-          if (provider.qcChecks.isEmpty && provider.error == null) {
-            provider.loadQcChecks();
+          ScreenUtil.init(context);
+          final provider = context.read<MachinesProvider>();
+          if (provider.machines.isEmpty && provider.error == null) {
+            print('Loading machines on MachinesListScreen init');
+            provider.loadAllMachines(refresh: true);
           }
         }
       });
     }
   }
 
-  void _editQcCheck(String? qcCheckId) {
-    if (qcCheckId != null) {
+  void _setupScrollListener() {
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent * 0.9 &&
+          !context.read<MachinesProvider>().isLoading &&
+          context.read<MachinesProvider>().hasMore) {
+        print('Loading more machines');
+        context.read<MachinesProvider>().loadAllMachines();
+      }
+    });
+  }
+
+  void _editMachine(String? machineId) {
+    if (machineId != null) {
+      print('Navigating to edit machine: $machineId');
       context.goNamed(
-        'qcCheckEdit', // Match the exact name from the route
-        pathParameters: {'qcCheckId': qcCheckId},
+        RouteNames.machinesedit,
+        pathParameters: {'machineId': machineId},
       );
     }
   }
 
-  Widget _buildQcCheckCard(QcCheckModel qcCheck) {
-    final qcCheckId = qcCheck.id;
-    final rejectedQuantity = qcCheck.rejectedQuantity.toString();
-    final recycledQuantity = qcCheck.recycledQuantity.toString();
-    final remarks = qcCheck.displayRemarks;
-    final createdBy = qcCheck.displayCreatedBy;
-    final createdAt = qcCheck.displayCreatedAt;
-    final workOrderNumber = qcCheck.displayWorkOrder;
-    final jobOrder = qcCheck.displayJobOrder;
+  String _formatDateTime(DateTime dateTime) {
+    return '${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year}';
+  }
+
+  String _getCreatedBy(CreatedBy? createdBy) {
+    return createdBy?.username.toString() ?? 'Unknown';
+  }
+
+  Widget _buildLogoAndTitle() {
+    return Row(
+      children: [
+        SizedBox(width: 8.w),
+        Expanded(
+          child: Text(
+            'Machines Management',
+            maxLines: 1, // ensures single line
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 18.sp,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF334155),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBackButton() {
+    return IconButton(
+      icon: Icon(
+        Icons.arrow_back_ios,
+        size: 24.sp,
+        color: const Color(0xFF334155),
+      ),
+      onPressed: () {
+        context.go(RouteNames.homeScreen);
+      },
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Padding(
+      padding: EdgeInsets.only(right: 16.w),
+      child: TextButton(
+        onPressed: () {
+          print('Navigating to add machine screen');
+          context.goNamed(RouteNames.machinesadd);
+        },
+        child: Row(
+          children: [
+            Icon(Icons.add, size: 20.sp, color: const Color(0xFF3B82F6)),
+            SizedBox(width: 4.w),
+            Text(
+              'Add Machine',
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF3B82F6),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMachineCard(MachineElement machine) {
+    final machineId = machine.id;
+    final name = machine.name;
+    final plantName = machine.plantId.plantName;
+    final createdBy = _getCreatedBy(machine.createdBy);
+    final createdAt = machine.createdAt;
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
@@ -93,13 +179,31 @@ class _QcCheckListViewState extends State<QcCheckListView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SizedBox(height: 4.h),
                           Text(
-                            'Work Order: $workOrderNumber',
+                            name,
                             style: TextStyle(
                               fontSize: 18.sp,
-                              color: AppTheme.primaryBlue,
                               fontWeight: FontWeight.w600,
+                              color: const Color(0xFF334155),
+                            ),
+                          ),
+                          SizedBox(height: 8.h),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 12.w,
+                              vertical: 6.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                            child: Text(
+                              plantName,
+                              style: TextStyle(
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF3B82F6),
+                              ),
                             ),
                           ),
                         ],
@@ -113,12 +217,13 @@ class _QcCheckListViewState extends State<QcCheckListView> {
                       ),
                       onSelected: (value) {
                         if (value == 'edit') {
-                          _editQcCheck(qcCheckId);
+                          _editMachine(machineId);
                         } else if (value == 'delete') {
-                          QcCheckDeleteHandler.deleteQcCheck(
+                          print('Initiating delete for machine: $machineId');
+                          MachineDeleteScreen.deleteMachine(
                             context,
-                            qcCheckId,
-                            remarks,
+                            machineId,
+                            name,
                           );
                         }
                       },
@@ -171,81 +276,6 @@ class _QcCheckListViewState extends State<QcCheckListView> {
                 Row(
                   children: [
                     Icon(
-                      Icons.warning_amber_outlined,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Rejected: $rejectedQuantity',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.recycling_outlined,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Recycled: $recycledQuantity',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.work_outline,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Job Order: $jobOrder',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.comment_outlined,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Expanded(
-                      child: Text(
-                        'Remarks: $remarks',
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          color: const Color(0xFF64748B),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.h),
-                Row(
-                  children: [
-                    Icon(
                       Icons.person_outline,
                       size: 16.sp,
                       color: const Color(0xFF64748B),
@@ -270,7 +300,7 @@ class _QcCheckListViewState extends State<QcCheckListView> {
                     ),
                     SizedBox(width: 8.w),
                     Text(
-                      'Created: $createdAt',
+                      'Created: ${_formatDateTime(createdAt)}',
                       style: TextStyle(
                         fontSize: 14.sp,
                         color: const Color(0xFF64748B),
@@ -286,73 +316,19 @@ class _QcCheckListViewState extends State<QcCheckListView> {
     );
   }
 
-  Widget _buildLogoAndTitle() {
-    return Row(
-      children: [
-        SizedBox(width: 8.w),
-        Text(
-          'QC Checks',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF334155),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBackButton() {
-    return IconButton(
-      icon: Icon(
-        Icons.arrow_back_ios,
-        size: 24.sp,
-        color: const Color(0xFF334155),
-      ),
-      onPressed: () {
-        context.go(RouteNames.homeScreen);
-      },
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Padding(
-      padding: EdgeInsets.only(right: 16.w),
-      child: TextButton(
-        onPressed: () {
-          context.goNamed(RouteNames.qcCheckAdd);
-        },
-        child: Row(
-          children: [
-            Icon(Icons.add, size: 20.sp, color: const Color(0xFF3B82F6)),
-            SizedBox(width: 4.w),
-            Text(
-              'Add QC Check',
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF3B82F6),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildEmptyState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.check_circle_outline,
+            Icons.factory_outlined,
             size: 64.sp,
             color: const Color(0xFF3B82F6),
           ),
           SizedBox(height: 16.h),
           Text(
-            'No QC Checks Found',
+            'No Machines Found',
             style: TextStyle(
               fontSize: 18.sp,
               fontWeight: FontWeight.w600,
@@ -361,24 +337,31 @@ class _QcCheckListViewState extends State<QcCheckListView> {
           ),
           SizedBox(height: 8.h),
           Text(
-            'Tap the button below to add your first QC check!',
+            'Tap the button below to add your first machine!',
             style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
           ),
           SizedBox(height: 16.h),
           AddButton(
-            text: 'Add QC Check',
+            text: 'Add Machine',
             icon: Icons.add,
-            route: RouteNames.qcCheck,
+            route: RouteNames.machinesadd,
           ),
         ],
       ),
     );
   }
 
+  Widget _buildLoadingIndicator() {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 16.h),
+      child: const Center(
+        child: CircularProgressIndicator(color: Color(0xFF3B82F6)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    ScreenUtil.init(context);
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBars(
@@ -386,9 +369,10 @@ class _QcCheckListViewState extends State<QcCheckListView> {
         leading: _buildBackButton(),
         action: [_buildActionButtons()],
       ),
-      body: Consumer<QcCheckProvider>(
+      body: Consumer<MachinesProvider>(
         builder: (context, provider, child) {
-          if (provider.error != null && provider.qcChecks.isEmpty) {
+          if (provider.error != null) {
+            print('Error in MachinesProvider: ${provider.error}');
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -400,7 +384,7 @@ class _QcCheckListViewState extends State<QcCheckListView> {
                   ),
                   SizedBox(height: 16.h),
                   Text(
-                    'Error Loading QC Checks',
+                    'Error Loading Machines',
                     style: TextStyle(
                       fontSize: 18.sp,
                       fontWeight: FontWeight.w600,
@@ -411,7 +395,7 @@ class _QcCheckListViewState extends State<QcCheckListView> {
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 24.w),
                     child: Text(
-                      provider.error!,
+                      provider.error.toString(),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14.sp,
@@ -424,8 +408,9 @@ class _QcCheckListViewState extends State<QcCheckListView> {
                     text: 'Retry',
                     icon: Icons.refresh,
                     onTap: () {
+                      print('Retrying to load machines');
                       provider.clearError();
-                      provider.loadQcChecks(refresh: true);
+                      provider.loadAllMachines(refresh: true);
                     },
                   ),
                 ],
@@ -435,36 +420,29 @@ class _QcCheckListViewState extends State<QcCheckListView> {
 
           return RefreshIndicator(
             onRefresh: () async {
-              await context.read<QcCheckProvider>().loadQcChecks(refresh: true);
+              print('Refreshing machines list');
+              await provider.loadAllMachines(refresh: true);
             },
             color: const Color(0xFF3B82F6),
             backgroundColor: Colors.white,
-            child: provider.isLoading && provider.qcChecks.isEmpty
+            child: provider.isLoading && provider.machines.isEmpty
                 ? ListView.builder(
                     itemCount: 5,
                     itemBuilder: (context, index) => buildShimmerCard(),
                   )
-                : provider.qcChecks.isEmpty
+                : provider.machines.isEmpty
                 ? _buildEmptyState()
                 : ListView.builder(
-                    padding: EdgeInsets.only(bottom: 80.h),
+                    controller: _scrollController,
+                    padding: EdgeInsets.only(bottom: 16.h),
                     itemCount:
-                        provider.qcChecks.length + (provider.isLoading ? 1 : 0),
+                        provider.machines.length + (provider.hasMore ? 1 : 0),
                     itemBuilder: (context, index) {
-                      if (index == provider.qcChecks.length &&
-                          provider.isLoading) {
-                        return const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Color(0xFF3B82F6),
-                              ),
-                            ),
-                          ),
-                        );
+                      if (index == provider.machines.length &&
+                          provider.hasMore) {
+                        return _buildLoadingIndicator();
                       }
-                      return _buildQcCheckCard(provider.qcChecks[index]);
+                      return _buildMachineCard(provider.machines[index]);
                     },
                   ),
           );

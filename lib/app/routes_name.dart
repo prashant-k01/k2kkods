@@ -27,4 +27,12 @@ class RouteNames {
   //qc check
   static const qcCheck = '/qc-check';
   static const String qcCheckAdd = '/qcadd';
+  static const String qcCheckEdit = 'qcCheckEdit';
+  //machines
+  static const String machines = '/machines';
+  static const String machinesadd = '/machinesadd';
+  static const String machinesedit = '/machines/edit/:machineId';
+  //packing 
+  static const String packing = '/packing';
+  static const String packingadd  = '/packingadd';
 }

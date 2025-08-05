@@ -11,6 +11,9 @@ import 'package:k2k/konkrete_klinkers/job_order/view/job_order_view.dart';
 import 'package:k2k/konkrete_klinkers/master_data/clients/view/clients_add.dart';
 import 'package:k2k/konkrete_klinkers/master_data/clients/view/clients_edit_screen.dart';
 import 'package:k2k/konkrete_klinkers/master_data/clients/view/clients_screen_list.dart';
+import 'package:k2k/konkrete_klinkers/master_data/machines/view/machine_add_screen.dart';
+import 'package:k2k/konkrete_klinkers/master_data/machines/view/machine_edit_screen.dart';
+import 'package:k2k/konkrete_klinkers/master_data/machines/view/machines_list_screen.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/view/plant_edit_screen.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/view/plant_add.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/view/plants_screen_list.dart';
@@ -20,7 +23,10 @@ import 'package:k2k/konkrete_klinkers/master_data/products/view/product_screen_l
 import 'package:k2k/konkrete_klinkers/master_data/projects/view/projects_add.dart';
 import 'package:k2k/konkrete_klinkers/master_data/projects/view/projects_edit_screen.dart';
 import 'package:k2k/konkrete_klinkers/master_data/projects/view/projects_screen_list.dart';
-import 'package:k2k/konkrete_klinkers/qc_check/view/qc_add_screen.dart';
+import 'package:k2k/konkrete_klinkers/packing/view/packing_add.dart';
+import 'package:k2k/konkrete_klinkers/packing/view/packing_list.dart';
+import 'package:k2k/konkrete_klinkers/qc_check/view/qc_check_add_screen.dart';
+import 'package:k2k/konkrete_klinkers/qc_check/view/qc_check_edit.dart';
 import 'package:k2k/konkrete_klinkers/qc_check/view/qc_check_list_screen.dart';
 import 'package:k2k/login/view/login_screen.dart';
 import 'package:k2k/splashscreen/splash_screen.dart';
@@ -133,30 +139,75 @@ class AppRoutes {
         builder: (context, state) {
           final plantId = state.pathParameters['plantId'];
           if (plantId == null) {
-            // Handle missing plantId gracefully
-            return const PlantsListView(); // Redirect to plants list
+            return const PlantsListView();
           }
           return EditPlantFormScreen(plantId: plantId);
         },
       ),
       GoRoute(
-        path: RouteNames.productedit, // '/plants/edit/:plantId'
+        path: '/qc-check/edit/:qcCheckId',
+        name: 'qcCheckEdit', // MUST be a simple string used for navigation
+        builder: (context, state) {
+          final qcCheckId = state.pathParameters['qcCheckId'];
+          return QcCheckEditScreen(qcCheckId: qcCheckId!);
+        },
+      ),
+      GoRoute(
+        path: RouteNames.machines,
+        name: RouteNames.machines,
+        builder: (BuildContext context, GoRouterState state) {
+          return MachinesListScreen();
+        },
+      ),
+      GoRoute(
+        path: RouteNames.packing,
+        name: RouteNames.packing,
+        builder: (BuildContext context, GoRouterState state) {
+          return PackingListView();
+        },
+      ),
+      GoRoute(
+        path: RouteNames.packingadd,
+        name: RouteNames.packingadd,
+        builder: (BuildContext context, GoRouterState state) {
+          return AddPackingFormScreen();
+        },
+      ),
+      GoRoute(
+        path: RouteNames.machinesadd,
+        name: RouteNames.machinesadd,
+        builder: (BuildContext context, GoRouterState state) {
+          return MachineAddScreen();
+        },
+      ),
+      GoRoute(
+        path: RouteNames.machinesedit,
+        name: RouteNames.machinesedit,
+        builder: (context, state) {
+          final machineId = state.pathParameters['machineId'];
+          if (machineId == null) {
+            // Handle missing plantId gracefully
+            return const MachinesListScreen(); // Redirect to plants list
+          }
+          return MachineEditScreen(machineId: machineId);
+        },
+      ),
+      GoRoute(
+        path: RouteNames.productedit,
         name: RouteNames.productedit,
         builder: (context, state) {
           final productId = state.pathParameters['productId'];
           if (productId == null) {
-            // Handle missing productId gracefully
-            return const ProductsListView(); // Redirect to plants list
+            return const ProductsListView();
           }
           return EditProductFormScreen(productId: productId);
         },
       ),
       GoRoute(
-        path: RouteNames.projectsedit, // '/projects/edit/:projectsId'
+        path: RouteNames.projectsedit,
         name: RouteNames.projectsedit,
         builder: (context, state) {
-          final projectId = state
-              .pathParameters['projectsId']; // Fix: Use 'projectsId' instead of 'plantId'
+          final projectId = state.pathParameters['projectsId'];
           if (projectId == null) {
             return const ProjectsListView(); // Redirect to projects list
           }

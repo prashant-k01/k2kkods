@@ -11,14 +11,15 @@ class AppUrl {
   static const String deletePlantUrl =
       '$baseUrl/konkreteKlinkers/helpers/plants/delete';
 
-  static const String addMachineUrl =
+  //Machine's Urls
+  static const String createMachineUrl =
       '$baseUrl/konkreteKlinkers/helpers/machine';
-  static const String fetchMachineUrl =
+  static const String fetchMachineDetailsUrl =
       '$baseUrl/konkreteKlinkers/helpers/machines';
-  static const String deleteMachineUrl =
+  static const String updateMachineDetailsUrl =
+      '$baseUrl/konkreteKlinkers/helpers/machines';
+  static const String deleteMachineDetailsUrl =
       '$baseUrl/konkreteKlinkers/helpers/machines/delete';
-  static const String updateMachineurl =
-      '$baseUrl/konkreteKlinkers/helpers/machines';
 
   //Client's Urls
   static const String createClientUrl =
@@ -101,15 +102,21 @@ class AppUrl {
   static const String createKKQcCheckUrl = "$baseUrl/konkreteKlinkers/qc-check";
   static const String getProductByjobOrder =
       "$baseUrl/konkreteKlinkers/qc-check/products?id=";
-  static const String getDropdownJobOrder = "https://k2k.kods.work/api/dropdown/joborders";
+  static const String getDropdownJobOrder =
+      "https://k2k.kods.work/api/dropdown/joborders";
+  static const String deleteQcCheck =
+      "$baseUrl/konkreteKlinkers/qc-check/delete";
 
   //Packing
-  static const String kkpacking = "$baseUrl/konkreteKlinkers/packing";
+  static const String getpacking = "$baseUrl/konkreteKlinkers/packing";
   static const String kkpackingByID = "$baseUrl/konkreteKlinkers/packing/get";
   static const String createPacking =
       "$baseUrl/konkreteKlinkers/packing/create";
   static const String getpackingbundlesizeurl =
       "$baseUrl/konkreteKlinkers/packing/bundlesize";
+
+  static const String fetchProductDetailsUrl =
+      'https://k2k.kods.work/api/dropdown/products';
 
   //Dispatch
   static const String kkdispatch = "$baseUrl/konkreteKlinkers/dispatch";

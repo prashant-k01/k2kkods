@@ -25,7 +25,7 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen> with Tick
       provider.fetchProductDetails(widget.productId).then((_) {
         setState(() {
           _tabController = TabController(
-            length: provider.productDetails.length > 0 ? provider.productDetails.length : 1,
+            length: provider.productDetails.isNotEmpty ? provider.productDetails.length : 1,
             vsync: this,
           );
         });

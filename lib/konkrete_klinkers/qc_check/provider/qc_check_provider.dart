@@ -8,24 +8,27 @@ class QcCheckProvider with ChangeNotifier {
   final QcCheckRepository _repository = QcCheckRepository();
 
   List<QcCheckModel> _qcChecks = [];
-  List<String> _jobOrders = []; // Store job order IDs
+  List<Map<String, String>> _jobOrders = [];
+  Map<String, String>? _workOrder;
+  List<Map<String, String>> _products = [];
   bool _isLoading = false;
-  bool _isJobOrdersLoading = false; // Separate loading state for job orders
+  bool _isJobOrdersLoading = false;
+  bool _isWorkOrderAndProductsLoading = false;
   String? _error;
   bool _hasMore = true;
   String _searchQuery = '';
 
-  // Loading states for specific operations
   bool _isAddQcCheckLoading = false;
   bool _isUpdateQcCheckLoading = false;
   bool _isDeleteQcCheckLoading = false;
 
-  // Getters
   List<QcCheckModel> get qcChecks => _qcChecks;
-  List<String> get jobOrders => _jobOrders; // Getter for job orders
+  List<Map<String, String>> get jobOrders => _jobOrders;
+  Map<String, String>? get workOrder => _workOrder;
+  List<Map<String, String>> get products => _products;
   bool get isLoading => _isLoading;
-  bool get isJobOrdersLoading =>
-      _isJobOrdersLoading; // Getter for job orders loading state
+  bool get isJobOrdersLoading => _isJobOrdersLoading;
+  bool get isWorkOrderAndProductsLoading => _isWorkOrderAndProductsLoading;
   String? get error => _error;
   bool get isAddQcCheckLoading => _isAddQcCheckLoading;
   bool get isUpdateQcCheckLoading => _isUpdateQcCheckLoading;
@@ -33,25 +36,25 @@ class QcCheckProvider with ChangeNotifier {
   bool get hasMore => _hasMore;
   String get searchQuery => _searchQuery;
 
-  // Clear error method
   void clearError() {
     _error = null;
     notifyListeners();
   }
 
-  // Reset provider state
   void reset() {
     _qcChecks = [];
-    _jobOrders = []; // Reset job orders
+    _jobOrders = [];
+    _workOrder = null;
+    _products = [];
     _isLoading = false;
-    _isJobOrdersLoading = false; // Reset job orders loading state
+    _isJobOrdersLoading = false;
+    _isWorkOrderAndProductsLoading = false;
     _error = null;
     _hasMore = true;
     _searchQuery = '';
     notifyListeners();
   }
 
-  // Load job orders from repository
   Future<void> loadJobOrders() async {
     print('Loading job orders - isJobOrdersLoading: $_isJobOrdersLoading');
     if (_isJobOrdersLoading) {
@@ -85,6 +88,45 @@ class QcCheckProvider with ChangeNotifier {
     }
   }
 
+  Future<void> loadWorkOrderAndProducts(String jobOrderId) async {
+    print(
+      'Loading work order and products - isWorkOrderAndProductsLoading: $_isWorkOrderAndProductsLoading',
+    );
+    if (_isWorkOrderAndProductsLoading) {
+      print('Skipping work order and products load - already loading');
+      return;
+    }
+
+    _isWorkOrderAndProductsLoading = true;
+    notifyListeners();
+
+    try {
+      print('Calling repository.getWorkOrderAndProducts($jobOrderId)');
+      final data = await _repository.getWorkOrderAndProducts(jobOrderId);
+      print(
+        'Repository returned work order: ${data['work_order']}, products: ${data['products'].length}',
+      );
+
+      _workOrder = data['work_order'] as Map<String, String>?;
+      _products = (data['products'] as List<dynamic>)
+          .cast<Map<String, String>>();
+      _error = null;
+
+      print(
+        'Load work order and products successful - work order: $_workOrder, products: ${_products.length}',
+      );
+    } catch (e) {
+      print('Error loading work order and products: $e');
+      _error = _getErrorMessage(e);
+    } finally {
+      _isWorkOrderAndProductsLoading = false;
+      notifyListeners();
+      print(
+        'Load work order and products completed - isWorkOrderAndProductsLoading: $_isWorkOrderAndProductsLoading, error: $_error',
+      );
+    }
+  }
+
   Future<void> loadQcChecks({bool refresh = false}) async {
     print(
       'Loading QC checks - refresh: $refresh, isLoading: $_isLoading, hasMore: $_hasMore',
@@ -97,7 +139,7 @@ class QcCheckProvider with ChangeNotifier {
 
     _isLoading = true;
     if (refresh) {
-      _error = null; // Clear error on manual refresh
+      _error = null;
     }
     notifyListeners();
 
@@ -114,7 +156,6 @@ class QcCheckProvider with ChangeNotifier {
         print('Added ${newQcChecks.length} new QC checks');
       }
 
-      // Update hasMore based on response
       _hasMore = newQcChecks.isNotEmpty;
       _error = null;
 
@@ -123,7 +164,6 @@ class QcCheckProvider with ChangeNotifier {
       print('Error loading QC checks: $e');
       _error = _getErrorMessage(e);
 
-      // Don't clear existing data on error unless it's a refresh
       if (refresh) {
         _qcChecks = [];
       }
@@ -149,7 +189,6 @@ class QcCheckProvider with ChangeNotifier {
       errorMessage = 'Invalid response format. Please contact support.';
     } else if (error is Exception) {
       String message = error.toString();
-      // Remove 'Exception: ' prefix if present
       if (message.startsWith('Exception: ')) {
         message = message.substring(11);
       }
@@ -164,13 +203,155 @@ class QcCheckProvider with ChangeNotifier {
     return errorMessage;
   }
 
-  // Method to retry loading
+  Future<void> createQcCheck(Map<String, dynamic> qcCheckData) async {
+    print('Creating QC check with data: $qcCheckData');
+
+    _isAddQcCheckLoading = true;
+    notifyListeners();
+
+    try {
+      final qcCheck = await _repository.createQcCheck(qcCheckData);
+
+      final jobOrder = _jobOrders.firstWhere(
+        (job) => job['_id'] == qcCheckData['job_order'],
+        orElse: () => {'job_order_id': qcCheckData['job_order'] ?? 'N/A'},
+      );
+      final workOrder =
+          _workOrder != null && _workOrder!['_id'] == qcCheckData['work_order']
+          ? _workOrder
+          : {'work_order_number': qcCheckData['work_order'] ?? 'N/A'};
+
+      final enrichedQcCheck = QcCheckModel(
+        id: qcCheck.id,
+        workOrder: qcCheck.workOrder,
+        jobOrder: qcCheck.jobOrder,
+        productId: qcCheck.productId,
+        rejectedQuantity: qcCheck.rejectedQuantity,
+        recycledQuantity: qcCheck.recycledQuantity,
+        remarks: qcCheck.remarks,
+        createdBy: qcCheck.createdBy,
+        updatedBy: qcCheck.updatedBy,
+        status: qcCheck.status,
+        createdAt: qcCheck.createdAt,
+        updatedAt: qcCheck.updatedAt,
+        workOrderNumber: workOrder?['work_order_number'],
+        jobOrderNumber: jobOrder['job_order_id'],
+      );
+
+      _qcChecks.insert(0, enrichedQcCheck);
+      _error = null;
+      print('QC check created successfully: ${enrichedQcCheck.id}');
+    } catch (e) {
+      print('Error creating QC check: $e');
+      _error = _getErrorMessage(e);
+    } finally {
+      _isAddQcCheckLoading = false;
+      notifyListeners();
+      print(
+        'Create QC check completed - isAddQcCheckLoading: $_isAddQcCheckLoading, error: $_error',
+      );
+    }
+  }
+
+  Future<void> deleteQcCheck(String id) async {
+    print('Deleting QC check with ID: $id');
+
+    _isDeleteQcCheckLoading = true;
+    _error = null; // Clear any previous errors
+    notifyListeners();
+
+    try {
+      final success = await _repository.deleteQcCheck(id);
+      if (success) {
+        // Remove the item from the local list
+        _qcChecks.removeWhere((qc) => qc.id == id);
+        _error = null;
+        print('QC check deleted successfully: $id');
+      } else {
+        _error = 'Failed to delete QC check.';
+        throw Exception('Failed to delete QC check.');
+      }
+    } catch (e) {
+      print('Error deleting QC check: $e');
+      _error = _getErrorMessage(e);
+      // Re-throw the exception so the UI can handle it
+      rethrow;
+    } finally {
+      _isDeleteQcCheckLoading = false;
+      notifyListeners();
+      print(
+        'Delete QC check completed - isDeleteQcCheckLoading: $_isDeleteQcCheckLoading, error: $_error',
+      );
+    }
+  }
+
+  Future<void> updateQcCheck(
+    String id,
+    Map<String, dynamic> qcCheckData,
+  ) async {
+    print('Updating QC check with ID: $id, data: $qcCheckData');
+
+    _isUpdateQcCheckLoading = true;
+    notifyListeners();
+
+    try {
+      final updatedQcCheck = await _repository.updateQcCheck(id, qcCheckData);
+
+      final jobOrder = _jobOrders.firstWhere(
+        (job) => job['_id'] == qcCheckData['job_order'],
+        orElse: () => {'job_order_id': qcCheckData['job_order'] ?? 'N/A'},
+      );
+      final workOrder =
+          _workOrder != null && _workOrder!['_id'] == qcCheckData['work_order']
+          ? _workOrder
+          : {'work_order_number': qcCheckData['work_order'] ?? 'N/A'};
+
+      final enrichedQcCheck = QcCheckModel(
+        id: updatedQcCheck.id,
+        workOrder: updatedQcCheck.workOrder,
+        jobOrder: updatedQcCheck.jobOrder,
+        productId: updatedQcCheck.productId,
+        rejectedQuantity: updatedQcCheck.rejectedQuantity,
+        recycledQuantity: updatedQcCheck.recycledQuantity,
+        remarks: updatedQcCheck.remarks,
+        createdBy: updatedQcCheck.createdBy,
+        updatedBy: updatedQcCheck.updatedBy,
+        status: updatedQcCheck.status,
+        createdAt: updatedQcCheck.createdAt,
+        updatedAt: updatedQcCheck.updatedAt,
+        workOrderNumber: workOrder?['work_order_number'],
+        jobOrderNumber: jobOrder['job_order_id'],
+      );
+
+      final index = _qcChecks.indexWhere((qc) => qc.id == id);
+      if (index != -1) {
+        _qcChecks[index] = enrichedQcCheck;
+      } else {
+        _qcChecks.insert(0, enrichedQcCheck);
+      }
+
+      _error = null;
+      print('QC check updated successfully: ${enrichedQcCheck.id}');
+    } catch (e) {
+      print('Error updating QC check: $e');
+      _error = _getErrorMessage(e);
+    } finally {
+      _isUpdateQcCheckLoading = false;
+      notifyListeners();
+      print(
+        'Update QC check completed - isUpdateQcCheckLoading: $_isUpdateQcCheckLoading, error: $_error',
+      );
+    }
+  }
+
   Future<void> retry() async {
     print('Retrying to load QC checks and job orders');
     clearError();
-    await Future.wait([
-      loadQcChecks(refresh: true),
-      loadJobOrders(), // Retry job orders as well
-    ]);
+    await Future.wait([loadQcChecks(refresh: true), loadJobOrders()]);
+  }
+
+  void updateSearchQuery(String query) {
+    _searchQuery = query;
+    notifyListeners();
   }
 }
