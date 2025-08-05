@@ -155,67 +155,68 @@ class PackingRepository {
       rethrow;
     }
   }
+
   Future<PackingModel> createPacking(Map<String, dynamic> packingData) async {
-  try {
-    final token = await fetchAccessToken();
-    if (token == null || token.isEmpty) {
-      throw Exception('Authentication token not found.');
-    }
-
-    final authHeaders = await headers;
-    final uri = Uri.parse(AppUrl.createPacking);
-
-    print('Creating packing with data: $packingData'); // Debug log
-    print('Create packing request URI: $uri'); // Debug log
-
-    final response = await http
-        .post(
-          uri,
-          headers: authHeaders,
-          body: json.encode(packingData),
-        )
-        .timeout(const Duration(seconds: 30));
-
-    print('Create Packing API Response Status: ${response.statusCode}'); // Debug log
-    print('Create Packing API Response Body: ${response.body}'); // Debug log
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final responseBody = response.body;
-      if (responseBody.isEmpty) {
-        throw Exception('Empty response body');
+    try {
+      final token = await fetchAccessToken();
+      if (token == null || token.isEmpty) {
+        throw Exception('Authentication token not found.');
       }
 
-      final jsonData = json.decode(responseBody);
-      print('Parsed Create Packing JSON: $jsonData'); // Debug log
+      final authHeaders = await headers;
+      final uri = Uri.parse(AppUrl.createPacking);
 
-      // Check if the response contains a 'data' field
-      final data = jsonData['data'];
-      if (data == null) {
-        throw Exception('No data found in response');
+      print('Creating packing with data: $packingData'); // Debug log
+      print('Create packing request URI: $uri'); // Debug log
+
+      final response = await http
+          .post(uri, headers: authHeaders, body: json.encode(packingData))
+          .timeout(const Duration(seconds: 30));
+
+      print(
+        'Create Packing API Response Status: ${response.statusCode}',
+      ); // Debug log
+      print('Create Packing API Response Body: ${response.body}'); // Debug log
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseBody = response.body;
+        if (responseBody.isEmpty) {
+          throw Exception('Empty response body');
+        }
+
+        final jsonData = json.decode(responseBody);
+        print('Parsed Create Packing JSON: $jsonData'); // Debug log
+
+        // Check if the response contains a 'data' field
+        final data = jsonData['data'];
+        if (data == null) {
+          throw Exception('No data found in response');
+        }
+
+        // If the API returns a single packing object
+        final packing = PackingModel.fromJson(data is List ? data[0] : data);
+
+        // Log required fields
+        print('Created Packing ID: ${packing.id}');
+        print('Created By: ${packing.createdBy}');
+        print('Created At: ${packing.createdAt.toIso8601String()}');
+
+        return packing;
+      } else {
+        final jsonData = json.decode(response.body);
+        print('Error Response JSON: $jsonData'); // Debug log
+        throw Exception(
+          'Failed to create packing: ${response.statusCode} - ${jsonData['errors']?.toString() ?? response.reasonPhrase}',
+        );
       }
-
-      // If the API returns a single packing object
-      final packing = PackingModel.fromJson(data is List ? data[0] : data);
-
-      // Log required fields
-      print('Created Packing ID: ${packing.id}');
-      print('Created By: ${packing.createdBy}');
-      print('Created At: ${packing.createdAt.toIso8601String()}');
-
-      return packing;
-    } else {
-      final jsonData = json.decode(response.body);
-      print('Error Response JSON: $jsonData'); // Debug log
-      throw Exception('Failed to create packing: ${response.statusCode} - ${jsonData['errors']?.toString() ?? response.reasonPhrase}');
+    } on SocketException {
+      print('No internet connection while creating packing');
+      throw Exception('No internet connection.');
+    } catch (e) {
+      print('Error in createPacking: $e');
+      rethrow;
     }
-  } on SocketException {
-    print('No internet connection while creating packing');
-    throw Exception('No internet connection.');
-  } catch (e) {
-    print('Error in createPacking: $e');
-    rethrow;
   }
-}
 
   Future<List<Map<String, String>>> getProducts(String workOrderId) async {
     try {

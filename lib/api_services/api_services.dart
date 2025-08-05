@@ -109,9 +109,11 @@ class AppUrl {
 
   //Packing
   static const String getpacking = "$baseUrl/konkreteKlinkers/packing";
+  static const String getpackingqr = "$baseUrl/konkreteKlinkers/packing/create";
   static const String kkpackingByID = "$baseUrl/konkreteKlinkers/packing/get";
   static const String createPacking =
-      "$baseUrl/konkreteKlinkers/packing/create";
+      "$baseUrl/konkreteKlinkers/packing";
+      
   static const String getpackingbundlesizeurl =
       "$baseUrl/konkreteKlinkers/packing/bundlesize";
 

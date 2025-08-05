@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
+import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
 import 'package:k2k/konkrete_klinkers/packing/provider/packing_provider.dart';
 import 'package:k2k/utils/theme.dart';
@@ -159,7 +160,7 @@ class _AddPackingFormScreenState extends State<AddPackingFormScreen> {
 
                 // Work Order Dropdown
                 CustomSearchableDropdownFormField(
-                  name: 'work_order',
+                  name: 'work_order_id',
                   labelText: 'Work Order',
                   hintText: provider.workOrders.isEmpty
                       ? 'No work orders available'
@@ -299,8 +300,6 @@ class _AddPackingFormScreenState extends State<AddPackingFormScreen> {
                   isExpanded: true,
                 ),
                 SizedBox(height: 40.h),
-
-                // Submit Button
                 SizedBox(
                   width: double.infinity,
                   child: Container(
@@ -309,63 +308,52 @@ class _AddPackingFormScreenState extends State<AddPackingFormScreen> {
                       borderRadius: BorderRadius.circular(12.r),
                     ),
                     child: ElevatedButton(
-                 onPressed: provider.isLoading
-    ? null
-    : () async {
-        if (_formKey.currentState?.saveAndValidate() ?? false) {
-          final formData = _formKey.currentState!.value;
-          final packingData = {
-            'packings': [
-              {
-                'work_order_id': provider.selectedWorkOrderId,
-                'product_id': provider.selectedProductId,
-                'product_quantity': int.tryParse(formData['product_quantity'].toString()) ?? 0,
-                'bundle_size': provider.bundleSize ?? 0,
-                'uom': formData['uom'],
-              }
-            ]
-          };
+                      onPressed: provider.isLoading
+                          ? null
+                          : () async {
+                              if (_formKey.currentState?.saveAndValidate() ??
+                                  false) {
+                                final formData = _formKey.currentState!.value;
+                                final packingData = {
+                                  'work_order': provider.selectedWorkOrderId,
+                                  'product': provider
+                                      .selectedProductId, // Changed from 'product_id' to 'product'
+                                  'product_quantity':
+                                      int.tryParse(
+                                        formData['product_quantity'].toString(),
+                                      ) ??
+                                      0,
+                                  'bundle_size': provider.bundleSize ?? 0,
+                                  'uom': formData['uom'],
+                                };
+                                print(
+                                  'Submitting Packing Data: $packingData',
+                                ); // Debug log
 
-          print('Submitting Packing Data: $packingData'); // Debug log
-
-          try {
-            await provider.createPacking(packingData);
-            if (provider.error == null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Packing added successfully!'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-              // Navigate back to the packing list screen
-              context.go(RouteNames.packing);
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(provider.error!),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          } catch (e) {
-            print('Error during packing creation: $e'); // Debug log
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Failed to add packing: $e'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        } else {
-          print('Form validation failed'); // Debug log
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please fill all required fields correctly'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      },
+                                try {
+                                  await provider.createPacking(packingData);
+                                  if (provider.error == null) {
+                                    context.showSuccessSnackbar(
+                                      "'Packing added successfully!'",
+                                    );
+                                    // Navigate back to the packing list screen
+                                    context.go(RouteNames.packing);
+                                  } else {
+                                    context.showErrorSnackbar("Error");
+                                  }
+                                } catch (e) {
+                                  print('Error during packing creation: $e');
+                                  context.showErrorSnackbar(
+                                    "Failed to add packing: $e",
+                                  );
+                                }
+                              } else {
+                                print('Form validation failed'); // Debug log
+                                context.showWarningSnackbar(
+                                  "Please fill all required fields correctly",
+                                );
+                              }
+                            },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
                         shadowColor: Colors.transparent,
