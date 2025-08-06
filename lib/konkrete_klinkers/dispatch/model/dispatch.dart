@@ -6,6 +6,9 @@ class DispatchModel {
   final List<ProductName> productNames;
   final String createdBy;
   final DateTime createdAt;
+  final String invoiceOrSto;
+  final String vehicleNumber;
+  final String date;
 
   DispatchModel({
     required this.id,
@@ -15,6 +18,9 @@ class DispatchModel {
     required this.productNames,
     required this.createdBy,
     required this.createdAt,
+    required this.invoiceOrSto,
+    required this.vehicleNumber,
+    required this.date,
   });
 
   factory DispatchModel.fromJson(Map<String, dynamic> json) {
@@ -23,11 +29,16 @@ class DispatchModel {
       workOrderNumber: json['work_order_number'] ?? '',
       clientName: json['client_name'] ?? '',
       projectName: json['project_name'] ?? '',
-      productNames: (json['product_names'] as List)
-          .map((e) => ProductName.fromJson(e))
+      productNames: (json['product_names'] as List? ?? [])
+          .map((e) => ProductName.fromJson(e as Map<String, dynamic>))
           .toList(),
       createdBy: json['created_by'] ?? '',
-      createdAt: DateTime.parse(json['created_at']),
+      createdAt: DateTime.parse(
+        json['created_at'] ?? DateTime.now().toIso8601String(),
+      ),
+      invoiceOrSto: json['invoice_or_sto'] ?? '',
+      vehicleNumber: json['vehicle_number'] ?? '',
+      date: json['date'] ?? '',
     );
   }
 
@@ -40,6 +51,9 @@ class DispatchModel {
       'product_names': productNames.map((e) => e.toJson()).toList(),
       'created_by': createdBy,
       'created_at': createdAt.toIso8601String(),
+      'invoice_or_sto': invoiceOrSto,
+      'vehicle_number': vehicleNumber,
+      'date': date,
     };
   }
 }
@@ -48,10 +62,7 @@ class ProductName {
   final String name;
   final int dispatchQuantity;
 
-  ProductName({
-    required this.name,
-    required this.dispatchQuantity,
-  });
+  ProductName({required this.name, required this.dispatchQuantity});
 
   factory ProductName.fromJson(Map<String, dynamic> json) {
     return ProductName(
@@ -61,9 +72,6 @@ class ProductName {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'dispatch_quantity': dispatchQuantity,
-    };
+    return {'name': name, 'dispatch_quantity': dispatchQuantity};
   }
 }

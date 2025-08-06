@@ -84,6 +84,8 @@ class DispatchRepository {
         return rawList
             .whereType<Map<String, dynamic>>()
             .map(DispatchModel.fromJson)
+            .toList()
+            .reversed
             .toList();
       } else {
         final jsonData = json.decode(response.body);
@@ -140,7 +142,44 @@ class DispatchRepository {
     }
   }
 
-  // Add this enhanced debugging to your createDispatch method in DispatchRepository:
+  Future<DispatchModel> fetchDispatchById(String dispatchId) async {
+    try {
+      final token = await fetchAccessToken();
+      if (token == null || token.isEmpty) {
+        throw Exception('Authentication token not found.');
+      }
+
+      final authHeaders = await headers;
+      final uri = Uri.parse('${AppUrl.kkdispatch}/$dispatchId');
+
+      print('Fetching dispatch from: $uri');
+
+      final response = await http
+          .get(uri, headers: authHeaders)
+          .timeout(const Duration(seconds: 30));
+
+      print('Fetch Dispatch API Response Status: ${response.statusCode}');
+      print('Fetch Dispatch API Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        if (jsonData['success'] == true) {
+          return DispatchModel.fromJson(jsonData['data']);
+        } else {
+          throw Exception(
+            'Failed to fetch dispatch: ${jsonData['errors']?.toString() ?? 'Unknown error'}',
+          );
+        }
+      } else {
+        throw Exception('Failed to fetch dispatch: ${response.statusCode}');
+      }
+    } on SocketException {
+      throw Exception('No internet connection.');
+    } catch (e) {
+      print('Error in fetchDispatchById: $e');
+      rethrow;
+    }
+  }
 
   Future<void> createDispatch({
     required String workOrder,
@@ -150,7 +189,6 @@ class DispatchRepository {
     required String date,
     required File invoiceFile,
   }) async {
-    print('🚀 Repository: createDispatch started');
     print('📋 Repository Parameters:');
     print('  - workOrder: "$workOrder"');
     print('  - invoiceOrSto: "$invoiceOrSto"');
@@ -181,12 +219,10 @@ class DispatchRepository {
 
       print('📦 Setting form fields...');
 
-      // IMPORTANT: Make sure we're sending the data correctly
       request.fields['work_order'] = workOrder;
       request.fields['invoice_or_sto'] = invoiceOrSto;
       request.fields['vehicle_number'] = vehicleNumber;
 
-      // Send QR codes as JSON array string (this is the key fix)
       String qrCodesJson = jsonEncode(qrCodes);
       request.fields['qr_codes'] = qrCodesJson;
       request.fields['date'] = date;
@@ -196,7 +232,6 @@ class DispatchRepository {
         print('  - $key: "$value"');
       });
 
-      // Validate QR codes before sending
       if (qrCodes.isEmpty) {
         print('❌ ERROR: QR codes array is empty!');
         throw Exception('At least one QR code is required');
@@ -218,14 +253,6 @@ class DispatchRepository {
         print('❌ Error adding file: $e');
         throw Exception('Failed to add invoice file: $e');
       }
-
-      print('🔄 Sending request...');
-      print('📤 REQUEST SUMMARY:');
-      print('  URL: $uri');
-      print('  Method: POST');
-      print('  Headers: ${request.headers}');
-      print('  Fields: ${request.fields}');
-      print('  Files: ${request.files.length} file(s)');
 
       final response = await request.send().timeout(
         const Duration(seconds: 30),
@@ -296,6 +323,94 @@ class DispatchRepository {
       throw Exception('No internet connection.');
     } catch (e) {
       print('❌ Unexpected error in createDispatch: $e');
+      print('❌ Error type: ${e.runtimeType}');
+      rethrow;
+    }
+  }
+
+  Future<void> updateDispatch({
+    required String dispatchId,
+    required String invoiceOrSto,
+    required String vehicleNumber,
+    required String date,
+  }) async {
+    print('🚀 Repository: updateDispatch started');
+    print('📋 Repository Parameters:');
+    print('  - dispatchId: "$dispatchId"');
+    print('  - invoiceOrSto: "$invoiceOrSto"');
+    print('  - vehicleNumber: "$vehicleNumber"');
+    print('  - date: "$date"');
+
+    try {
+      final token = await fetchAccessToken();
+      if (token == null || token.isEmpty) {
+        print('❌ No access token found');
+        throw Exception('Authentication token not found.');
+      }
+      print('✅ Access token obtained: ${token.substring(0, 20)}...');
+
+      final uri = Uri.parse('${AppUrl.kkdispatch}/$dispatchId');
+      print('🌐 Request URL: $uri');
+
+      final authHeaders = await headers;
+      final body = jsonEncode({
+        'invoice_or_sto': invoiceOrSto,
+        'vehicle_number': vehicleNumber,
+        'date': date,
+      });
+
+      print('📋 Request Body: $body');
+
+      final response = await http
+          .put(uri, headers: authHeaders, body: body)
+          .timeout(const Duration(seconds: 30));
+
+      print('📨 Response received:');
+      print('  - Status Code: ${response.statusCode}');
+      print('  - Headers: ${response.headers}');
+      print('  - Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final jsonData = json.decode(response.body);
+        print('📊 Parsed JSON: $jsonData');
+
+        if (jsonData['success'] == true) {
+          print('🎉 Dispatch updated successfully!');
+          return;
+        } else {
+          final errorMsg =
+              'Server returned success=false: ${jsonData['message'] ?? jsonData['errors']?.toString() ?? 'Unknown error'}';
+          print('❌ $errorMsg');
+          throw Exception(errorMsg);
+        }
+      } else {
+        String errorMsg = 'HTTP ${response.statusCode}';
+        try {
+          final jsonData = json.decode(response.body);
+          print('❌ ERROR RESPONSE PARSED: $jsonData');
+
+          if (jsonData is Map<String, dynamic>) {
+            if (jsonData.containsKey('message')) {
+              errorMsg = jsonData['message'].toString();
+            } else if (jsonData.containsKey('error')) {
+              errorMsg = jsonData['error'].toString();
+            } else if (jsonData.containsKey('errors')) {
+              errorMsg = jsonData['errors'].toString();
+            }
+          }
+        } catch (e) {
+          print('⚠️ Could not parse error response: $e');
+          errorMsg = 'HTTP ${response.statusCode}: ${response.body}';
+        }
+
+        print('❌ Server error: $errorMsg');
+        throw Exception(errorMsg);
+      }
+    } on SocketException catch (e) {
+      print('❌ Network error: $e');
+      throw Exception('No internet connection.');
+    } catch (e) {
+      print('❌ Unexpected error in updateDispatch: $e');
       print('❌ Error type: ${e.runtimeType}');
       rethrow;
     }

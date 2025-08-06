@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/dashboard/view/dashboard_screen.dart';
 import 'package:k2k/konkrete_klinkers/dispatch/view/dispatch_add_screen.dart';
+import 'package:k2k/konkrete_klinkers/dispatch/view/dispatch_edit_screen.dart';
 import 'package:k2k/konkrete_klinkers/dispatch/view/dispatch_list_screen.dart';
 import 'package:k2k/konkrete_klinkers/inventory/view/inventory_list.dart';
 import 'package:k2k/konkrete_klinkers/job_order/model/job_order.dart';
@@ -167,6 +168,14 @@ class AppRoutes {
           return const AddDispatchFormScreen();
         },
       ),
+      GoRoute(
+      path: '/edit-dispatch/:dispatchId',
+      name: RouteNames.dispatchEdit, // Must match 'dispatchEdit' used in _editDispatch
+      builder: (context, state) => EditDispatchFormScreen(
+        dispatchId: state.pathParameters['dispatchId']!,
+      ),
+    ),
+  
       GoRoute(
         path: RouteNames.plantsedit, // '/plants/edit/:plantId'
         name: RouteNames.plantsedit,

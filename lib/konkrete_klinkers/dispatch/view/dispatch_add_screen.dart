@@ -484,7 +484,6 @@ class _AddDispatchFormScreenState extends State<AddDispatchFormScreen> {
                               '✅ QR ID for reference: ${provider.qrScanData!['qr_id']}',
                             );
                           } else {
-                            // If no scan data is available, show error
                             context.showWarningSnackbar(
                               'Please scan a QR code first to get the QR code URL',
                             );
@@ -493,15 +492,12 @@ class _AddDispatchFormScreenState extends State<AddDispatchFormScreen> {
 
                           print('🔍 Final QR Codes array: $qrCodes');
 
-                          // Validate that we have at least one QR code
                           if (qrCodes.isEmpty) {
                             context.showWarningSnackbar(
                               'Please scan a QR code first',
                             );
                             return;
                           }
-
-                          // Additional validation - ensure QR code URL is valid
                           if (!qrCodes.first.startsWith('https://')) {
                             context.showWarningSnackbar(
                               'Invalid QR code format. Please scan again.',

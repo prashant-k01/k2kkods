@@ -35,16 +35,18 @@ class RouteNames {
   //packing
   static const String packing = '/packing';
   static const String packingadd = '/packingadd';
-  static const String packingDetails= '/packing-details/:workOrderId/:productId';
+  static const String packingDetails =
+      '/packing-details/:workOrderId/:productId';
   //workorder
   static const String workordersadd = '/workordersadd';
   static const String workordersedit = '/workorders/edit/:workorderId';
   static const String workorders = '/workorders';
   static const String workorderdetail = '/workorderdetail';
-//stock management 
+  //stock management
   static const String stockmanagement = "/stockmanagement";
 
   //dispatch
   static const String dispatch = "/dispatch";
   static const String dispatchAdd = "/dispatchAdd";
+  static const String dispatchEdit = "/dispatchEdit";
 }

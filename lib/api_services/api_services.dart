@@ -128,6 +128,7 @@ class AppUrl {
   static const String getdispatchbundlesizeurl =
       "$baseUrl/konkreteKlinkers/dispatch/bundlesize";
   static const String qrScanUrl = "$baseUrl/konkreteKlinkers/dispatch/qrscan";
+  
 
   //Inventory
   static const String kkinventories = "$baseUrl/konkreteKlinkers/inventories";

@@ -45,7 +45,7 @@ class _DispatchListViewState extends State<DispatchListView> {
   void _editDispatch(String? dispatchId) {
     if (dispatchId != null) {
       context.goNamed(
-        'dispatchEdit', // Ensure this matches your route name
+        '/dispatchEdit',
         pathParameters: {'dispatchId': dispatchId},
       );
     }
@@ -56,7 +56,9 @@ class _DispatchListViewState extends State<DispatchListView> {
     final workOrderNumber = dispatch.workOrderNumber;
     final clientName = dispatch.clientName;
     final projectName = dispatch.projectName;
-    final productNames = dispatch.productNames.map((p) => '${p.name} (${p.dispatchQuantity})').join(', ');
+    final productNames = dispatch.productNames
+        .map((p) => '${p.name} (${p.dispatchQuantity})')
+        .join(', ');
     final createdBy = dispatch.createdBy;
     final createdAt = dispatch.createdAt.toString().split('.')[0];
 
@@ -412,7 +414,9 @@ class _DispatchListViewState extends State<DispatchListView> {
 
           return RefreshIndicator(
             onRefresh: () async {
-              await context.read<DispatchProvider>().loadDispatches(refresh: true);
+              await context.read<DispatchProvider>().loadDispatches(
+                refresh: true,
+              );
             },
             color: const Color(0xFF3B82F6),
             backgroundColor: Colors.white,
@@ -422,28 +426,29 @@ class _DispatchListViewState extends State<DispatchListView> {
                     itemBuilder: (context, index) => buildShimmerCard(),
                   )
                 : provider.dispatches.isEmpty
-                    ? _buildEmptyState()
-                    : ListView.builder(
-                        padding: EdgeInsets.only(bottom: 80.h),
-                        itemCount: provider.dispatches.length +
-                            (provider.isLoading ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index == provider.dispatches.length &&
-                              provider.isLoading) {
-                            return const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(16.0),
-                                child: CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Color(0xFF3B82F6),
-                                  ),
-                                ),
+                ? _buildEmptyState()
+                : ListView.builder(
+                    padding: EdgeInsets.only(bottom: 80.h),
+                    itemCount:
+                        provider.dispatches.length +
+                        (provider.isLoading ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == provider.dispatches.length &&
+                          provider.isLoading) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Color(0xFF3B82F6),
                               ),
-                            );
-                          }
-                          return _buildDispatchCard(provider.dispatches[index]);
-                        },
-                      ),
+                            ),
+                          ),
+                        );
+                      }
+                      return _buildDispatchCard(provider.dispatches[index]);
+                    },
+                  ),
           );
         },
       ),

@@ -11,6 +11,7 @@ class DispatchProvider with ChangeNotifier {
   String? _error;
   bool _hasMore = true;
   List<String> qrCodes = [];
+  DispatchModel? _selectedDispatch;
 
   List<Map<String, String>> _workOrders = [];
   bool _isLoadingWorkOrders = false;
@@ -24,6 +25,7 @@ class DispatchProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get hasMore => _hasMore;
+  DispatchModel? get selectedDispatch => _selectedDispatch;
 
   List<Map<String, String>> get workOrders => _workOrders;
   bool get isLoadingWorkOrders => _isLoadingWorkOrders;
@@ -51,6 +53,7 @@ class DispatchProvider with ChangeNotifier {
     _qrScanData = null;
     _isLoadingQrScan = false;
     _qrScanError = null;
+    _selectedDispatch = null;
     notifyListeners();
   }
 
@@ -119,6 +122,24 @@ class DispatchProvider with ChangeNotifier {
     }
   }
 
+  Future<void> fetchDispatchById(String dispatchId) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final dispatch = await _repository.fetchDispatchById(dispatchId);
+      _selectedDispatch = dispatch;
+      _error = null;
+    } catch (e) {
+      _error = _getErrorMessage(e);
+      _selectedDispatch = null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> createDispatch({
     required String workOrder,
     required String invoiceOrSto,
@@ -137,7 +158,6 @@ class DispatchProvider with ChangeNotifier {
     print('  - invoiceFile path: "${invoiceFile.path}"');
     print('  - invoiceFile exists: ${await invoiceFile.exists()}');
 
-    // Validate parameters before proceeding
     if (workOrder.isEmpty) {
       _error = 'Work order is required';
       print('❌ Error: Work order is empty');
@@ -206,6 +226,74 @@ class DispatchProvider with ChangeNotifier {
       _isLoading = false;
       print(
         '🏁 DispatchProvider: createDispatch completed, loading: $_isLoading',
+      );
+      notifyListeners();
+    }
+  }
+
+  Future<void> updateDispatch({
+    required String dispatchId,
+    required String invoiceOrSto,
+    required String vehicleNumber,
+    required String date,
+  }) async {
+    print('🔄 DispatchProvider: Starting updateDispatch...');
+    print('📋 Parameters received:');
+    print('  - dispatchId: "$dispatchId"');
+    print('  - invoiceOrSto: "$invoiceOrSto"');
+    print('  - vehicleNumber: "$vehicleNumber"');
+    print('  - date: "$date"');
+
+    if (invoiceOrSto.isEmpty) {
+      _error = 'Invoice/STO is required';
+      print('❌ Error: Invoice/STO is empty');
+      notifyListeners();
+      throw Exception('Invoice/STO is required');
+    }
+
+    if (vehicleNumber.isEmpty) {
+      _error = 'Vehicle number is required';
+      print('❌ Error: Vehicle number is empty');
+      notifyListeners();
+      throw Exception('Vehicle number is required');
+    }
+
+    if (date.isEmpty) {
+      _error = 'Dispatch date is required';
+      print('❌ Error: Date is empty');
+      notifyListeners();
+      throw Exception('Dispatch date is required');
+    }
+
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      print('🚀 Calling repository.updateDispatch...');
+
+      await _repository.updateDispatch(
+        dispatchId: dispatchId,
+        invoiceOrSto: invoiceOrSto,
+        vehicleNumber: vehicleNumber,
+        date: date,
+      );
+
+      print('✅ DispatchProvider: Dispatch updated successfully!');
+      _error = null;
+    } catch (e) {
+      print('❌ DispatchProvider: Error in updateDispatch: $e');
+      print('🔍 Error type: ${e.runtimeType}');
+      print('📝 Error details: ${e.toString()}');
+
+      _error = _getErrorMessage(e);
+      print('🚨 Formatted error message: $_error');
+
+      rethrow;
+    } finally {
+      _isLoading = false;
+      print(
+        '🏁 DispatchProvider: updateDispatch completed, loading: $_isLoading',
       );
       notifyListeners();
     }
