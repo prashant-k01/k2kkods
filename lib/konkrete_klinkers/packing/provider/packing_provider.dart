@@ -10,22 +10,29 @@ class PackingProvider with ChangeNotifier {
   List<PackingModel> _packings = [];
   List<Map<String, String>> _workOrders = [];
   List<Map<String, String>> _products = [];
+  List<Map<String, dynamic>> _packingDetails = [];
   bool _isLoading = false;
   String? _error;
   bool _hasMore = true;
   String? _selectedWorkOrderId;
   String? _selectedProductId;
   int? _bundleSize;
+  String? _packingId;
+  bool _showQrSection = false;
 
+  // Getters
   List<PackingModel> get packings => _packings;
   List<Map<String, String>> get workOrders => _workOrders;
   List<Map<String, String>> get products => _products;
+  List<Map<String, dynamic>> get packingDetails => _packingDetails;
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get hasMore => _hasMore;
   String? get selectedWorkOrderId => _selectedWorkOrderId;
   String? get selectedProductId => _selectedProductId;
   int? get bundleSize => _bundleSize;
+  String? get packingId => _packingId;
+  bool get showQrSection => _showQrSection;
 
   void clearError() {
     _error = null;
@@ -36,47 +43,28 @@ class PackingProvider with ChangeNotifier {
     _packings = [];
     _workOrders = [];
     _products = [];
+    _packingDetails = [];
     _bundleSize = null;
     _isLoading = false;
     _error = null;
     _hasMore = true;
     _selectedWorkOrderId = null;
     _selectedProductId = null;
+    _packingId = null;
+    _showQrSection = false;
     notifyListeners();
-  }
-
-  Future<void> loadPackings({bool refresh = false}) async {
-    if (_isLoading || (!_hasMore && !refresh)) return;
-
-    _isLoading = true;
-    if (refresh) _error = null;
-    notifyListeners();
-
-    try {
-      final newPackings = await _repository.getPackings();
-      if (refresh) {
-        _packings = newPackings;
-      } else {
-        _packings.addAll(newPackings);
-      }
-      _hasMore = newPackings.isNotEmpty;
-      _error = null;
-    } catch (e) {
-      _error = _getErrorMessage(e);
-      if (refresh) _packings = [];
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
   }
 
   Future<void> loadWorkOrdersAndProducts() async {
     try {
       _workOrders = await _repository.getWorkOrders();
       _products = [];
+      _packingDetails = [];
       _selectedWorkOrderId = null;
       _selectedProductId = null;
       _bundleSize = null;
+      _packingId = null;
+      _showQrSection = false;
       _error = null;
     } catch (e) {
       _error = _getErrorMessage(e);
@@ -95,6 +83,27 @@ class PackingProvider with ChangeNotifier {
       _error = _getErrorMessage(e);
       _products = [];
     } finally {
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadPackingDetails(String workOrderId, String productId) async {
+    _isLoading = true;
+    _error = null;
+    _packingDetails = []; // Clear previous details
+    notifyListeners();
+
+    try {
+      _packingDetails = await _repository.getPackingDetails(workOrderId, productId);
+      print('Loaded packing details: $_packingDetails');
+      print('Number of packing details loaded: ${_packingDetails.length}');
+      _error = null;
+    } catch (e) {
+      _error = _getErrorMessage(e);
+      _packingDetails = [];
+      print('Error loading packing details: $_error');
+    } finally {
+      _isLoading = false;
       notifyListeners();
     }
   }
@@ -142,6 +151,8 @@ class PackingProvider with ChangeNotifier {
     try {
       final packing = await _repository.createPacking(packingData);
       _packings.add(packing);
+      _packingId = packing.id;
+      _showQrSection = true;
       _error = null;
       return packing;
     } catch (e) {
@@ -161,9 +172,107 @@ class PackingProvider with ChangeNotifier {
     try {
       await _repository.submitQrCode(packingId, qrCode);
       _error = null;
+      _packingId = null;
+      _showQrSection = false;
     } catch (e) {
       _error = _getErrorMessage(e);
       rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> deletePacking(
+    String packingId, {
+    String? workOrderId,
+    String? productId,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      print('Attempting to delete packing with ID: $packingId');
+      print('Current packings: ${_packings.map((p) => p.id).toList()}');
+
+      final packingExists = _packings.any((p) => p.id == packingId);
+      if (!packingExists) {
+        throw Exception('Packing with ID $packingId not found in local list');
+      }
+
+      if (workOrderId == null || productId == null) {
+        final packing = _packings.firstWhere(
+          (p) => p.id == packingId,
+          orElse: () => throw Exception('Packing not found'),
+        );
+        workOrderId = packing.workOrderId;
+        productId = packing.productId;
+        print('Resolved workOrderId: $workOrderId, productId: $productId');
+      }
+
+      final success = await _repository.deletePacking(
+        packingId,
+        workOrderId: workOrderId,
+        productId: productId,
+      );
+
+      if (success) {
+        print('Packing deleted successfully: $packingId');
+        _packings.removeWhere((m) => m.id == packingId);
+        print('Packings after removal: ${_packings.map((p) => p.id).toList()}');
+
+        try {
+          final newPackings = await _repository.getPackings();
+          _packings = newPackings;
+          _hasMore = newPackings.isNotEmpty;
+          _error = null;
+          print('Refreshed packings: ${_packings.map((p) => p.id).toList()}');
+        } catch (e) {
+          _error = _getErrorMessage(e);
+          print('Error refreshing packings after deletion: $_error');
+          _hasMore = _packings.isNotEmpty;
+        }
+        return true;
+      } else {
+        _error = 'Failed to delete packing';
+        print('Error: Failed to delete packing');
+        return false;
+      }
+    } catch (e) {
+      _error = _getErrorMessage(e);
+      print('Error deleting packing: $_error');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadPackings({bool refresh = false}) async {
+    if (_isLoading || (!_hasMore && !refresh)) return;
+
+    _isLoading = true;
+    if (refresh) _error = null;
+    notifyListeners();
+
+    try {
+      final newPackings = await _repository.getPackings();
+      if (refresh) {
+        _packings = newPackings;
+      } else {
+        final existingIds = _packings.map((p) => p.id).toSet();
+        _packings.addAll(newPackings.where((p) => !existingIds.contains(p.id)));
+      }
+      _hasMore = newPackings.isNotEmpty;
+      _error = null;
+      print('Loaded packings: ${_packings.map((p) => p.id).toList()}');
+    } catch (e) {
+      _error = _getErrorMessage(e);
+      if (refresh && _packings.isEmpty) {
+        _packings = [];
+      }
+      print('Error loading packings: $_error');
     } finally {
       _isLoading = false;
       notifyListeners();

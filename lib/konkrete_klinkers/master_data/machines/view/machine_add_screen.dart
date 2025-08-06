@@ -3,12 +3,12 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
+import 'package:k2k/konkrete_klinkers/master_data/machines/model/machines_model.dart';
 import 'package:k2k/konkrete_klinkers/master_data/machines/provider/machine_provider.dart';
-import 'package:k2k/konkrete_klinkers/master_data/plants/model/plants_model.dart';
-import 'package:k2k/konkrete_klinkers/master_data/plants/provider/plants_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -21,32 +21,55 @@ class MachineAddScreen extends StatefulWidget {
 
 class _MachineAddScreenState extends State<MachineAddScreen> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
-  bool _isScreenUtilInitialized = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      print('Initializing ScreenUtil in MachineAddScreen');
-      ScreenUtil.init(context);
-      setState(() {
-        _isScreenUtilInitialized = true;
-      });
-      print('ScreenUtil initialized: screenWidth=${ScreenUtil().screenWidth}');
-
-      final plantProvider = context.read<PlantProvider>();
-      if (plantProvider.allPlants.isEmpty &&
-          plantProvider.error == null &&
-          !plantProvider.isAllPlantsLoading) {
-        print('Loading plants for dropdown in MachineAddScreen');
-        plantProvider.loadAllPlantsForDropdown();
-      }
+      final machineProvider = Provider.of<MachinesProvider>(
+        context,
+        listen: false,
+      );
+      print('MachineAddScreen: Loading plants');
+      machineProvider.ensurePlantsLoaded();
     });
+  }
+
+  Widget _buildLogoAndTitle() {
+    return Row(
+      children: [
+        SizedBox(width: 8.w),
+        Expanded(
+          child: Text(
+            'Add Machine',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 18.sp,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF334155),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBackButton() {
+    return IconButton(
+      icon: Icon(
+        Icons.arrow_back_ios,
+        size: 24.sp,
+        color: const Color(0xFF334155),
+      ),
+      onPressed: () {
+        context.go(RouteNames.machines);
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final plantProvider = Provider.of<PlantProvider>(context, listen: false);
     final machineProvider = Provider.of<MachinesProvider>(
       context,
       listen: false,
@@ -54,34 +77,24 @@ class _MachineAddScreenState extends State<MachineAddScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: const Text('Add Machine'),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF334155),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => context.go(RouteNames.machines),
+      appBar: AppBars(
+        title: _buildLogoAndTitle(),
+        leading: _buildBackButton(),
+        action: [],
+      ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [_buildFormCard(context, machineProvider)],
         ),
       ),
-      body: _isScreenUtilInitialized
-          ? SingleChildScrollView(
-              padding: EdgeInsets.all(24.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildFormCard(context, machineProvider, plantProvider),
-                ],
-              ),
-            )
-          : const Center(child: CircularProgressIndicator()),
     );
   }
 
   Widget _buildFormCard(
     BuildContext context,
     MachinesProvider machineProvider,
-    PlantProvider plantProvider,
   ) {
     return Container(
       padding: EdgeInsets.all(24.w),
@@ -115,11 +128,10 @@ class _MachineAddScreenState extends State<MachineAddScreen> {
               style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
             ),
             SizedBox(height: 24.h),
-            // Plant Dropdown
-            Consumer<PlantProvider>(
+            Consumer<MachinesProvider>(
               builder: (context, provider, _) {
                 print(
-                  'Building Plant Dropdown: plants=${provider.allPlants.length}, isLoading=${provider.isAllPlantsLoading}, error=${provider.error}',
+                  'Building Plant Dropdown: plants=${provider.plant.length}, isLoading=${provider.isAllPlantsLoading}, error=${provider.error}',
                 );
                 if (provider.isAllPlantsLoading) {
                   return const Center(child: CircularProgressIndicator());
@@ -136,24 +148,24 @@ class _MachineAddScreenState extends State<MachineAddScreen> {
                         onPressed: () {
                           print('Retrying to load plants');
                           provider.clearError();
-                          provider.loadAllPlantsForDropdown(refresh: true);
+                          provider.ensurePlantsLoaded(refresh: true);
                         },
                         child: Text('Retry', style: TextStyle(fontSize: 14.sp)),
                       ),
                     ],
                   );
                 }
-                if (provider.allPlants.isEmpty) {
-                  return const Text(
+                if (provider.plant.isEmpty) {
+                  return Text(
                     'No plants found. Please add a plant first.',
-                    style: TextStyle(color: Colors.red),
+                    style: TextStyle(fontSize: 14.sp, color: Colors.red),
                   );
                 }
-                return CustomSearchableDropdownFormField<PlantModel>(
+                return CustomSearchableDropdownFormField<PlantId>(
                   name: 'plant',
                   labelText: 'Plant Name',
                   prefixIcon: Icons.factory_outlined,
-                  options: provider.allPlants,
+                  options: provider.plant,
                   optionLabel: (plant) => plant.plantName,
                   validators: [
                     FormBuilderValidators.required(
@@ -165,7 +177,6 @@ class _MachineAddScreenState extends State<MachineAddScreen> {
               },
             ),
             SizedBox(height: 24.h),
-            // Machine Name
             CustomTextFormField(
               name: 'machine_name',
               labelText: 'Machine Name',
@@ -181,7 +192,6 @@ class _MachineAddScreenState extends State<MachineAddScreen> {
               borderRadius: 12.r,
             ),
             SizedBox(height: 24.h),
-            // Submit
             Consumer<MachinesProvider>(
               builder: (context, provider, _) => SizedBox(
                 width: double.infinity,
@@ -266,12 +276,12 @@ class _MachineAddScreenState extends State<MachineAddScreen> {
   ) async {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       final formData = _formKey.currentState!.value;
-      final plant = formData['plant'] as PlantModel?;
+      final plant = formData['plant'] as PlantId?;
       final machineName = formData['machine_name'] as String;
 
       if (plant == null) {
         print('Validation failed: No plant selected');
-        context.showWarningSnackbar('Please select a valid plant.');
+        context.showWarningSnackbar('Please select a plant.');
         return;
       }
 
@@ -316,13 +326,17 @@ class _MachineAddScreenState extends State<MachineAddScreen> {
 
       final success = await provider.createMachine(machineName, plant.id);
 
-      Navigator.of(context).pop();
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
 
       if (success && context.mounted) {
         print(
           'Machine created successfully: machine_name=$machineName, plant_id=${plant.id}',
         );
         context.showSuccessSnackbar('Machine created successfully!');
+        await provider.loadAllMachines(refresh: true);
+
         context.go(RouteNames.machines);
       } else {
         print('Failed to create machine: ${provider.error}');

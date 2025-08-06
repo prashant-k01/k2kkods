@@ -32,7 +32,19 @@ class RouteNames {
   static const String machines = '/machines';
   static const String machinesadd = '/machinesadd';
   static const String machinesedit = '/machines/edit/:machineId';
-  //packing 
+  //packing
   static const String packing = '/packing';
-  static const String packingadd  = '/packingadd';
+  static const String packingadd = '/packingadd';
+  static const String packingDetails= '/packing-details/:workOrderId/:productId';
+  //workorder
+  static const String workordersadd = '/workordersadd';
+  static const String workordersedit = '/workorders/edit/:workorderId';
+  static const String workorders = '/workorders';
+  static const String workorderdetail = '/workorderdetail';
+//stock management 
+  static const String stockmanagement = "/stockmanagement";
+
+  //dispatch
+  static const String dispatch = "/dispatch";
+  static const String dispatchAdd = "/dispatchAdd";
 }

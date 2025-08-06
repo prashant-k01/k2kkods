@@ -69,7 +69,6 @@ class AppUrl {
       '$baseUrl/konkreteKlinkers/workorders-delete';
   static const String getWOProjectbyClient =
       '$baseUrl/konkreteKlinkers/workorders-getProject?clientId=';
-
   static const String getjoborder = "$baseUrl/konkreteKlinkers/joborders";
   static const String createJoborder =
       "$baseUrl/konkreteKlinkers/joborder/create";
@@ -111,9 +110,11 @@ class AppUrl {
   static const String getpacking = "$baseUrl/konkreteKlinkers/packing";
   static const String getpackingqr = "$baseUrl/konkreteKlinkers/packing/create";
   static const String kkpackingByID = "$baseUrl/konkreteKlinkers/packing/get";
-  static const String createPacking =
-      "$baseUrl/konkreteKlinkers/packing";
-      
+  static const String createPacking = "$baseUrl/konkreteKlinkers/packing";
+
+  static const String deletePacking =
+      "$baseUrl/konkreteKlinkers/packing/delete";
+
   static const String getpackingbundlesizeurl =
       "$baseUrl/konkreteKlinkers/packing/bundlesize";
 
@@ -126,6 +127,7 @@ class AppUrl {
       "$baseUrl/konkreteKlinkers/dispatch/create";
   static const String getdispatchbundlesizeurl =
       "$baseUrl/konkreteKlinkers/dispatch/bundlesize";
+  static const String qrScanUrl = "$baseUrl/konkreteKlinkers/dispatch/qrscan";
 
   //Inventory
   static const String kkinventories = "$baseUrl/konkreteKlinkers/inventories";
@@ -138,7 +140,6 @@ class AppUrl {
   static const String kkStockManagement = "$baseUrl/konkreteKlinkers/transfer";
   static const String createStockManagement =
       "$baseUrl/konkreteKlinkers/transfer/create";
-  // static const String getStockManagementbyid = "$baseUrl/konkreteKlinkers/inventory";
   static const String getwobyproduct =
       "$baseUrl/konkreteKlinkers/transfer-getworkorder?prId=";
 }

@@ -144,7 +144,7 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
         MenuItem(
           title: 'Work Orders',
           icon: Icons.person_outline,
-          route: '/profile',
+          route: RouteNames.workorders,
         ),
         MenuItem(
           title: 'Job Order/Planning',
@@ -169,7 +169,7 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
         MenuItem(
           title: 'Dispatch',
           icon: Icons.shopping_cart_outlined,
-          route: '/cart',
+          route: RouteNames.dispatch,
         ),
         MenuItem(
           title: 'Inventory',
@@ -179,7 +179,7 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
         MenuItem(
           title: 'Stock Management',
           icon: Icons.shopping_cart_outlined,
-          route: '/cart',
+          route: RouteNames.stockmanagement,
         ),
         MenuItem(
           title: "Master Data",

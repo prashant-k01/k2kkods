@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:k2k/konkrete_klinkers/master_data/machines/model/machines_model.dart';
 import 'package:k2k/konkrete_klinkers/master_data/machines/repo/machines.dart';
+import 'package:k2k/konkrete_klinkers/master_data/machines/repo/plants.dart';
 
 class MachinesProvider with ChangeNotifier {
   final MachineRepository _repository;
 
   MachinesProvider({MachineRepository? repository})
     : _repository = repository ?? MachineRepository();
+
+  final Map<String, CreatedBy> _userCache = {};
+  final Map<String, PlantId> _plantCache = {};
 
   List<MachineElement> _machines = [];
   bool _isLoading = false;
@@ -108,6 +112,43 @@ class MachinesProvider with ChangeNotifier {
     await loadAllMachines(refresh: true);
   }
 
+  final PlantRepository _plantRepository = PlantRepository();
+
+  List<PlantId> _plant = [];
+  bool _isAllPlantsLoading = false;
+
+  bool get isAllPlantsLoading => _isAllPlantsLoading;
+  List<PlantId> get plant => _plant;
+  Future<void> ensurePlantsLoaded({bool refresh = false}) async {
+    if (_isAllPlantsLoading) return;
+
+    _isAllPlantsLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      if (refresh || _plant.isEmpty) {
+        print('[PlantProvider] Fetching all plants...');
+        final plants = await _plantRepository.fetchAllPlants();
+        _plant = plants;
+
+        print('[PlantProvider] Loaded ${_plant.length} plants');
+      } else {
+        print(
+          '[PlantProvider] Using cached plant list with ${_plant.length} items',
+        );
+      }
+    } catch (e, stackTrace) {
+      _error = 'Failed to load plants: $e';
+      _plant = [];
+      print('[PlantProvider] Error: $e');
+      print(stackTrace);
+    } finally {
+      _isAllPlantsLoading = false;
+      notifyListeners();
+    }
+  }
+
   // Create machine
   Future<bool> createMachine(String machineName, String plantId) async {
     try {
@@ -126,14 +167,19 @@ class MachinesProvider with ChangeNotifier {
       );
 
       // ✅ Set plant details
-      machine.plantId = PlantId(
-        id: matchedPlant.id,
-        plantName: matchedPlant.plantName,
-        plantCode: matchedPlant.plantCode,
+      final machines = MachineElement(
+        id: machine.id,
+        name: machine.name,
+        plantId: matchedPlant, // Use the full PlantId object
+        createdBy: machine.createdBy,
+        createdAt: machine.createdAt,
+        isDeleted: false,
+        updatedAt: DateTime.now(),
+        v: 0,
       );
 
       // ✅ Insert at top of the list
-      _machines.insert(0, machine);
+      _machines.insert(0, machines);
       notifyListeners();
 
       print('Created machine: ${machine.id} - ${machine.name}');
@@ -149,7 +195,6 @@ class MachinesProvider with ChangeNotifier {
     }
   }
 
-  // Update machine
   Future<bool> updateMachines(
     String machineId,
     String machineName,
@@ -169,14 +214,58 @@ class MachinesProvider with ChangeNotifier {
         plantId,
       );
 
-      print('Updated machine: ${machine.id} - ${machine.name}');
+      print(
+        'API response machine: id=${machine.id}, name=${machine.name}, '
+        'createdBy=${machine.createdBy?.email}, createdAt=${machine.createdAt}',
+      );
+
+      final matchedPlant = _plant.firstWhere(
+        (plant) => plant.id == plantId,
+        orElse: () => PlantId(id: plantId, plantName: 'Unknown', plantCode: ''),
+      );
+
+      // Find existing machine to preserve createdBy and createdAt
+      _machines.firstWhere(
+        (m) => m.id == machineId,
+        orElse: () => MachineElement(
+          id: machineId,
+          name: machineName,
+          plantId: matchedPlant,
+          createdBy: CreatedBy(id: '', email: 'Unknown'),
+          createdAt: DateTime.now(),
+          isDeleted: false,
+          updatedAt: DateTime.now(),
+          v: 0,
+        ),
+      );
+
+      // Create updated machine with full details
+      final updatedMachine = MachineElement(
+        id: machine.id,
+        name: machine.name,
+        plantId: matchedPlant,
+        createdBy: machine.createdBy,
+        createdAt: machine.createdAt,
+        isDeleted: false,
+        updatedAt: DateTime.now(),
+        v: machine.v,
+      );
+
+      print(
+        'Updated machine: id=${updatedMachine.id}, name=${updatedMachine.name}, '
+        'plantName=${updatedMachine.plantId.plantName}, '
+        'createdBy=${updatedMachine.createdBy?.email}, createdAt=${updatedMachine.createdAt}',
+      );
+
       final index = _machines.indexWhere((m) => m.id == machineId);
       if (index != -1) {
-        // _machines[index] = machine;
-        _machines.removeAt(index); // Remove from current position
-        _machines.insert(0, machine);
+        _machines.removeAt(index);
+        _machines.insert(0, updatedMachine);
       } else {
-        print('Machine $machineId not found in local list');
+        print(
+          'Machine $machineId not found in local list, refreshing machines',
+        );
+        await loadAllMachines(refresh: true);
       }
 
       notifyListeners();
@@ -187,6 +276,7 @@ class MachinesProvider with ChangeNotifier {
       return false;
     } finally {
       _isUpdateMachinesLoading = false;
+      notifyListeners();
     }
   }
 

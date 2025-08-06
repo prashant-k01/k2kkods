@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/dashboard/view/dashboard_screen.dart';
+import 'package:k2k/konkrete_klinkers/dispatch/view/dispatch_add_screen.dart';
+import 'package:k2k/konkrete_klinkers/dispatch/view/dispatch_list_screen.dart';
 import 'package:k2k/konkrete_klinkers/inventory/view/inventory_list.dart';
 import 'package:k2k/konkrete_klinkers/job_order/model/job_order.dart';
 import 'package:k2k/konkrete_klinkers/job_order/view/job_order_add.dart';
@@ -25,9 +27,15 @@ import 'package:k2k/konkrete_klinkers/master_data/projects/view/projects_edit_sc
 import 'package:k2k/konkrete_klinkers/master_data/projects/view/projects_screen_list.dart';
 import 'package:k2k/konkrete_klinkers/packing/view/packing_add.dart';
 import 'package:k2k/konkrete_klinkers/packing/view/packing_list.dart';
+import 'package:k2k/konkrete_klinkers/packing/view/packing_view.dart';
 import 'package:k2k/konkrete_klinkers/qc_check/view/qc_check_add_screen.dart';
 import 'package:k2k/konkrete_klinkers/qc_check/view/qc_check_edit.dart';
 import 'package:k2k/konkrete_klinkers/qc_check/view/qc_check_list_screen.dart';
+import 'package:k2k/konkrete_klinkers/stock_management/view/stock_list_screen.dart';
+import 'package:k2k/konkrete_klinkers/work_order/view/work_order_add_screen.dart';
+import 'package:k2k/konkrete_klinkers/work_order/view/work_order_detail_page.dart';
+import 'package:k2k/konkrete_klinkers/work_order/view/work_order_edit_screen.dart';
+import 'package:k2k/konkrete_klinkers/work_order/view/work_order_list_screen.dart';
 import 'package:k2k/login/view/login_screen.dart';
 import 'package:k2k/splashscreen/splash_screen.dart';
 
@@ -134,6 +142,32 @@ class AppRoutes {
         },
       ),
       GoRoute(
+        path: RouteNames.packingDetails,
+        name: RouteNames.packingDetails,
+        builder: (context, state) {
+          final workOrderId = state.pathParameters['workOrderId']!;
+          final productId = state.pathParameters['productId']!;
+          return PackingDetailsView(
+            workOrderId: workOrderId,
+            productId: productId,
+          );
+        },
+      ),
+      GoRoute(
+        path: RouteNames.stockmanagement,
+        name: RouteNames.stockmanagement,
+        builder: (BuildContext context, GoRouterState state) {
+          return const StockManagementListView();
+        },
+      ),
+      GoRoute(
+        path: RouteNames.dispatchAdd,
+        name: RouteNames.dispatchAdd,
+        builder: (BuildContext context, GoRouterState state) {
+          return const AddDispatchFormScreen();
+        },
+      ),
+      GoRoute(
         path: RouteNames.plantsedit, // '/plants/edit/:plantId'
         name: RouteNames.plantsedit,
         builder: (context, state) {
@@ -171,6 +205,45 @@ class AppRoutes {
         name: RouteNames.packingadd,
         builder: (BuildContext context, GoRouterState state) {
           return AddPackingFormScreen();
+        },
+      ),
+      GoRoute(
+        path: RouteNames.workorderdetail,
+        name: RouteNames.workorderdetail,
+        builder: (BuildContext context, GoRouterState state) {
+          return WorkOrderDetailsPage();
+        },
+      ),
+      GoRoute(
+        path: RouteNames.workorders,
+        name: RouteNames.workorders,
+        builder: (BuildContext context, GoRouterState state) {
+          return WorkOrderListView();
+        },
+      ),
+      GoRoute(
+        path: RouteNames.dispatch,
+        name: RouteNames.dispatch,
+        builder: (BuildContext context, GoRouterState state) {
+          return DispatchListView();
+        },
+      ),
+      GoRoute(
+        path: RouteNames.workordersadd,
+        name: RouteNames.workordersadd,
+        builder: (BuildContext context, GoRouterState state) {
+          return AddWorkOrderScreen();
+        },
+      ),
+      GoRoute(
+        path: RouteNames.workordersedit,
+        name: RouteNames.workordersedit,
+        builder: (context, state) {
+          final workOrderId = state.pathParameters['workorderId'];
+          if (workOrderId == null) {
+            return const WorkOrderListView();
+          }
+          return EditWorkOrderScreen(workOrderId: workOrderId);
         },
       ),
       GoRoute(

@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
-import 'package:k2k/konkrete_klinkers/packing/provider/packing_provider.dart';
+import 'package:k2k/konkrete_klinkers/work_order/provider/work_order_provider.dart';
 import 'package:provider/provider.dart';
 
-class PackingDeleteHandler {
-  static void deletePacking(
+class WorkOrderDeleteHandler {
+  static void deleteWorkOrder(
     BuildContext context,
-    String? packingId,
-    String? productName,
+    String? workOrderId,
+    String? workOrderNumber,
   ) {
-    if (packingId == null || productName == null) return;
+    if (workOrderId == null || workOrderNumber == null) return;
 
     showDialog(
       context: context,
@@ -24,7 +24,7 @@ class PackingDeleteHandler {
           children: [
             Icon(
               Icons.warning_amber_rounded,
-              color: const Color.fromARGB(255, 255, 165, 8),
+              color: const Color(0xFFF59E0B),
               size: 24.sp,
             ),
             SizedBox(width: 8.w),
@@ -39,7 +39,7 @@ class PackingDeleteHandler {
           ],
         ),
         content: Text(
-          'Are you sure you want to delete packing for "$productName"?',
+          'Are you sure you want to delete Work Order "$workOrderNumber"?',
           style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
         ),
         actions: [
@@ -53,15 +53,20 @@ class PackingDeleteHandler {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(dialogContext);
-              final provider = Provider.of<PackingProvider>(context, listen: false);
-              final success = await provider.deletePacking(packingId);
-              if (success) {
-                context.showSuccessSnackbar('Packing deleted successfully!');
-              } else {
-                context.showErrorSnackbar(
-                  provider.error ?? 'Failed to delete packing',
-                );
-              }
+
+              final scaffoldContext = context;
+
+              final provider = Provider.of<WorkOrderProvider>(
+                scaffoldContext,
+                listen: false,
+              );
+              final success = await provider.deleteWorkOrder(workOrderId);
+
+              context.showSuccessSnackbar(
+                success
+                    ? 'Work Order deleted successfully!'
+                    : 'Failed to delete Work Order.',
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFF43F5E),

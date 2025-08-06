@@ -3,13 +3,12 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
 import 'package:k2k/konkrete_klinkers/master_data/machines/model/machines_model.dart';
 import 'package:k2k/konkrete_klinkers/master_data/machines/provider/machine_provider.dart';
-import 'package:k2k/konkrete_klinkers/master_data/plants/model/plants_model.dart';
-import 'package:k2k/konkrete_klinkers/master_data/plants/provider/plants_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -24,7 +23,6 @@ class MachineEditScreen extends StatefulWidget {
 
 class _MachineEditScreenState extends State<MachineEditScreen> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
-  bool _isScreenUtilInitialized = false;
   MachineElement? _machine;
   bool _isLoading = true;
   String? _error;
@@ -33,20 +31,14 @@ class _MachineEditScreenState extends State<MachineEditScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      print('Initializing ScreenUtil in MachineEditScreen');
-      ScreenUtil.init(context);
-      setState(() {
-        _isScreenUtilInitialized = true;
-      });
-      print('ScreenUtil initialized: screenWidth=${ScreenUtil().screenWidth}');
-
+      print('MachineEditScreen: Initializing');
       _fetchMachine();
-      final plantProvider = context.read<PlantProvider>();
-      if (plantProvider.allPlants.isEmpty &&
+      final plantProvider = context.read<MachinesProvider>();
+      if (plantProvider.plant.isEmpty &&
           plantProvider.error == null &&
           !plantProvider.isAllPlantsLoading) {
         print('Loading plants for dropdown in MachineEditScreen');
-        plantProvider.loadAllPlantsForDropdown();
+        plantProvider.ensurePlantsLoaded();
       }
     });
   }
@@ -78,29 +70,58 @@ class _MachineEditScreenState extends State<MachineEditScreen> {
     }
   }
 
+  Widget _buildLogoAndTitle() {
+    return Row(
+      children: [
+        SizedBox(width: 8.w),
+        Expanded(
+          child: Text(
+            'Edit Machine',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 18.sp,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF334155),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBackButton() {
+    return IconButton(
+      icon: Icon(
+        Icons.arrow_back_ios,
+        size: 24.sp,
+        color: const Color(0xFF334155),
+      ),
+      onPressed: () {
+        print('Navigating back to machines list');
+        context.go(RouteNames.machines);
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final plantProvider = Provider.of<PlantProvider>(context, listen: false);
     final machineProvider = Provider.of<MachinesProvider>(
       context,
       listen: false,
     );
 
-    if (!_isScreenUtilInitialized || _isLoading) {
+    if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (_error != null) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Edit Machine'),
-          backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFF334155),
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios),
-            onPressed: () => context.go(RouteNames.machines),
-          ),
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBars(
+          title: _buildLogoAndTitle(),
+          leading: _buildBackButton(),
+          action: [],
         ),
         body: Center(
           child: Column(
@@ -129,21 +150,16 @@ class _MachineEditScreenState extends State<MachineEditScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: const Text('Edit Machine'),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF334155),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => context.go(RouteNames.machines),
-        ),
+      appBar: AppBars(
+        title: _buildLogoAndTitle(),
+        leading: _buildBackButton(),
+        action: [],
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(24.w),
+        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [_buildFormCard(context, machineProvider, plantProvider)],
+          children: [_buildFormCard(context, machineProvider)],
         ),
       ),
     );
@@ -152,7 +168,6 @@ class _MachineEditScreenState extends State<MachineEditScreen> {
   Widget _buildFormCard(
     BuildContext context,
     MachinesProvider machineProvider,
-    PlantProvider plantProvider,
   ) {
     return Container(
       padding: EdgeInsets.all(24.w),
@@ -187,10 +202,10 @@ class _MachineEditScreenState extends State<MachineEditScreen> {
             ),
             SizedBox(height: 24.h),
             // Plant Dropdown
-            Consumer<PlantProvider>(
+            Consumer<MachinesProvider>(
               builder: (context, provider, _) {
                 print(
-                  'Building Plant Dropdown: plants=${provider.allPlants.length}, isLoading=${provider.isAllPlantsLoading}, error=${provider.error}',
+                  'Building Plant Dropdown: plants=${provider.plant.length}, isLoading=${provider.isAllPlantsLoading}, error=${provider.error}',
                 );
                 if (provider.isAllPlantsLoading) {
                   return const Center(child: CircularProgressIndicator());
@@ -207,28 +222,28 @@ class _MachineEditScreenState extends State<MachineEditScreen> {
                         onPressed: () {
                           print('Retrying to load plants');
                           provider.clearError();
-                          provider.loadAllPlantsForDropdown(refresh: true);
+                          provider.ensurePlantsLoaded();
                         },
                         child: Text('Retry', style: TextStyle(fontSize: 14.sp)),
                       ),
                     ],
                   );
                 }
-                if (provider.allPlants.isEmpty) {
-                  return const Text(
+                if (provider.plant.isEmpty) {
+                  return Text(
                     'No plants found. Please add a plant first.',
-                    style: TextStyle(color: Colors.red),
+                    style: TextStyle(fontSize: 14.sp, color: Colors.red),
                   );
                 }
-                return CustomSearchableDropdownFormField<PlantModel>(
+                return CustomSearchableDropdownFormField<PlantId>(
                   name: 'plant',
                   labelText: 'Plant Name',
                   prefixIcon: Icons.factory_outlined,
-                  options: provider.allPlants,
+                  options: provider.plant,
                   optionLabel: (plant) => plant.plantName,
-                  initialValue: provider.allPlants.firstWhere(
+                  initialValue: provider.plant.firstWhere(
                     (plant) => plant.id == _machine!.plantId.id,
-                    orElse: () => provider.allPlants.first,
+                    orElse: () => provider.plant.first,
                   ),
                   validators: [
                     FormBuilderValidators.required(
@@ -342,12 +357,12 @@ class _MachineEditScreenState extends State<MachineEditScreen> {
   ) async {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       final formData = _formKey.currentState!.value;
-      final plant = formData['plant'] as PlantModel?;
+      final plant = formData['plant'] as PlantId?;
       final machineName = formData['machine_name'] as String;
 
       if (plant == null) {
         print('Validation failed: No plant selected');
-        context.showWarningSnackbar('Please select a valid plant.');
+        context.showWarningSnackbar('Please select a plant.');
         return;
       }
 
@@ -396,13 +411,16 @@ class _MachineEditScreenState extends State<MachineEditScreen> {
         plant.id,
       );
 
-      Navigator.of(context).pop();
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
 
       if (success && context.mounted) {
         print(
           'Machine updated successfully: machine_name=$machineName, plant_id=${plant.id}',
         );
         context.showSuccessSnackbar('Machine updated successfully!');
+        await provider.loadAllMachines(refresh: true);
         context.go(RouteNames.machines);
       } else {
         print('Failed to update machine: ${provider.error}');

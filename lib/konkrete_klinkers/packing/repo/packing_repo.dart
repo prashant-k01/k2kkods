@@ -45,7 +45,102 @@ class PackingRepository {
       throw Exception('No internet connection.');
     }
   }
+Future<List<Map<String, dynamic>>> getPackingDetails(
+  String workOrderId,
+  String productId,
+) async {
+  try {
+    final token = await fetchAccessToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('Authentication token not found.');
+    }
 
+    final authHeaders = await headers;
+    final correctUri = Uri.parse(
+      'https://k2k.kods.work/api/konkreteKlinkers/packing/get?work_order_id=$workOrderId&product_id=$productId',
+    );
+
+    print('Fetching packing details for workOrderId: $workOrderId, productId: $productId');
+    print('Trying website endpoint: $correctUri');
+
+    var response = await http
+        .get(correctUri, headers: authHeaders)
+        .timeout(const Duration(seconds: 30));
+
+    print('Packing Details API Response Status: ${response.statusCode}');
+    print('Packing Details API Response Body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final responseBody = response.body;
+      if (responseBody.isEmpty) {
+        print('Empty packing details response body');
+        return [];
+      }
+
+      final jsonData = json.decode(responseBody);
+      print('Parsed Packing Details JSON: $jsonData');
+
+      List<dynamic> rawList = jsonData['data'] ?? [];
+      List<Map<String, dynamic>> allPackings = [];
+
+      // Iterate through all items in the data array
+      for (var item in rawList) {
+        if (item is Map<String, dynamic>) {
+          print('Processing item with work_order_id: ${item['work_order_id']}');
+
+          // Check if this item matches the work order
+          bool workOrderMatches = item['work_order_id'] == workOrderId;
+          print('Work order matches: $workOrderMatches');
+
+          if (workOrderMatches && item['packing_details'] != null) {
+            // Extract packing_details array
+            List<dynamic> packingsList = item['packing_details'];
+            print('Found packing_details array with ${packingsList.length} items');
+
+            // Add all packings from this item with enhanced data
+            for (var packing in packingsList) {
+              if (packing is Map<String, dynamic>) {
+                // Create enhanced packing object with all required fields
+                Map<String, dynamic> enhancedPacking = Map<String, dynamic>.from(packing);
+
+                // Add missing fields from parent object
+                enhancedPacking['work_order_number'] =
+                    packing['work_order_number'] ?? item['work_order_name'] ?? 'N/A';
+                enhancedPacking['client_name'] =
+                    packing['client_name'] ?? item['client_project']?['client_name'] ?? 'N/A';
+                enhancedPacking['project_name'] =
+                    packing['project_name'] ?? item['client_project']?['project_name'] ?? 'N/A';
+                enhancedPacking['job_order_name'] =
+                    packing['job_order_name'] ?? item['job_order_name'] ?? 'N/A';
+                enhancedPacking['uom'] = packing['uom'] ?? item['uom'] ?? 'N/A';
+                enhancedPacking['status'] = packing['status'] ?? item['status'] ?? 'N/A';
+                enhancedPacking['qr_code_id'] = packing['qr_id'] ?? 'N/A';
+                enhancedPacking['qr_code'] = packing['qr_code'] ?? 'N/A';
+
+                print('Adding enhanced packing with ID: ${enhancedPacking['packing_id']}');
+                print('Enhanced packing data: $enhancedPacking');
+                allPackings.add(enhancedPacking);
+              }
+            }
+          }
+        }
+      }
+
+      print('Total collected packings: ${allPackings.length}');
+      print('Collected packings IDs: ${allPackings.map((p) => p['packing_id']).toList()}');
+      return allPackings;
+    } else {
+      print('Failed to load packing details - Status: ${response.statusCode}');
+      throw Exception('Failed to load packing details: ${response.statusCode}');
+    }
+  } on SocketException {
+    print('No internet connection while fetching packing details');
+    throw Exception('No internet connection.');
+  } catch (e) {
+    print('Error in getPackingDetails: $e');
+    rethrow;
+  }
+}
   Future<List<Map<String, String>>> getWorkOrders() async {
     try {
       final token = await fetchAccessToken();
@@ -95,27 +190,25 @@ class PackingRepository {
         '${AppUrl.baseUrl}/konkreteKlinkers/packing/bundlesize?product_id=$productId',
       );
 
-      print('Fetching bundle size for productId: $productId'); // Debug log
-      print('Bundle size request URI: $uri'); // Debug log
+      print('Fetching bundle size for productId: $productId');
+      print('Bundle size request URI: $uri');
 
       final response = await http
           .get(uri, headers: authHeaders)
           .timeout(const Duration(seconds: 30));
 
-      print(
-        'Bundle Size API Response Status: ${response.statusCode}',
-      ); // Debug log
-      print('Bundle Size API Response Body: ${response.body}'); // Debug log
+      print('Bundle Size API Response Status: ${response.statusCode}');
+      print('Bundle Size API Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final responseBody = response.body;
         if (responseBody.isEmpty) {
-          print('Empty response body for bundle size'); // Debug log
+          print('Empty response body for bundle size');
           return null;
         }
 
         final jsonData = json.decode(responseBody);
-        print('Parsed Bundle Size JSON: $jsonData'); // Debug log
+        print('Parsed Bundle Size JSON: $jsonData');
 
         if (jsonData is Map<String, dynamic>) {
           if (jsonData.containsKey('data') && jsonData['data'] != null) {
@@ -150,7 +243,7 @@ class PackingRepository {
       print('No internet connection while fetching bundle size');
       throw Exception('No internet connection.');
     } catch (e) {
-      print('Error in getBundleSize: $e'); // Debug log
+      print('Error in getBundleSize: $e');
       rethrow;
     }
   }
@@ -165,17 +258,15 @@ class PackingRepository {
       final authHeaders = await headers;
       final uri = Uri.parse(AppUrl.createPacking);
 
-      print('Creating packing with data: $packingData'); // Debug log
-      print('Create packing request URI: $uri'); // Debug log
+      print('Creating packing with data: $packingData');
+      print('Create packing request URI: $uri');
 
       final response = await http
           .post(uri, headers: authHeaders, body: json.encode(packingData))
           .timeout(const Duration(seconds: 30));
 
-      print(
-        'Create Packing API Response Status: ${response.statusCode}',
-      ); // Debug log
-      print('Create Packing API Response Body: ${response.body}'); // Debug log
+      print('Create Packing API Response Status: ${response.statusCode}');
+      print('Create Packing API Response Body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseBody = response.body;
@@ -184,7 +275,7 @@ class PackingRepository {
         }
 
         final jsonData = json.decode(responseBody);
-        print('Parsed Create Packing JSON: $jsonData'); // Debug log
+        print('Parsed Create Packing JSON: $jsonData');
 
         final data = jsonData['data'];
         if (data == null) {
@@ -200,7 +291,7 @@ class PackingRepository {
         return packing;
       } else {
         final jsonData = json.decode(response.body);
-        print('Error Response JSON: $jsonData'); // Debug log
+        print('Error Response JSON: $jsonData');
         throw Exception(
           'Failed to create packing: ${response.statusCode} - ${jsonData['errors']?.toString() ?? response.reasonPhrase}',
         );
@@ -214,53 +305,100 @@ class PackingRepository {
     }
   }
 
- Future<void> submitQrCode(String packingId, String qrCode) async {
-  try {
-    final token = await fetchAccessToken();
-    if (token == null || token.isEmpty) {
-      throw Exception('Authentication token not found.');
+  Future<void> submitQrCode(String packingId, String qrCode) async {
+    try {
+      final token = await fetchAccessToken();
+      if (token == null || token.isEmpty) {
+        throw Exception('Authentication token not found.');
+      }
+
+      final authHeaders = await headers;
+      final uri = Uri.parse(AppUrl.getpackingqr);
+
+      final body = json.encode({
+        'packings': [
+          {
+            'packing_id': packingId,
+            'qrCodeId': qrCode,
+          },
+        ],
+      });
+
+      print('Submitting QR code with data: $body');
+      print('QR code request URI: $uri');
+
+      final response = await http
+          .post(uri, headers: authHeaders, body: body)
+          .timeout(const Duration(seconds: 30));
+
+      print('QR Code API Response Status: ${response.statusCode}');
+      print('QR Code API Response Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final jsonData = json.decode(response.body);
+        print('Parsed QR Code JSON: $jsonData');
+      } else {
+        final jsonData = json.decode(response.body);
+        throw Exception(
+          'Failed to submit QR code: ${response.statusCode} - ${jsonData['errors']?.toString() ?? response.reasonPhrase}',
+        );
+      }
+    } on SocketException {
+      print('No internet connection while submitting QR code');
+      throw Exception('No internet connection.');
+    } catch (e) {
+      print('Error in submitQrCode: $e');
+      rethrow;
     }
-
-    final authHeaders = await headers;
-    final uri = Uri.parse(AppUrl.getpackingqr);
-
-    // Fix: Change 'qr_code' to 'qrCodeId' to match API expectation
-    final body = json.encode({
-      'packings': [
-        {
-          'packing_id': packingId,
-          'qrCodeId': qrCode, // Changed from 'qr_code' to 'qrCodeId'
-        }
-      ],
-    });
-
-    print('Submitting QR code with data: $body'); // Debug log
-    print('QR code request URI: $uri'); // Debug log
-
-    final response = await http
-        .post(uri, headers: authHeaders, body: body)
-        .timeout(const Duration(seconds: 30));
-
-    print('QR Code API Response Status: ${response.statusCode}'); // Debug log
-    print('QR Code API Response Body: ${response.body}'); // Debug log
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final jsonData = json.decode(response.body);
-      print('Parsed QR Code JSON: $jsonData'); // Debug log
-    } else {
-      final jsonData = json.decode(response.body);
-      throw Exception(
-        'Failed to submit QR code: ${response.statusCode} - ${jsonData['errors']?.toString() ?? response.reasonPhrase}',
-      );
-    }
-  } on SocketException {
-    print('No internet connection while submitting QR code');
-    throw Exception('No internet connection.');
-  } catch (e) {
-    print('Error in submitQrCode: $e');
-    rethrow;
   }
-}
+
+  Future<bool> deletePacking(
+    String packingId, {
+    String? workOrderId,
+    String? productId,
+  }) async {
+    try {
+      final authHeaders = await headers;
+      final deleteUrl = AppUrl.deletePacking;
+
+      final body = jsonEncode({
+        "work_order_number": workOrderId ?? "",
+        "product_number": productId ?? "",
+      });
+
+      print('Sending DELETE to $deleteUrl');
+      print('Request Body: $body');
+
+      final response = await http
+          .delete(Uri.parse(deleteUrl), headers: authHeaders, body: body)
+          .timeout(const Duration(seconds: 30));
+
+      print('Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        if (responseData['success'] == true) {
+          print('Packing deleted: $packingId');
+          return true;
+        } else {
+          print('Delete operation not successful: ${response.body}');
+          throw Exception('Delete operation not successful: ${response.body}');
+        }
+      } else {
+        final errorData = jsonDecode(response.body);
+        final errorMessage = errorData['message'] ?? 'Unknown error';
+        print('Failed to delete packing: ${response.statusCode} - $errorMessage');
+        throw Exception('Failed to delete packing: $errorMessage');
+      }
+    } on SocketException catch (e) {
+      print('No internet connection: $e');
+      throw Exception('No internet connection. Please try again.');
+    } catch (e) {
+      print('Error deleting packing: $e');
+      throw Exception('Error deleting packing: $e');
+    }
+  }
 
   Future<List<Map<String, String>>> getProducts(String workOrderId) async {
     try {
@@ -272,17 +410,15 @@ class PackingRepository {
       final authHeaders = await headers;
       final uri = Uri.parse('${AppUrl.getproductsbyworkOrder}$workOrderId');
 
-      print('Fetching products for workOrderId: $workOrderId'); // Debug log
-      print('Products request URI: $uri'); // Debug log
+      print('Fetching products for workOrderId: $workOrderId');
+      print('Products request URI: $uri');
 
       final response = await http
           .get(uri, headers: authHeaders)
           .timeout(const Duration(seconds: 30));
 
-      print(
-        'Products API Response Status: ${response.statusCode}',
-      ); // Debug log
-      print('Products API Response Body: ${response.body}'); // Debug log
+      print('Products API Response Status: ${response.statusCode}');
+      print('Products API Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final responseBody = response.body;
@@ -292,18 +428,18 @@ class PackingRepository {
         }
 
         final jsonData = json.decode(responseBody);
-        print('Parsed Products JSON: $jsonData'); // Debug log
+        print('Parsed Products JSON: $jsonData');
 
         List<dynamic> rawList = jsonData['data'] ?? [];
-        print('Raw products list: $rawList'); // Debug log
-        print('Raw list length: ${rawList.length}'); // Debug log
+        print('Raw products list: $rawList');
+        print('Raw list length: ${rawList.length}');
 
         final products = <Map<String, String>>[];
 
         for (int i = 0; i < rawList.length; i++) {
           final item = rawList[i];
-          print('Processing product item $i: $item'); // Debug log
-          print('Item type: ${item.runtimeType}'); // Debug log
+          print('Processing product item $i: $item');
+          print('Item type: ${item.runtimeType}');
 
           if (item is Map<String, dynamic>) {
             String id = '';
@@ -332,13 +468,13 @@ class PackingRepository {
               name = item['code'].toString();
             }
 
-            print('Extracted - ID: "$id", Name: "$name"'); // Debug log
+            print('Extracted - ID: "$id", Name: "$name"');
 
             if (id.isNotEmpty && name.isNotEmpty) {
               products.add({'id': id, 'name': name});
-              print('Added product: {id: $id, name: $name}'); // Debug log
+              print('Added product: {id: $id, name: $name}');
             } else {
-              print('Skipped product due to empty ID or name'); // Debug log
+              print('Skipped product due to empty ID or name');
             }
           } else {
             print('Item is not a Map<String, dynamic>: ${item.runtimeType}');

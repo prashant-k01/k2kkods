@@ -17,7 +17,6 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
-      // backgroundColor: Colors.grey.shade50,
       backgroundColor: Colors.white,
       drawer: const EnhancedMenuDrawer(),
       appBar: AppBars(

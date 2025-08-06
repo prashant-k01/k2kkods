@@ -10,6 +10,7 @@ class ReusableDateFormField extends StatelessWidget {
   final String? hintText;
   final String? helperText;
   final DateTime? initialValue;
+  final double? iconSize;
   final DateTime? firstDate;
   final DateTime? lastDate;
   final IconData? prefixIcon;
@@ -41,6 +42,7 @@ class ReusableDateFormField extends StatelessWidget {
     super.key,
     required this.name,
     this.labelText,
+    this.iconSize,
     this.hintText,
     this.helperText,
     this.initialValue,

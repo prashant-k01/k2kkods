@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart' hide ScreenUtil;
+import 'package:intl/intl.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/list_helper/add_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
@@ -75,11 +76,14 @@ class _MachinesListScreenState extends State<MachinesListScreen> {
   }
 
   String _formatDateTime(DateTime dateTime) {
-    return '${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year}';
+    return DateFormat('dd-MM-yyyy, hh:mm a').format(dateTime);
   }
 
   String _getCreatedBy(CreatedBy? createdBy) {
-    return createdBy?.username.toString() ?? 'Unknown';
+    if (createdBy == null || createdBy.username.isEmpty) {
+      return 'Unknown';
+    }
+    return createdBy.username;
   }
 
   Widget _buildLogoAndTitle() {
@@ -88,7 +92,7 @@ class _MachinesListScreenState extends State<MachinesListScreen> {
         SizedBox(width: 8.w),
         Expanded(
           child: Text(
-            'Machines Management',
+            'Machines',
             maxLines: 1, // ensures single line
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
@@ -145,7 +149,11 @@ class _MachinesListScreenState extends State<MachinesListScreen> {
     final machineId = machine.id;
     final name = machine.name;
     final plantName = machine.plantId.plantName;
+
     final createdBy = _getCreatedBy(machine.createdBy);
+    print(
+      'Rendering machine card - ID: $machineId, CreatedBy: $createdBy',
+    ); // Debug
     final createdAt = machine.createdAt;
 
     return Container(
