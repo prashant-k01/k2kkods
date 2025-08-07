@@ -94,7 +94,7 @@ class AppUrl {
   static const String fetchProductionLogs =
       "$baseUrl/konkreteKlinkers/production/log?product_id=";
   static const String updatedProduction =
-      "$baseUrl/konkreteKlinkers/updated-production";
+      "$baseUrl/konkreteKlinkers/updated-production?product_id=";
 
   //Qc check
   static const String getKKqcCheckData = "$baseUrl/konkreteKlinkers/qc-check";

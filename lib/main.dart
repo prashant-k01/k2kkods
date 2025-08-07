@@ -10,6 +10,7 @@ import 'package:k2k/konkrete_klinkers/master_data/plants/provider/plants_provide
 import 'package:k2k/konkrete_klinkers/master_data/products/provider/product_provider.dart';
 import 'package:k2k/konkrete_klinkers/master_data/projects/provider/projects_provider.dart';
 import 'package:k2k/konkrete_klinkers/packing/provider/packing_provider.dart';
+import 'package:k2k/konkrete_klinkers/production/provider/production_provider.dart';
 import 'package:k2k/konkrete_klinkers/qc_check/provider/qc_check_provider.dart';
 import 'package:k2k/konkrete_klinkers/stock_management/provider/stock_provider.dart';
 import 'package:k2k/konkrete_klinkers/work_order/provider/work_order_provider.dart';
@@ -45,6 +46,7 @@ class MyApp extends StatelessWidget {
             ChangeNotifierProvider(create: (_) => WorkOrderProvider()),
             ChangeNotifierProvider(create: (_) => DispatchProvider()),
             ChangeNotifierProvider(create: (_) => StockProvider()),
+            ChangeNotifierProvider(create: (_) => ProductionProvider()),
           ],
           child: Consumer<LoginProvider>(
             builder: (context, value, child) {

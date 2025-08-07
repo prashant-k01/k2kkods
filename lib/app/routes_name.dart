@@ -44,7 +44,11 @@ class RouteNames {
   static const String workorderdetail = '/workorderdetail';
   //stock management
   static const String stockmanagement = "/stockmanagement";
-
+  static const String stockmanagementAdd = "/stockmanagementAdd";
+  //production
+  static const String production = '/production';
+  static const String downtime = '/downtime';
+  static const String logs = '/logs';
   //dispatch
   static const String dispatch = "/dispatch";
   static const String dispatchAdd = "/dispatchAdd";

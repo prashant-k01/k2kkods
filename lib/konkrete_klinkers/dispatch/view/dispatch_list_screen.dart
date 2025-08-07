@@ -115,8 +115,6 @@ class _DispatchListViewState extends State<DispatchListView> {
                         if (value == 'edit') {
                           _editDispatch(dispatchId);
                         } else if (value == 'delete') {
-                          // Implement delete handler similar to QcCheckDeleteHandler
-                          // DispatchDeleteHandler.deleteDispatch(context, dispatchId, projectName);
                         }
                       },
                       itemBuilder: (BuildContext context) => [

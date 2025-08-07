@@ -373,7 +373,7 @@ class _StockManagementListViewState extends State<StockManagementListView> {
       padding: EdgeInsets.only(right: 16.w),
       child: TextButton(
         onPressed: () {
-          // context.goNamed(RouteNames.StockManagementAdd);
+          context.goNamed(RouteNames.stockmanagementAdd);
         },
         child: Row(
           children: [
@@ -419,9 +419,9 @@ class _StockManagementListViewState extends State<StockManagementListView> {
           ),
           SizedBox(height: 16.h),
           AddButton(
-            text: 'Add Transfer',
+            text: 'Add Stock',
             icon: Icons.add,
-            route: RouteNames.qcCheckAdd,
+            route: RouteNames.stockmanagementAdd,
           ),
         ],
       ),

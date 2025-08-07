@@ -31,7 +31,7 @@ class DispatchRepository {
       if (response.statusCode == 200) {
         final responseBody = response.body;
         if (responseBody.isEmpty) return [];
-
+        
         final jsonData = json.decode(responseBody);
         List<dynamic> rawList = jsonData['data'] ?? [];
         return rawList
@@ -189,7 +189,6 @@ class DispatchRepository {
     required String date,
     required File invoiceFile,
   }) async {
-    print('📋 Repository Parameters:');
     print('  - workOrder: "$workOrder"');
     print('  - invoiceOrSto: "$invoiceOrSto"');
     print('  - vehicleNumber: "$vehicleNumber"');

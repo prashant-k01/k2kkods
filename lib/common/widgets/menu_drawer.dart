@@ -154,7 +154,7 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
         MenuItem(
           title: 'Production',
           icon: Icons.bookmarks_outlined,
-          route: '/my-bookings',
+          route: RouteNames.production,
         ),
         MenuItem(
           title: 'QC Check',

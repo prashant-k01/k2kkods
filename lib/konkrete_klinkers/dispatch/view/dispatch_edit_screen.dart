@@ -44,9 +44,7 @@ class _EditDispatchFormScreenState extends State<EditDispatchFormScreen> {
         provider.fetchDispatchById(widget.dispatchId),
       ]);
       if (provider.selectedDispatch == null) {
-        throw Exception(
-          'Failed to load dispatch details for ID: ${widget.dispatchId}',
-        );
+        throw Exception('Failed to load dispatch details for ID: ${widget.dispatchId}');
       }
     } catch (e) {
       print('❌ Error initializing data: $e');
@@ -278,8 +276,7 @@ class _EditDispatchFormScreenState extends State<EditDispatchFormScreen> {
                   labelText: 'QR Code',
                   hintText: 'QR code (cannot be changed)',
                   prefixIcon: Icons.qr_code,
-                  initialValue:
-                      provider.qrScanData?['qr_code']?.toString() ?? 'N/A',
+                  initialValue: provider.qrScanData?['qr_code']?.toString() ?? 'N/A',
                   enabled: false,
                   fillColor: Colors.grey.shade100,
                   borderColor: Colors.grey.shade300,
@@ -524,9 +521,7 @@ class _EditDispatchFormScreenState extends State<EditDispatchFormScreen> {
                           final dateValue = formData['dispatch_date'];
                           if (dateValue != null) {
                             if (dateValue is DateTime) {
-                              dispatchDate = dateValue.toIso8601String().split(
-                                'T',
-                              )[0];
+                              dispatchDate = dateValue.toIso8601String().split('T')[0];
                             } else {
                               dispatchDate = dateValue.toString();
                             }
@@ -534,12 +529,8 @@ class _EditDispatchFormScreenState extends State<EditDispatchFormScreen> {
 
                           print('🚀 UPDATE PAYLOAD TO BE SENT:');
                           print('  dispatchId: "${widget.dispatchId}"');
-                          print(
-                            '  invoice_or_sto: "${formData['invoice_sto'] ?? ''}"',
-                          );
-                          print(
-                            '  vehicle_number: "${formData['vehicle_number'] ?? ''}"',
-                          );
+                          print('  invoice_or_sto: "${formData['invoice_sto'] ?? ''}"');
+                          print('  vehicle_number: "${formData['vehicle_number'] ?? ''}"');
                           print('  date: "$dispatchDate"');
 
                           try {

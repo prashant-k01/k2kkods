@@ -29,9 +29,13 @@ import 'package:k2k/konkrete_klinkers/master_data/projects/view/projects_screen_
 import 'package:k2k/konkrete_klinkers/packing/view/packing_add.dart';
 import 'package:k2k/konkrete_klinkers/packing/view/packing_list.dart';
 import 'package:k2k/konkrete_klinkers/packing/view/packing_view.dart';
+import 'package:k2k/konkrete_klinkers/production/view/downtime_screen.dart';
+import 'package:k2k/konkrete_klinkers/production/view/production%20planning%20screen.dart';
+import 'package:k2k/konkrete_klinkers/production/view/production_log_screen.dart';
 import 'package:k2k/konkrete_klinkers/qc_check/view/qc_check_add_screen.dart';
 import 'package:k2k/konkrete_klinkers/qc_check/view/qc_check_edit.dart';
 import 'package:k2k/konkrete_klinkers/qc_check/view/qc_check_list_screen.dart';
+import 'package:k2k/konkrete_klinkers/stock_management/view/stock_add_screen.dart';
 import 'package:k2k/konkrete_klinkers/stock_management/view/stock_list_screen.dart';
 import 'package:k2k/konkrete_klinkers/work_order/view/work_order_add_screen.dart';
 import 'package:k2k/konkrete_klinkers/work_order/view/work_order_detail_page.dart';
@@ -169,12 +173,47 @@ class AppRoutes {
         },
       ),
       GoRoute(
+        path: RouteNames.stockmanagementAdd,
+        name: RouteNames.stockmanagementAdd,
+        builder: (BuildContext context, GoRouterState state) {
+          return const StockManagementFormScreen();
+        },
+      ),
+      GoRoute(
       path: '/edit-dispatch/:dispatchId',
-      name: RouteNames.dispatchEdit, // Must match 'dispatchEdit' used in _editDispatch
+      name: RouteNames.dispatchEdit, 
       builder: (context, state) => EditDispatchFormScreen(
         dispatchId: state.pathParameters['dispatchId']!,
       ),
     ),
+    GoRoute(
+        path: RouteNames.production,
+        name: RouteNames.production,
+        builder: (BuildContext context, GoRouterState state) {
+          return ProductionScreen();
+        },
+      ),
+      GoRoute(
+        path: RouteNames.downtime,
+        name: RouteNames.downtime,
+        builder: (BuildContext context, GoRouterState state) {
+          final extra = state.extra as Map<String, dynamic>;
+          return DowntimeScreen(
+            productId: extra['productId'],
+            jobOrder: extra['jobOrder'],
+          );
+        },
+      ),
+      GoRoute(
+        path: RouteNames.logs,
+        name: RouteNames.logs,
+        builder: (BuildContext context, GoRouterState state) {
+          final extra = state.extra as Map<String, dynamic>;
+          return ProductionLogScreen(
+            productId: extra['productId'],
+            jobOrder: extra['jobOrder'],
+          );},
+),
   
       GoRoute(
         path: RouteNames.plantsedit, // '/plants/edit/:plantId'
