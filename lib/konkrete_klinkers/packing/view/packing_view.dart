@@ -796,10 +796,10 @@ class _PackingDetailsViewState extends State<PackingDetailsView>
     ScreenUtil.init(context);
 
     return PopScope(
-      canPop: true,
+      canPop: false,
       onPopInvoked: (didPop) {
-        if (didPop) {
-          debugPrint('PackingDetailsView popped');
+        if (!didPop) {
+          context.go(RouteNames.packing);
         }
       },
       child: Scaffold(

@@ -8,6 +8,7 @@ import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/provider/plants_provider.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/view/plant_delete_screen.dart';
 import 'package:k2k/utils/sreen_util.dart';
+import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
@@ -64,11 +65,16 @@ class _PlantsListViewState extends State<PlantsListView> {
 
   Widget _buildPlantCard(dynamic plant) {
     final plantData = plant is Map<String, dynamic> ? plant : plant.toJson();
-    final plantId = plantData['_id']?.toString() ?? plantData['id']?.toString() ?? '';
+    final plantId =
+        plantData['_id']?.toString() ?? plantData['id']?.toString() ?? '';
     final plantName =
-        plantData['plant_name']?.toString() ?? plantData['plantName']?.toString() ?? 'Unknown Plant';
+        plantData['plant_name']?.toString() ??
+        plantData['plantName']?.toString() ??
+        'Unknown Plant';
     final plantCode =
-        plantData['plant_code']?.toString() ?? plantData['plantCode']?.toString() ?? 'N/A';
+        plantData['plant_code']?.toString() ??
+        plantData['plantCode']?.toString() ??
+        'N/A';
     final createdBy = _getCreatedBy(
       plantData['created_by'] ?? plantData['createdBy'],
     );
@@ -80,27 +86,41 @@ class _PlantsListViewState extends State<PlantsListView> {
       margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
       child: Card(
         elevation: 0,
+        color: AppColors.cardBackground,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.r),
+          borderRadius: BorderRadius.circular(12.r),
+          side: BorderSide(color: const Color(0xFFE5E7EB), width: 1.w),
         ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20.r),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(24.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12.r),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top Header Section
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.cardHeaderStart,
+                      AppColors.cardHeaderEnd,
+                      AppColors.cardBackground,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(12.r),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.shadow.withOpacity(0.03),
+                      blurRadius: 4.r,
+                      offset: Offset(0, 1.h),
+                    ),
+                  ],
+                ),
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
@@ -110,38 +130,22 @@ class _PlantsListViewState extends State<PlantsListView> {
                           Text(
                             plantName,
                             style: TextStyle(
-                              fontSize: 18.sp,
+                              fontSize: 14.sp,
                               fontWeight: FontWeight.w600,
                               color: const Color(0xFF334155),
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           SizedBox(height: 8.h),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 12.w,
-                              vertical: 6.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                            child: Text(
-                              plantCode,
-                              style: TextStyle(
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF3B82F6),
-                              ),
-                            ),
-                          ),
                         ],
                       ),
                     ),
                     PopupMenuButton<String>(
                       icon: Icon(
                         Icons.more_vert,
-                        size: 24.sp,
-                        color: const Color(0xFF64748B),
+                        size: 18.sp,
+                        color: AppColors.textSecondary,
                       ),
                       onSelected: (value) {
                         if (value == 'edit') {
@@ -196,47 +200,79 @@ class _PlantsListViewState extends State<PlantsListView> {
                           ),
                         ),
                       ],
+                      offset: Offset(0, 32.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                      color: AppColors.cardBackground,
+                      elevation: 2,
                     ),
                   ],
                 ),
-                SizedBox(height: 16.h),
-                Row(
+              ),
+              // Body Section
+              Padding(
+                padding: EdgeInsets.all(12.w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.person_outline,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Created by: $createdBy',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12.w,
+                        vertical: 6.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Text(
+                        'Plant Code: $plantCode',
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF3B82F6),
+                        ),
                       ),
                     ),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.person_outline,
+                          size: 16.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Created by: $createdBy',
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 6.h),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time_outlined,
+                          size: 16.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Created: ${_formatDateTime(createdAt)}',
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
-                SizedBox(height: 8.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.access_time_outlined,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Created: ${_formatDateTime(createdAt)}',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -336,93 +372,104 @@ class _PlantsListViewState extends State<PlantsListView> {
   Widget build(BuildContext context) {
     ScreenUtil.init(context);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBars(
-        title: _buildLogoAndTitle(),
-        leading: _buildBackButton(),
-        action: [_buildActionButtons()],
-      ),
-      body: Consumer<PlantProvider>(
-        builder: (context, provider, child) {
-          if (provider.error != null && provider.plants.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64.sp,
-                    color: const Color(0xFFF43F5E),
-                  ),
-                  SizedBox(height: 16.h),
-                  Text(
-                    'Error Loading Plants',
-                    style: TextStyle(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF334155),
+    return PopScope(
+       canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          context.go(RouteNames.homeScreen);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBars(
+          title: _buildLogoAndTitle(),
+          leading: _buildBackButton(),
+          action: [_buildActionButtons()],
+        ),
+        body: Consumer<PlantProvider>(
+          builder: (context, provider, child) {
+            if (provider.error != null && provider.plants.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 64.sp,
+                      color: const Color(0xFFF43F5E),
                     ),
-                  ),
-                  SizedBox(height: 8.h),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24.w),
-                    child: Text(
-                      provider.error!,
-                      textAlign: TextAlign.center,
+                    SizedBox(height: 16.h),
+                    Text(
+                      'Error Loading Plants',
                       style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF334155),
                       ),
                     ),
-                  ),
-                  SizedBox(height: 16.h),
-                  RefreshButton(
-                    text: 'Retry',
-                    icon: Icons.refresh,
-                    onTap: () {
-                      provider.clearError();
-                      provider.loadPlants(refresh: true);
-                    },
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async {
-              await context.read<PlantProvider>().loadPlants(refresh: true);
-            },
-            color: const Color(0xFF3B82F6),
-            backgroundColor: Colors.white,
-            child: provider.isLoading && provider.plants.isEmpty
-                ? ListView.builder(
-                    itemCount: 5,
-                    itemBuilder: (context, index) => buildShimmerCard(),
-                  )
-                : provider.plants.isEmpty
-                    ? _buildEmptyState()
-                    : ListView.builder(
-                        padding: EdgeInsets.only(bottom: 80.h),
-                        itemCount: provider.plants.length + (provider.isLoading ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index == provider.plants.length && provider.isLoading) {
-                            return const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(16.0),
-                                child: CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      Color(0xFF3B82F6)),
+                    SizedBox(height: 8.h),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 24.w),
+                      child: Text(
+                        provider.error!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 16.h),
+                    RefreshButton(
+                      text: 'Retry',
+                      icon: Icons.refresh,
+                      onTap: () {
+                        provider.clearError();
+                        provider.loadPlants(refresh: true);
+                      },
+                    ),
+                  ],
+                ),
+              );
+            }
+      
+            return RefreshIndicator(
+              onRefresh: () async {
+                await context.read<PlantProvider>().loadPlants(refresh: true);
+              },
+              color: const Color(0xFF3B82F6),
+              backgroundColor: Colors.white,
+              child: provider.isLoading && provider.plants.isEmpty
+                  ? ListView.builder(
+                      itemCount: 5,
+                      itemBuilder: (context, index) => buildShimmerCard(),
+                    )
+                  : provider.plants.isEmpty
+                  ? _buildEmptyState()
+                  : ListView.builder(
+                      padding: EdgeInsets.only(bottom: 80.h),
+                      itemCount:
+                          provider.plants.length + (provider.isLoading ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == provider.plants.length &&
+                            provider.isLoading) {
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Color(0xFF3B82F6),
                                 ),
                               ),
-                            );
-                          }
-                          return _buildPlantCard(provider.plants[index]);
-                        },
-                      ),
-          );
-        },
+                            ),
+                          );
+                        }
+                        return _buildPlantCard(provider.plants[index]);
+                      },
+                    ),
+            );
+          },
+        ),
       ),
     );
   }

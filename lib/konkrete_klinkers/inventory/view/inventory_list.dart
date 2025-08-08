@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
+import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/konkrete_klinkers/inventory/model/inventory.dart';
 import 'package:k2k/konkrete_klinkers/inventory/provider/inventory_provider.dart';
 import 'package:k2k/konkrete_klinkers/inventory/view/inventory_detailscreen.dart';
+import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
 
 class InventoryListScreen extends StatefulWidget {
@@ -34,176 +37,205 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
     final uom = item.uom.isNotEmpty ? item.uom : '';
     final status = item.status.isNotEmpty ? item.status : 'Unknown';
 
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.r),
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20.r),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
-              ),
-            ],
+    return InkWell(
+      onTap: () {
+        context.goNamed(RouteNames.inventorydetail, extra: item.productId);
+      },
+      child: Container(
+        margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+        child: Card(
+          elevation: 0,
+          color: AppColors.cardBackground,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.r),
+            side: BorderSide(color: const Color(0xFFE5E7EB), width: 1.w),
           ),
-          child: Padding(
-            padding: EdgeInsets.all(24.w),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12.r),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        materialCode,
-                        style: TextStyle(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF334155),
+                // Top Header Section
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.cardHeaderStart,
+                        AppColors.cardHeaderEnd,
+                        AppColors.cardBackground,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(12.r),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.shadow.withOpacity(0.03),
+                        blurRadius: 4.r,
+                        offset: Offset(0, 1.h),
+                      ),
+                    ],
+                  ),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 8.h,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Material Code: $materialCode',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF334155),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    ),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12.w,
-                        vertical: 6.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: status.toLowerCase() == 'active'
-                            ? Colors.green.shade50
-                            : Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                      child: Text(
-                        status,
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w600,
+
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12.w,
+                          vertical: 6.h,
+                        ),
+                        decoration: BoxDecoration(
                           color: status.toLowerCase() == 'active'
-                              ? Colors.green.shade700
-                              : Colors.grey.shade700,
+                              ? Colors.green.shade50
+                              : Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                        child: Text(
+                          status,
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
+                            color: status.toLowerCase() == 'active'
+                                ? Colors.green.shade700
+                                : Colors.grey.shade700,
+                          ),
                         ),
                       ),
-                    ),
-                    SizedBox(width: 12.w),
-                    // Eye icon button
-                    IconButton(
-                      icon: Icon(
-                        Icons.remove_red_eye_outlined,
-                        color: Colors.blue.shade400,
-                        size: 24.sp,
+                      SizedBox(width: 12.w),
+                      IconButton(
+                        icon: Icon(
+                          Icons.remove_red_eye_outlined,
+                          color: Colors.blue.shade400,
+                          size: 18.sp,
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => InventoryDetailScreen(
+                                productId: item.productId,
+                              ),
+                            ),
+                          );
+                        },
+                        tooltip: 'View Details',
                       ),
-                      onPressed: () {
-                        // Navigate to the detail screen with product_id
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => InventoryDetailScreen(
-                              productId: item.productId,
+                    ],
+                  ),
+                ),
+                // Body Section
+                Padding(
+                  padding: EdgeInsets.all(12.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            "Description:",
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w400,
+                              color: const Color(0xFF64748B),
                             ),
                           ),
-                        );
-                      },
-                      tooltip: 'View Details',
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.h),
-
-                Row(
-                  children: [
-                    Text(
-                      "Description:",
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w400,
-                        color: const Color(0xFF64748B),
+                          SizedBox(width: 4.w),
+                          Expanded(
+                            child: Text(
+                              description,
+                              style: TextStyle(
+                                fontSize: 13.sp,
+                                fontWeight: FontWeight.w400,
+                                color: const Color(0xFF64748B),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    SizedBox(width: 4.w),
-                    Expanded(
-                      child: Text(
-                        description,
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w400,
-                          color: const Color(0xFF64748B),
-                        ),
+                      SizedBox(height: 12.h),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.inventory_2_outlined,
+                                size: 16.sp,
+                                color: const Color(0xFF64748B),
+                              ),
+                              SizedBox(width: 8.w),
+                              Text(
+                                'Balance: $balanceQuantity',
+                                style: TextStyle(
+                                  fontSize: 13.sp,
+                                  color: const Color(0xFF64748B),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 6.h),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.straighten,
+                                size: 16.sp,
+                                color: const Color(0xFF64748B),
+                              ),
+                              SizedBox(width: 8.w),
+                              Text(
+                                'UOM: $uom',
+                                style: TextStyle(
+                                  fontSize: 13.sp,
+                                  color: const Color(0xFF64748B),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 6.h),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                size: 16.sp,
+                                color: const Color(0xFF64748B),
+                              ),
+                              SizedBox(width: 8.w),
+                              Text(
+                                'Status: $status',
+                                style: TextStyle(
+                                  fontSize: 13.sp,
+                                  color: const Color(0xFF64748B),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-
-                SizedBox(height: 16.h),
-
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.inventory_2_outlined,
-                          size: 18.sp,
-                          color: Color(0xFF64748B),
-                        ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          'Balance: $balanceQuantity',
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            color: Color(0xFF64748B),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 6.h),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.straighten,
-                          size: 18.sp,
-                          color: Color(0xFF64748B),
-                        ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          'UOM: $uom',
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            color: Color(0xFF64748B),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 6.h),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          size: 18.sp,
-                          color: Color(0xFF64748B),
-                        ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          'Status: $status',
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            color: Color(0xFF64748B),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -273,45 +305,52 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ScreenUtil.init(context);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBars(
-        title: _buildLogoAndTitle(),
-        leading: _buildBackButton(),
-        action: [],
-      ),
-      body: Consumer<InventoryProvider>(
-        builder: (context, provider, _) {
-          if (provider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          context.go(RouteNames.homeScreen);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBars(
+          title: _buildLogoAndTitle(),
+          leading: _buildBackButton(),
+          action: [],
+        ),
+        body: Consumer<InventoryProvider>(
+          builder: (context, provider, _) {
+            if (provider.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          if (provider.error != null) {
-            return Center(
-              child: Text(
-                'Error: ${provider.error}',
-                style: const TextStyle(color: Colors.red),
-              ),
+            if (provider.error != null) {
+              return Center(
+                child: Text(
+                  'Error: ${provider.error}',
+                  style: const TextStyle(color: Colors.red),
+                ),
+              );
+            }
+
+            final inventory = provider.inventoryList;
+
+            if (inventory.isEmpty) {
+              return _buildEmptyState();
+            }
+
+            return ListView.builder(
+              padding: EdgeInsets.only(bottom: 80.h),
+              itemCount: inventory.length,
+              itemBuilder: (context, index) {
+                final item = inventory[index];
+                return _buildInventoryCard(item);
+              },
             );
-          }
-
-          final inventory = provider.inventoryList;
-
-          if (inventory.isEmpty) {
-            return _buildEmptyState();
-          }
-
-          return ListView.builder(
-            padding: EdgeInsets.only(bottom: 80.h),
-            itemCount: inventory.length,
-            itemBuilder: (context, index) {
-              final item = inventory[index];
-              return _buildInventoryCard(item);
-            },
-          );
-        },
+          },
+        ),
       ),
     );
   }

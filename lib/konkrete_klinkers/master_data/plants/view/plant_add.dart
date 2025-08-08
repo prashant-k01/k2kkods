@@ -19,18 +19,26 @@ class AddPlantFormScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final plantProvider = Provider.of<PlantProvider>(context, listen: false);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBars(
-        title: _buildLogoAndTitle(),
-        leading: _buildBackButton(),
-        action: [],
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(24.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [_buildFormCard(context, plantProvider)],
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          context.go(RouteNames.plants);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBars(
+          title: _buildLogoAndTitle(),
+          leading: _buildBackButton(),
+          action: [],
+        ),
+        body: SingleChildScrollView(
+          padding: EdgeInsets.all(24.w),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [_buildFormCard(context, plantProvider)],
+          ),
         ),
       ),
     );

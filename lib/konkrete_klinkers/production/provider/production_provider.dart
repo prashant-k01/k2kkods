@@ -17,6 +17,7 @@ class ProductionProvider with ChangeNotifier {
   String? _activeTimerJobId;
   final Map<String, int> _timers = {};
   bool _showTimer = false;
+  String _selectedFilter = 'all';
 
   Production? get productionData => _productionData;
   List<Downtime>? get downTimeLogs => _downTimeLogs;
@@ -26,7 +27,8 @@ class ProductionProvider with ChangeNotifier {
   DateTime? get selectedDate => _selectedDate;
   String? get activeTimerJobId => _activeTimerJobId;
   bool get showTimer => _showTimer;
-  
+  String get selectedFilter => _selectedFilter;
+
   List<PastDpr> getFilteredPastDpr() {
     final list = _productionData?.data.pastDpr ?? [];
     return list;
@@ -34,7 +36,7 @@ class ProductionProvider with ChangeNotifier {
 
   List<PastDpr> getFilteredTodayDpr() {
     final list = _productionData?.data.todayDpr ?? [];
-    return list;
+    return _applyFilter(list); // Apply filter logic
   }
 
   List<PastDpr> getFilteredFutureDpr() {
@@ -42,9 +44,88 @@ class ProductionProvider with ChangeNotifier {
     return list;
   }
 
+  // NEW: Method to apply filter logic
+  List<PastDpr> _applyFilter(List<PastDpr> dprList) {
+    print(
+      'Filtering DPR list, selectedFilter: $_selectedFilter, total items: ${dprList.length}',
+    );
+
+    // Debug: Print all DPR statuses
+    for (int i = 0; i < dprList.length; i++) {
+      final dpr = dprList[i];
+      final Status actualStatus = dpr is PastDpr
+          ? (dpr.dailyProduction?.status ?? dpr.status)
+          : dpr.status;
+      print('DPR $i: actualStatus = $actualStatus, id = ${dpr.id}');
+    }
+
+    switch (_selectedFilter) {
+      case 'active':
+        final activeList = dprList.where((dpr) {
+          final Status actualStatus = dpr is PastDpr
+              ? (dpr.dailyProduction?.status ?? dpr.status)
+              : dpr.status;
+          return actualStatus == Status.IN_PROGRESS;
+        }).toList();
+        print('Active filter applied, items: ${activeList.length}');
+        return activeList;
+
+      case 'inactive':
+        final inactiveList = dprList.where((dpr) {
+          final Status actualStatus = dpr is PastDpr
+              ? (dpr.dailyProduction?.status ?? dpr.status)
+              : dpr.status;
+          return actualStatus == Status.PAUSED ||
+              actualStatus == Status.PENDING_QC;
+        }).toList();
+        print('Inactive filter applied, items: ${inactiveList.length}');
+        return inactiveList;
+
+      case 'created_today':
+        final today = _normalizeDate(DateTime.now());
+        final createdTodayList = dprList.where((dpr) {
+          final DateTime createdAt = dpr.createdAt;
+          return _normalizeDate(createdAt) == today;
+        }).toList();
+        print(
+          'Created today filter applied, items: ${createdTodayList.length}',
+        );
+        return createdTodayList;
+
+      default:
+        print('All filter applied, items: ${dprList.length}');
+        return dprList;
+    }
+  }
+
+  // NEW: Method to get appropriate empty message based on filter
+  String getEmptyMessage() {
+    switch (_selectedFilter) {
+      case 'active':
+        return 'No active production jobs found';
+      case 'inactive':
+        return 'No inactive production jobs found';
+      case 'created_today':
+        return 'No production jobs created today';
+      default:
+        return 'No production scheduled for selected date';
+    }
+  }
+
+  // NEW: Method to set filter and notify listeners
+  void setFilter(String filter) {
+    if (_selectedFilter != filter) {
+      _selectedFilter = filter;
+      print('Filter changed to: $_selectedFilter');
+      notifyListeners();
+    }
+  }
+
   void setDate(DateTime date) {
     _selectedDate = _normalizeDate(date);
-    print('Setting selectedDate: $_selectedDate');
+    // Reset filter when date changes
+    _selectedFilter = 'all';
+    print('Setting selectedDate: $_selectedDate, resetting filter to all');
     notifyListeners();
   }
 
@@ -75,25 +156,27 @@ class ProductionProvider with ChangeNotifier {
       _productionData = await _repository.fetchProductionJobOrderByDate(
         date: _selectedDate ?? today,
       );
-      print('Production data fetched successfully: ${_productionData?.data.todayDpr.length ?? 0} items');
+      print(
+        'Production data fetched successfully: ${_productionData?.data.todayDpr.length ?? 0} items',
+      );
     } catch (e) {
       _error = 'Error fetching production data: $e';
       print('Error: $_error');
     } finally {
       _isLoading = false;
-      // FIXED: Always notify listeners after data fetch
       notifyListeners();
     }
   }
 
-  // FIXED: Enhanced performProductionAction with better error handling and UI updates
   Future<void> performProductionAction({
     required String jobOrder,
     required String productId,
     required String action,
   }) async {
     try {
-      print('Performing action: $action for jobOrder: $jobOrder, productId: $productId');
+      print(
+        'Performing action: $action for jobOrder: $jobOrder, productId: $productId',
+      );
 
       // Set loading state
       setLoading(true);
@@ -114,20 +197,17 @@ class ProductionProvider with ChangeNotifier {
       await fetchProductionJobOrderByDate();
 
       print('Data refreshed after action: $action');
-      
-      // FIXED: Explicit notification after successful action
+
       notifyListeners();
-      
     } catch (e) {
       print('Error performing action $action: $e');
       setError('Error performing action $action: $e');
-      rethrow; // Re-throw so the UI can handle it
+      rethrow;
     } finally {
       setLoading(false);
     }
   }
 
-  // FIXED: Enhanced helper methods with proper notifications
   void setLoading(bool loading) {
     if (_isLoading != loading) {
       _isLoading = loading;
@@ -152,7 +232,7 @@ class ProductionProvider with ChangeNotifier {
     try {
       if (await _repository.addDownTime(productId, jobOrder, downtimeData)) {
         await fetchDownTimeLogs(productId, jobOrder);
-        // FIXED: Refresh main production data after downtime changes
+        // Refresh main production data after downtime changes
         await fetchProductionJobOrderByDate();
       }
     } catch (e) {
@@ -192,7 +272,6 @@ class ProductionProvider with ChangeNotifier {
     }
   }
 
-  // FIXED: Enhanced updateProduction with proper data refresh
   Future<void> updateProduction(String productId, String jobOrder) async {
     _isLoading = true;
     notifyListeners();
@@ -218,7 +297,8 @@ class ProductionProvider with ChangeNotifier {
   DateTime _normalizeDate(DateTime date) {
     return DateTime(date.year, date.month, date.day);
   }
-    void forceRefresh() {
+
+  void forceRefresh() {
     print('Force refreshing UI');
     notifyListeners();
   }

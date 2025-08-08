@@ -57,30 +57,38 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
   Widget build(BuildContext context) {
     return Consumer<WorkOrderProvider>(
       builder: (context, workOrderProvider, child) {
-        return Scaffold(
-          resizeToAvoidBottomInset: true,
-          backgroundColor: const Color(0xFFF8FAFC),
-          appBar: AppBars(
-            title: _buildLogoAndTitle(),
-            leading: _buildBackButton(),
-            action: _buildAppBarActions(),
-          ),
-          body: SafeArea(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12.w),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(height: 12.h),
-                    _buildMainFormCard(context, workOrderProvider),
-                  ],
+        return PopScope(
+           canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          context.go(RouteNames.workorders);
+        }
+      },
+          child: Scaffold(
+            resizeToAvoidBottomInset: true,
+            backgroundColor: const Color(0xFFF8FAFC),
+            appBar: AppBars(
+              title: _buildLogoAndTitle(),
+              leading: _buildBackButton(),
+              action: _buildAppBarActions(),
+            ),
+            body: SafeArea(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12.w),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(height: 12.h),
+                      _buildMainFormCard(context, workOrderProvider),
+                    ],
+                  ),
                 ),
               ),
             ),
+            // : const Center(child: CircularProgressIndicator()),
+            bottomNavigationBar: _buildFixedSubmitButton(context),
           ),
-          // : const Center(child: CircularProgressIndicator()),
-          bottomNavigationBar: _buildFixedSubmitButton(context),
         );
       },
     );
@@ -190,6 +198,8 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
               prefixIcon: Icons.format_list_numbered,
               textStyle: TextStyle(fontSize: 14.sp),
               labelStyle: TextStyle(fontSize: 14.sp),
+              fillColor: Colors.white,
+
               hintStyle: TextStyle(fontSize: 14.sp, color: Colors.grey[400]),
               contentPadding: EdgeInsets.symmetric(
                 horizontal: 12.w,
@@ -288,8 +298,11 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
                 CustomSearchableDropdownFormField<ClientModel>(
                   name: 'client_id',
                   labelText: 'Client Name',
+                  hintText: ' Select Client Name',
                   prefixIcon: Icons.person_outline,
                   iconSize: 18.sp,
+                  fillColor: Colors.white,
+
                   textStyle: TextStyle(fontSize: 14.sp),
                   labelStyle: TextStyle(fontSize: 14.sp),
                   hintStyle: TextStyle(
@@ -330,7 +343,10 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
                   name: 'project_id',
                   labelText: 'Project Name',
                   prefixIcon: Icons.domain,
+                  hintText: ' Select Project Name',
                   iconSize: 18.sp,
+                  fillColor: Colors.white,
+
                   textStyle: TextStyle(fontSize: 14.sp),
                   labelStyle: TextStyle(fontSize: 14.sp),
                   hintStyle: TextStyle(
@@ -360,6 +376,7 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
                 hintText: 'Select date',
                 prefixIcon: Icons.calendar_today_outlined,
                 iconSize: 18.sp,
+                fillColor: Colors.white,
                 textStyle: TextStyle(fontSize: 14.sp),
                 labelStyle: TextStyle(fontSize: 14.sp),
                 hintStyle: TextStyle(fontSize: 14.sp, color: Colors.grey[400]),
@@ -539,6 +556,8 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
                               name: 'product_id_$index',
                               labelText: 'Product Name / Material Code',
                               prefixIcon: Icons.category,
+                              fillColor: Colors.white,
+                              hintText: "Product Name / Material Code",
                               iconSize: 18.sp,
                               textStyle: TextStyle(fontSize: 14.sp),
                               labelStyle: TextStyle(fontSize: 14.sp),
@@ -644,6 +663,7 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
                               name: 'po_quantity_$index',
                               labelText: 'PO Quantity',
                               hintText: 'Enter PO quantity',
+                              fillColor: Colors.white,
                               prefixIcon: Icons.numbers,
                               textStyle: TextStyle(fontSize: 14.sp),
                               labelStyle: TextStyle(fontSize: 14.sp),
@@ -743,6 +763,8 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
                                 return CustomTextFormField(
                                   name: 'qty_in_nos_$index',
                                   labelText: 'Quantity in Nos',
+                                  fillColor: Colors.white,
+
                                   hintText: 'Auto-calculated',
                                   controller: qtyController,
                                   prefixIcon: Icons.format_list_numbered,
@@ -766,6 +788,7 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
                             CustomTextFormField(
                               name: 'plant_code_$index',
                               labelText: 'Plant Code',
+                              fillColor: Colors.white,
                               hintText: 'Auto-fetched',
                               prefixIcon: Icons.factory,
                               textStyle: TextStyle(fontSize: 14.sp),
@@ -785,6 +808,7 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
                             ReusableDateFormField(
                               name: 'delivery_date_$index',
                               labelText: 'Delivery Date',
+                              fillColor: Colors.white,
                               hintText: 'Select date',
                               prefixIcon: Icons.calendar_today_outlined,
                               iconSize: 18.sp,

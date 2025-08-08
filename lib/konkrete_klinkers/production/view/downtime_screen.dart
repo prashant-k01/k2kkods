@@ -45,53 +45,61 @@ class _DowntimeScreenState extends State<DowntimeScreen> {
   Widget build(BuildContext context) {
     return Consumer<ProductionProvider>(
       builder: (context, provider, child) {
-        return Scaffold(
-          backgroundColor: Colors.grey[50],
-          appBar: AppBars(
-            title: Text(
-              'Downtime Logs',
-              style: TextStyle(
-                fontSize: 20.sp,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
+        return PopScope(
+          canPop: false,
+          onPopInvoked: (didPop) {
+            if (!didPop) {
+              context.go(RouteNames.production);
+            }
+          },
+          child: Scaffold(
+            backgroundColor: Colors.grey[50],
+            appBar: AppBars(
+              title: Text(
+                'Downtime Logs',
+                style: TextStyle(
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
               ),
-            ),
-            leading: IconButton(
-              icon: Icon(
-                Icons.arrow_back_ios_new_rounded,
-                size: 22.sp,
-                color: Colors.blue[700],
+              leading: IconButton(
+                icon: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 22.sp,
+                  color: Colors.blue[700],
+                ),
+                onPressed: () => context.goNamed(RouteNames.production),
               ),
-              onPressed: () => context.goNamed(RouteNames.production),
-            ),
-            action: [
-              IconButton(
-                icon: Icon(Icons.add, color: Colors.blue[700], size: 24.sp),
-                onPressed: () => _showDowntimeForm(context, provider),
-                tooltip: 'Add Downtime',
-              ),
-            ],
-          ),
-          body: SafeArea(
-            child: Column(
-              children: [
-                // _buildDatePickerSection(provider),
-                Expanded(
-                  child: provider.isLoading
-                      ? Center(
-                          child: CircularProgressIndicator(
-                            color: Colors.blue[700],
-                            strokeWidth: 2.w,
-                          ),
-                        )
-                      : _buildDowntimeList(
-                          provider.downTimeLogs ?? [],
-                          emptyMessage:
-                              'No downtime records for this job order',
-                          error: provider.error,
-                        ),
+              action: [
+                IconButton(
+                  icon: Icon(Icons.add, color: Colors.blue[700], size: 24.sp),
+                  onPressed: () => _showDowntimeForm(context, provider),
+                  tooltip: 'Add Downtime',
                 ),
               ],
+            ),
+            body: SafeArea(
+              child: Column(
+                children: [
+                  // _buildDatePickerSection(provider),
+                  Expanded(
+                    child: provider.isLoading
+                        ? Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.blue[700],
+                              strokeWidth: 2.w,
+                            ),
+                          )
+                        : _buildDowntimeList(
+                            provider.downTimeLogs ?? [],
+                            emptyMessage:
+                                'No downtime records for this job order',
+                            error: provider.error,
+                          ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -456,15 +464,8 @@ class _DowntimeScreenState extends State<DowntimeScreen> {
                             startTime == null ||
                             minutes == null ||
                             minutes! <= 0) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Please fill all required fields'),
-                              backgroundColor: Colors.red[700],
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8.r),
-                              ),
-                            ),
+                          context.showErrorSnackbar(
+                            "Please fill all required fields",
                           );
                           return;
                         }

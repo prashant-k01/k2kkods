@@ -35,44 +35,53 @@ class _ProductionLogScreenState extends State<ProductionLogScreen> {
   Widget build(BuildContext context) {
     return Consumer<ProductionProvider>(
       builder: (context, provider, child) {
-        return Scaffold(
-          backgroundColor: Colors.grey[50],
-          appBar: AppBars(
-            title: Text(
-              'Production Logs',
-              style: TextStyle(
-                fontSize: 20.sp,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
-            ),
-            leading: IconButton(
-              icon: Icon(
-                Icons.arrow_back_ios_new_rounded,
-                size: 22.sp,
-                color: Colors.blue[700],
-              ),
-              onPressed: () => context.goNamed(RouteNames.production),
-            ),
-          ),
-          body: SafeArea(
-            child: Column(
-              children: [
-                Expanded(
-                  child: provider.isLoading
-                      ? Center(
-                          child: CircularProgressIndicator(
-                            color: Colors.blue[700],
-                            strokeWidth: 2.w,
-                          ),
-                        )
-                      : _buildProductionLogList(
-                          provider.productionLogs ?? [],
-                          emptyMessage: 'No production logs for this job order',
-                          error: provider.error,
-                        ),
+        return PopScope(
+          canPop: false,
+          onPopInvoked: (didPop) {
+            if (!didPop) {
+              context.go(RouteNames.production);
+            }
+          },
+          child: Scaffold(
+            backgroundColor: Colors.grey[50],
+            appBar: AppBars(
+              title: Text(
+                'Production Logs',
+                style: TextStyle(
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
                 ),
-              ],
+              ),
+              leading: IconButton(
+                icon: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 22.sp,
+                  color: Colors.blue[700],
+                ),
+                onPressed: () => context.goNamed(RouteNames.production),
+              ),
+            ),
+            body: SafeArea(
+              child: Column(
+                children: [
+                  Expanded(
+                    child: provider.isLoading
+                        ? Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.blue[700],
+                              strokeWidth: 2.w,
+                            ),
+                          )
+                        : _buildProductionLogList(
+                            provider.productionLogs ?? [],
+                            emptyMessage:
+                                'No production logs for this job order',
+                            error: provider.error,
+                          ),
+                  ),
+                ],
+              ),
             ),
           ),
         );

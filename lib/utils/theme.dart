@@ -1,4 +1,36 @@
 import 'package:flutter/material.dart';
+class AppColors {
+  static const Color background = Color(0xFFF8FAFC);
+  static const Color primary = Color(0xFF3B82F6);
+  static const Color error = Color(0xFFF43F5E);
+  static const Color textPrimary = Color(0xFF334155);
+  static const Color textSecondary = Color(0xFF64748B);
+  static const Color cardBackground = Color(0xFFFFFFFF);
+  static const Color cardHeaderStart = Color(0xFFEDE9FE);
+  static const Color cardHeaderEnd = Color(0xFFF5F3FF);
+  static const Color shadow = Color(0xFF6B7280);
+}
+
+// Centralized typography
+class AppTextStyles {
+  static TextStyle title(double fontSize) => TextStyle(
+    fontSize: fontSize,
+    fontWeight: FontWeight.w600,
+    color: AppColors.textPrimary,
+  );
+  static TextStyle subtitle(double fontSize) => TextStyle(
+    fontSize: fontSize,
+    fontWeight: FontWeight.w600,
+    color: AppColors.textPrimary,
+  );
+  static TextStyle body(double fontSize) => TextStyle(
+    fontSize: fontSize,
+    fontWeight: FontWeight.w500,
+    color: AppColors.textPrimary,
+  );
+  static TextStyle secondary(double fontSize) =>
+      TextStyle(fontSize: fontSize, color: AppColors.textSecondary);
+}
 
 class AppTheme {
   // Primary gradient colors
@@ -15,7 +47,6 @@ class AppTheme {
   static const Color warningColor = Color(0xFFF59E0B);
   static const Color errorColor = Color(0xFFEF4444);
   
-  // Gradients
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,

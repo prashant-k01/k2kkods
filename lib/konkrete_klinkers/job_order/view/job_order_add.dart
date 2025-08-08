@@ -45,43 +45,54 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
   Widget build(BuildContext context) {
     return Consumer<JobOrderProvider>(
       builder: (context, provider, _) {
-        return Scaffold(
-          backgroundColor: const Color(0xFFF8FAFC),
-          resizeToAvoidBottomInset: true,
-          appBar: AppBars(
-            title: _buildLogoAndTitle(),
-            leading: _buildBackButton(),
-            action: [],
-          ),
-          body: GestureDetector(
-            onTap: () => FocusScope.of(context).unfocus(),
-            behavior: HitTestBehavior.opaque,
-            child: provider.isFormLoading
-                ? const Center(child: CircularProgressIndicator())
-                : provider.formError != null
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          provider.formError!,
-                          style: TextStyle(color: Colors.red, fontSize: 14.sp),
-                        ),
-                        SizedBox(height: 8.h),
-                        ElevatedButton(
-                          onPressed: () => provider.initializeFormForCreate(),
-                          child: const Text('Retry'),
-                        ),
-                      ],
+        return PopScope(
+          canPop: false,
+          onPopInvoked: (didPop) {
+            if (!didPop) {
+              context.go(RouteNames.jobOrder);
+            }
+          },
+          child: Scaffold(
+            backgroundColor: const Color(0xFFF8FAFC),
+            resizeToAvoidBottomInset: true,
+            appBar: AppBars(
+              title: _buildLogoAndTitle(),
+              leading: _buildBackButton(),
+              action: [],
+            ),
+            body: GestureDetector(
+              onTap: () => FocusScope.of(context).unfocus(),
+              behavior: HitTestBehavior.opaque,
+              child: provider.isFormLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : provider.formError != null
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            provider.formError!,
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontSize: 14.sp,
+                            ),
+                          ),
+                          SizedBox(height: 8.h),
+                          ElevatedButton(
+                            onPressed: () => provider.initializeFormForCreate(),
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView(
+                      controller: _scrollController,
+                      padding: EdgeInsets.all(24.w).copyWith(
+                        bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
+                      ),
+                      children: [_buildFormCard(context, provider)],
                     ),
-                  )
-                : ListView(
-                    controller: _scrollController,
-                    padding: EdgeInsets.all(24.w).copyWith(
-                      bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
-                    ),
-                    children: [_buildFormCard(context, provider)],
-                  ),
+            ),
           ),
         );
       },

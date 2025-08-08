@@ -9,6 +9,7 @@ class RouteNames {
   //plants
   static const String plants = '/plants';
   static const String inventory = '/inventory';
+  static const String inventorydetail= '/inventorydetail';
   static const String plantsadd = '/plantsadd';
   static const String plantsedit = '/plants/edit/:plantId';
   //projects
@@ -45,6 +46,7 @@ class RouteNames {
   //stock management
   static const String stockmanagement = "/stockmanagement";
   static const String stockmanagementAdd = "/stockmanagementAdd";
+  static const String stockmanagementview = "/stockmanagementview";
   //production
   static const String production = '/production';
   static const String downtime = '/downtime';

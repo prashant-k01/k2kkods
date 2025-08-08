@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/konkrete_klinkers/production/model/common_model.dart';
 import 'package:k2k/konkrete_klinkers/production/model/production_model.dart';
 import 'package:k2k/konkrete_klinkers/production/provider/production_provider.dart';
@@ -18,9 +19,6 @@ class ProductionScreen extends StatefulWidget {
 
 class _ProductionScreenState extends State<ProductionScreen> {
   final TextEditingController _remarksController = TextEditingController();
-
-  // Add filter state
-  String _selectedFilter = 'all'; // 'all', 'active', 'inactive', 'created_today'
 
   @override
   void initState() {
@@ -48,66 +46,75 @@ class _ProductionScreenState extends State<ProductionScreen> {
           'error: ${provider.error}, '
           'todayDpr: ${provider.getFilteredTodayDpr().length}',
         );
-        return Scaffold(
-          backgroundColor: Colors.grey[50],
-          appBar: AppBars(
-            title: Text(
-              'Production Logs',
-              style: TextStyle(
-                fontSize: 20.sp,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
-            ),
-            leading: IconButton(
-              icon: Icon(
-                Icons.arrow_back_ios_new_rounded,
-                size: 22.sp,
-                color: Colors.blue[700],
-              ),
-              onPressed: () => context.goNamed(RouteNames.homeScreen),
-            ),
-            action: [
-              IconButton(
-                icon: Icon(
-                  provider.showTimer ? Icons.timer_off : Icons.timer,
-                  color: Colors.blue[700],
-                  size: 24.sp,
+        return PopScope(
+          canPop: false,
+          onPopInvoked: (didPop) {
+            if (!didPop) {
+              context.go(RouteNames.homeScreen);
+            }
+          },
+          child: Scaffold(
+            backgroundColor: Colors.grey[50],
+            appBar: AppBars(
+              title: Text(
+                'Production Logs',
+                style: TextStyle(
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
                 ),
-                onPressed: () {
-                  print(
-                    'Toggling timer, current showTimer: ${provider.showTimer}',
-                  );
-                  provider.toggleTimer();
-                },
-                tooltip: provider.showTimer ? 'Hide Timer' : 'Show Timer',
               ),
-            ],
-          ),
-          body: SafeArea(
-            child: Column(
-              children: [
-                _buildDatePickerSection(provider),
-                if (provider.showTimer && provider.activeTimerJobId != null)
-                  _buildTimerSection(provider),
-                _buildMetricsSection(provider),
-                // Add filter indicator
-                if (_selectedFilter != 'all') _buildFilterIndicator(),
-                Expanded(
-                  child: provider.isLoading
-                      ? Center(
-                          child: CircularProgressIndicator(
-                            color: Colors.blue[700],
-                            strokeWidth: 2.w,
-                          ),
-                        )
-                      : _buildDprList(
-                          dprList: _getFilteredDprList(provider),
-                          emptyMessage: _getEmptyMessage(),
-                          error: provider.error,
-                        ),
+              leading: IconButton(
+                icon: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 22.sp,
+                  color: Colors.blue[700],
+                ),
+                onPressed: () => context.goNamed(RouteNames.homeScreen),
+              ),
+              action: [
+                IconButton(
+                  icon: Icon(
+                    provider.showTimer ? Icons.timer_off : Icons.timer,
+                    color: Colors.blue[700],
+                    size: 24.sp,
+                  ),
+                  onPressed: () {
+                    print(
+                      'Toggling timer, current showTimer: ${provider.showTimer}',
+                    );
+                    provider.toggleTimer();
+                  },
+                  tooltip: provider.showTimer ? 'Hide Timer' : 'Show Timer',
                 ),
               ],
+            ),
+            body: SafeArea(
+              child: Column(
+                children: [
+                  _buildDatePickerSection(provider),
+                  if (provider.showTimer && provider.activeTimerJobId != null)
+                    _buildTimerSection(provider),
+                  _buildMetricsSection(provider),
+                  // Add filter indicator
+                  if (provider.selectedFilter != 'all')
+                    _buildFilterIndicator(provider),
+                  Expanded(
+                    child: provider.isLoading
+                        ? Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.blue[700],
+                              strokeWidth: 2.w,
+                            ),
+                          )
+                        : _buildDprList(
+                            dprList: provider.getFilteredTodayDpr(),
+                            emptyMessage: provider.getEmptyMessage(),
+                            error: provider.error,
+                          ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -115,80 +122,12 @@ class _ProductionScreenState extends State<ProductionScreen> {
     );
   }
 
-  // FIXED: Updated filtering logic to be consistent
-  List<dynamic> _getFilteredDprList(ProductionProvider provider) {
-    final dprList = provider.getFilteredTodayDpr();
-
-    print(
-      'Filtering DPR list, selectedFilter: $_selectedFilter, total items: ${dprList.length}',
-    );
-    
-    // Debug: Print all DPR statuses
-    for (int i = 0; i < dprList.length; i++) {
-      final dpr = dprList[i];
-      final Status actualStatus = dpr is PastDpr 
-          ? (dpr.dailyProduction?.status ?? dpr.status) 
-          : dpr.status;
-      print('DPR $i: actualStatus = $actualStatus, id = ${dpr.id}');
-    }
-
-    switch (_selectedFilter) {
-      case 'active':
-        final activeList = dprList.where((dpr) {
-          final Status actualStatus = dpr is PastDpr 
-              ? (dpr.dailyProduction?.status ?? dpr.status) 
-              : dpr.status;
-          return actualStatus == Status.IN_PROGRESS;
-        }).toList();
-        print('Active filter applied, items: ${activeList.length}');
-        return activeList;
-        
-      case 'inactive':
-        final inactiveList = dprList.where((dpr) {
-          final Status actualStatus = dpr is PastDpr 
-              ? (dpr.dailyProduction?.status ?? dpr.status) 
-              : dpr.status;
-          // FIXED: Include both PAUSED and PENDING_QC as inactive
-          return actualStatus == Status.PAUSED || actualStatus == Status.PENDING_QC;
-        }).toList();
-        print('Inactive filter applied, items: ${inactiveList.length}');
-        return inactiveList;
-        
-      case 'created_today':
-        final today = _normalizeDate(DateTime.now());
-        final createdTodayList = dprList.where((dpr) {
-          final DateTime createdAt = dpr.createdAt;
-          return _normalizeDate(createdAt) == today;
-        }).toList();
-        print('Created today filter applied, items: ${createdTodayList.length}');
-        return createdTodayList;
-        
-      default:
-        print('All filter applied, items: ${dprList.length}');
-        return dprList;
-    }
-  }
-
-  // Add method to get appropriate empty message based on filter
-  String _getEmptyMessage() {
-    switch (_selectedFilter) {
-      case 'active':
-        return 'No active production jobs found';
-      case 'inactive':
-        return 'No inactive production jobs found';
-      case 'created_today':
-        return 'No production jobs created today';
-      default:
-        return 'No production scheduled for selected date';
-    }
-  }
-
-  // Add filter indicator widget
-  Widget _buildFilterIndicator() {
+  // Updated to use provider's filter
+  Widget _buildFilterIndicator(ProductionProvider provider) {
     String filterText = '';
     Color filterColor = Colors.blue;
 
-    switch (_selectedFilter) {
+    switch (provider.selectedFilter) {
       case 'active':
         filterText = 'Showing Active Jobs';
         filterColor = Colors.green;
@@ -226,9 +165,7 @@ class _ProductionScreenState extends State<ProductionScreen> {
           Spacer(),
           GestureDetector(
             onTap: () {
-              setState(() {
-                _selectedFilter = 'all';
-              });
+              provider.setFilter('all');
             },
             child: Icon(Icons.close, size: 18.sp, color: filterColor),
           ),
@@ -265,7 +202,9 @@ class _ProductionScreenState extends State<ProductionScreen> {
             children: [
               Text(
                 provider.selectedDate != null
-                    ? DateFormat('EEE, MMM d, yyyy').format(provider.selectedDate!)
+                    ? DateFormat(
+                        'EEE, MMM d, yyyy',
+                      ).format(provider.selectedDate!)
                     : 'Select Date',
                 style: TextStyle(
                   fontSize: 15.sp,
@@ -305,10 +244,6 @@ class _ProductionScreenState extends State<ProductionScreen> {
     );
     if (date != null) {
       print('Date selected: $date');
-      // Reset filter when date changes
-      setState(() {
-        _selectedFilter = 'all';
-      });
       provider.setDate(date);
       await provider.fetchProductionJobOrderByDate();
     }
@@ -370,27 +305,24 @@ class _ProductionScreenState extends State<ProductionScreen> {
     );
   }
 
-  // FIXED: Updated metrics calculation to be consistent with filtering
   Widget _buildMetricsSection(ProductionProvider provider) {
     final dprList = provider.getFilteredTodayDpr();
     final total = dprList.length;
-    
-    // FIXED: Use consistent status checking logic
+
     final active = dprList.where((dpr) {
-      final Status actualStatus = dpr is PastDpr 
-          ? (dpr.dailyProduction?.status ?? dpr.status) 
+      final Status actualStatus = dpr is PastDpr
+          ? (dpr.dailyProduction?.status ?? dpr.status)
           : dpr.status;
       return actualStatus == Status.IN_PROGRESS;
     }).length;
-    
+
     final inactive = dprList.where((dpr) {
-      final Status actualStatus = dpr is PastDpr 
-          ? (dpr.dailyProduction?.status ?? dpr.status) 
+      final Status actualStatus = dpr is PastDpr
+          ? (dpr.dailyProduction?.status ?? dpr.status)
           : dpr.status;
-      // FIXED: Include both PAUSED and PENDING_QC as inactive
       return actualStatus == Status.PAUSED || actualStatus == Status.PENDING_QC;
     }).length;
-    
+
     final today = _normalizeDate(DateTime.now());
     final createdToday = dprList.where((dpr) {
       final DateTime createdAt = dpr.createdAt;
@@ -401,109 +333,182 @@ class _ProductionScreenState extends State<ProductionScreen> {
       'Building MetricsSection, total: $total, active: $active, inactive: $inactive, createdToday: $createdToday',
     );
 
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildClickableMetricBox(
-              title: 'Total',
+    return Container(
+      margin: EdgeInsets.symmetric(
+        horizontal: 12.w,
+        vertical: 10.h,
+      ), // Reduced margins
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildProfessionalMetricBox(
+              title: 'Total Jobs',
               value: total.toString(),
-              color: Colors.blue.withOpacity(0.4),
+              icon: Icons.inventory_2_outlined,
+              gradientColors: [
+                const Color.fromARGB(255, 92, 187, 255),
+                const Color(0xFFBBDEFB),
+              ],
               filterKey: 'all',
-              isSelected: _selectedFilter == 'all',
+              isSelected: provider.selectedFilter == 'all',
+              provider: provider,
             ),
-          ),
-          SizedBox(width: 8.w),
-          Expanded(
-            child: _buildClickableMetricBox(
+            SizedBox(width: 8.w), // Reduced spacing
+            _buildProfessionalMetricBox(
               title: 'Active',
               value: active.toString(),
-              color: Colors.green[700]!,
+              icon: Icons.play_circle_outline,
+              gradientColors: [
+                const Color.fromARGB(255, 5, 161, 18),
+                const Color(0xFFC8E6C9),
+              ],
               filterKey: 'active',
-              isSelected: _selectedFilter == 'active',
+              isSelected: provider.selectedFilter == 'active',
+              provider: provider,
             ),
-          ),
-          SizedBox(width: 8.w),
-          Expanded(
-            child: _buildClickableMetricBox(
+            SizedBox(width: 8.w), // Reduced spacing
+            _buildProfessionalMetricBox(
               title: 'Inactive',
               value: inactive.toString(),
-              color: Colors.orange[700]!,
+              icon: Icons.pause_circle_outline,
+              gradientColors: [
+                const Color.fromARGB(255, 248, 171, 46),
+                const Color(0xFFFFE0B2),
+              ],
               filterKey: 'inactive',
-              isSelected: _selectedFilter == 'inactive',
+              isSelected: provider.selectedFilter == 'inactive',
+              provider: provider,
             ),
-          ),
-          SizedBox(width: 8.w),
-          Expanded(
-            child: _buildClickableMetricBox(
+            SizedBox(width: 8.w), // Reduced spacing
+            _buildProfessionalMetricBox(
               title: 'Created',
               value: createdToday.toString(),
-              color: Colors.purple[700]!,
+              icon: Icons.add_circle_outline,
+              gradientColors: [
+                const Color.fromARGB(255, 172, 20, 196),
+                const Color(0xFFE1BEE7),
+              ],
               filterKey: 'created_today',
-              isSelected: _selectedFilter == 'created_today',
+              isSelected: provider.selectedFilter == 'created_today',
+              provider: provider,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  // Updated metric box to be clickable
-  Widget _buildClickableMetricBox({
+  Widget _buildProfessionalMetricBox({
     required String title,
     required String value,
-    required Color color,
+    required IconData icon,
+    required List<Color> gradientColors,
     required String filterKey,
     required bool isSelected,
+    required ProductionProvider provider,
   }) {
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedFilter = isSelected ? 'all' : filterKey;
-        });
-        print('Filter changed to: $_selectedFilter');
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 8.w),
+      onTap: () => provider.setFilter(filterKey),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        width: 90.w, // Fixed width for consistency
+        height: 100.h, // Reduced height
         decoration: BoxDecoration(
-          color: isSelected ? color : color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8.r),
-          border: Border.all(
-            color: isSelected ? color : color.withOpacity(0.3),
-            width: isSelected ? 2.w : 1.w,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: gradientColors,
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: color.withOpacity(0.3),
-                    blurRadius: 8.r,
-                    offset: Offset(0, 2.h),
-                  ),
-                ]
-              : null,
-        ),
-        child: Column(
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 13.sp,
-                fontWeight: FontWeight.w600,
-                color: isSelected ? Colors.white : color,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 4.h),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : Colors.black87,
-              ),
+          borderRadius: BorderRadius.circular(12.r),
+          boxShadow: [
+            BoxShadow(
+              color: gradientColors[1].withOpacity(0.3),
+              blurRadius: isSelected ? 10.r : 6.r,
+              offset: Offset(0, isSelected ? 4.h : 2.h),
+              spreadRadius: isSelected ? 1.r : 0,
             ),
           ],
+          border: isSelected
+              ? Border.all(color: Colors.white, width: 1.5.w)
+              : null,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12.r),
+            onTap: () => provider.setFilter(filterKey),
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: 8.w,
+                vertical: 10.h,
+              ), // Reduced padding
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        width: 28.w,
+                        height: 28.h,
+                        padding: EdgeInsets.all(4.r),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(6.r),
+                        ),
+                        child: Icon(icon, color: Colors.white, size: 16.sp),
+                      ),
+                      if (isSelected)
+                        Container(
+                          width: 20.w,
+                          height: 20.h,
+                          padding: EdgeInsets.all(2.r),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10.r),
+                          ),
+                          child: Icon(
+                            Icons.check,
+                            color: gradientColors[1],
+                            size: 12.sp,
+                          ),
+                        ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        value,
+                        style: TextStyle(
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                      SizedBox(height: 2.h),
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white.withOpacity(0.9),
+                          letterSpacing: 0.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -530,8 +535,10 @@ class _ProductionScreenState extends State<ProductionScreen> {
             ElevatedButton(
               onPressed: () {
                 print('Retrying fetchProductionJobOrderByDate');
-                Provider.of<ProductionProvider>(context, listen: false)
-                    .fetchProductionJobOrderByDate();
+                Provider.of<ProductionProvider>(
+                  context,
+                  listen: false,
+                ).fetchProductionJobOrderByDate();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue[700],
@@ -572,14 +579,16 @@ class _ProductionScreenState extends State<ProductionScreen> {
       separatorBuilder: (_, __) => SizedBox(height: 16.h),
       itemBuilder: (context, index) {
         final dpr = dprList[index];
-        final provider = Provider.of<ProductionProvider>(context, listen: false);
-        
-        // FIXED: Get the correct status for color calculation
-        final Status actualStatus = dpr is PastDpr 
-            ? (dpr.dailyProduction?.status ?? dpr.status) 
+        final provider = Provider.of<ProductionProvider>(
+          context,
+          listen: false,
+        );
+
+        final Status actualStatus = dpr is PastDpr
+            ? (dpr.dailyProduction?.status ?? dpr.status)
             : dpr.status;
         final statusColor = provider.getStatusColor(actualStatus);
-        
+
         return _buildProductionCard(dpr, statusColor, provider);
       },
     );
@@ -591,15 +600,16 @@ class _ProductionScreenState extends State<ProductionScreen> {
     ProductionProvider provider,
   ) {
     final String? id = dpr is PastDpr ? dpr.id : dpr.id;
-    
-    // FIXED: Get the correct status consistently
+
     final Status status = dpr is PastDpr
         ? (dpr.dailyProduction?.status ?? dpr.status)
         : dpr.status;
-        
+
     final WorkOrder workOrder = dpr is PastDpr ? dpr.workOrder : dpr.workOrder;
     final String? jobOrderId = dpr is PastDpr ? dpr.jobOrderId : dpr.jobOrder;
-    final String? salesOrderNumber = dpr is PastDpr ? dpr.salesOrderNumber : 'N/A';
+    final String? salesOrderNumber = dpr is PastDpr
+        ? dpr.salesOrderNumber
+        : 'N/A';
     final String? machineName = dpr is PastDpr ? dpr.machineName : 'N/A';
     final DateTime? startedAt = dpr is PastDpr ? dpr.startedAt : dpr.startedAt;
     final DateTime? stoppedAt = dpr is PastDpr ? dpr.stoppedAt : null;
@@ -615,10 +625,8 @@ class _ProductionScreenState extends State<ProductionScreen> {
         ? dpr.recycledQuantity
         : (dpr.products.isNotEmpty ? dpr.products[0].recycledQuantity : 0);
 
-    print(
-      'Building ProductionCard for id: $id, status: $status',
-    );
-    
+    print('Building ProductionCard for id: $id, status: $status');
+
     return Container(
       margin: EdgeInsets.symmetric(vertical: 8.h),
       decoration: BoxDecoration(
@@ -684,7 +692,10 @@ class _ProductionScreenState extends State<ProductionScreen> {
                 _buildSectionTitle("Work Order Info"),
                 SizedBox(height: 8.h),
                 _buildInfoGrid([
-                  _buildDetailItem("Work Order No", workOrder.workOrderNumber ?? 'N/A'),
+                  _buildDetailItem(
+                    "Work Order No",
+                    workOrder.workOrderNumber ?? 'N/A',
+                  ),
                   _buildDetailItem("Job Order No", jobOrderId ?? 'N/A'),
                   _buildDetailItem("Sales Order No", salesOrderNumber ?? 'N/A'),
                   _buildDetailItem("Machine Name", machineName ?? 'N/A'),
@@ -817,7 +828,9 @@ class _ProductionScreenState extends State<ProductionScreen> {
     return Wrap(
       spacing: 20.w,
       runSpacing: 12.h,
-      children: items.map((item) => SizedBox(width: 160.w, child: item)).toList(),
+      children: items
+          .map((item) => SizedBox(width: 160.w, child: item))
+          .toList(),
     );
   }
 
@@ -850,7 +863,11 @@ class _ProductionScreenState extends State<ProductionScreen> {
     final (color, icon, label) = switch (status) {
       Status.PENDING => (Colors.grey, Icons.access_time, 'Pending'),
       Status.IN_PROGRESS => (Colors.green, Icons.play_arrow, 'In Progress'),
-      Status.PENDING_QC => (Colors.blue, Icons.check_circle_outline, 'Pending QC'),
+      Status.PENDING_QC => (
+        Colors.blue,
+        Icons.check_circle_outline,
+        'Pending QC',
+      ),
       Status.PAUSED => (Colors.orange, Icons.pause_circle_filled, 'Paused'),
       Status.COMPLETED => (Colors.black54, Icons.check_circle, 'Completed'),
     };
@@ -879,7 +896,6 @@ class _ProductionScreenState extends State<ProductionScreen> {
   }
 
   Widget _buildActionButtons(dynamic dpr, ProductionProvider provider) {
-    // FIXED: Get the correct status consistently
     final Status status = dpr is PastDpr
         ? (dpr.dailyProduction?.status ?? dpr.status)
         : dpr.status;
@@ -889,13 +905,43 @@ class _ProductionScreenState extends State<ProductionScreen> {
         : (dpr.products.isNotEmpty ? dpr.products[0].productId : null);
 
     final (action, label, icon, color, isEnabled) = switch (status) {
-      Status.PENDING => ('start', 'Start', Icons.play_arrow, Colors.green, true),
-      Status.IN_PROGRESS => ('pause', 'Pause', Icons.pause, Colors.orange, true),
-      Status.PAUSED => ('resume', 'Resume', Icons.play_arrow, Colors.green, true),
-      Status.PENDING_QC => ('complete', 'Completed', Icons.check, Colors.blue, false),
-      Status.COMPLETED => ('complete', 'Completed', Icons.check, Colors.blue, false),
+      Status.PENDING => (
+        'start',
+        'Start',
+        Icons.play_arrow,
+        Colors.green,
+        true,
+      ),
+      Status.IN_PROGRESS => (
+        'pause',
+        'Pause',
+        Icons.pause,
+        Colors.orange,
+        true,
+      ),
+      Status.PAUSED => (
+        'resume',
+        'Resume',
+        Icons.play_arrow,
+        Colors.green,
+        true,
+      ),
+      Status.PENDING_QC => (
+        'complete',
+        'Completed',
+        Icons.check,
+        Colors.blue,
+        false,
+      ),
+      Status.COMPLETED => (
+        'complete',
+        'Completed',
+        Icons.check,
+        Colors.blue,
+        false,
+      ),
     };
-    
+
     return Padding(
       padding: EdgeInsets.only(top: 10.h),
       child: Row(
@@ -908,8 +954,6 @@ class _ProductionScreenState extends State<ProductionScreen> {
             onPressed: jobOrder != null && productId != null
                 ? () async {
                     await provider.updateProduction(productId, jobOrder);
-                    // FIXED: Refresh the UI after action
-                    setState(() {});
                   }
                 : null,
           ),
@@ -954,18 +998,10 @@ class _ProductionScreenState extends State<ProductionScreen> {
                         productId: productId,
                         action: action,
                       );
-                      print('Action $action successful, refreshing data');
-                      await provider.fetchProductionJobOrderByDate();
-                      // FIXED: Refresh the UI after successful action
-                      setState(() {});
+                      print('Action $action successful');
                     } catch (e) {
                       print('Error performing action $action: $e');
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Error: $e'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
+                      context.showErrorSnackbar("Error: $e");
                     }
                   }
                 : null,

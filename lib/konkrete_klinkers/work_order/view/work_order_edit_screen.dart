@@ -397,6 +397,7 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
             CustomTextFormField(
               name: 'work_order_number',
               labelText: 'Work Order No',
+              fillColor: Colors.white,
               hintText: 'Enter Work Order No.',
               prefixIcon: Icons.format_list_numbered,
               textStyle: TextStyle(fontSize: 14.sp),
@@ -421,6 +422,7 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
               ReusableDateFormField(
                 name: 'work_order_date',
                 labelText: 'Work Order Date',
+                fillColor: Colors.white,
                 hintText: 'Select date',
                 prefixIcon: Icons.calendar_today_outlined,
                 iconSize: 18.sp,
@@ -514,6 +516,7 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
     return CustomSearchableDropdownFormField<ClientModel>(
       name: 'client_id',
       labelText: 'Client Name',
+      fillColor: Colors.white,
       prefixIcon: Icons.person_outline,
       iconSize: 18.sp,
       textStyle: TextStyle(fontSize: 14.sp),
@@ -597,6 +600,7 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
     return CustomSearchableDropdownFormField<TId>(
       name: 'project_id',
       labelText: 'Project Name',
+      fillColor: Colors.white,
       prefixIcon: Icons.domain,
       iconSize: 18.sp,
       textStyle: TextStyle(fontSize: 14.sp),
@@ -754,6 +758,7 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
                             >(
                               name: 'product_id_$index',
                               labelText: 'Product Name / Material Code',
+                              fillColor: Colors.white,
                               prefixIcon: Icons.category,
                               iconSize: 18.sp,
                               textStyle: TextStyle(fontSize: 14.sp),
@@ -962,6 +967,7 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
                             CustomTextFormField(
                               name: 'po_quantity_$index',
                               labelText: 'PO Quantity',
+                              fillColor: Colors.white,
                               hintText: 'Enter PO quantity',
                               prefixIcon: Icons.numbers,
                               textStyle: TextStyle(fontSize: 14.sp),
@@ -1062,6 +1068,7 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
                                 return CustomTextFormField(
                                   name: 'qty_in_nos_$index',
                                   labelText: 'Quantity in Nos',
+                                  fillColor: Colors.white,
                                   hintText: 'Auto-calculated',
                                   controller: qtyController,
                                   prefixIcon: Icons.format_list_numbered,
@@ -1085,7 +1092,8 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
                             ReusableDateFormField(
                               name: 'delivery_date_$index',
                               labelText: 'Delivery Date',
-                              hintText: 'Select date',
+                              hintText: 'Select Delivery date',
+                              fillColor: Colors.white,
                               prefixIcon: Icons.calendar_today_outlined,
                               iconSize: 18.sp,
                               textStyle: TextStyle(fontSize: 14.sp),
@@ -1773,12 +1781,7 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ScreenUtil.init(
-      context,
-      designSize: const Size(411.43, 867.43),
-      minTextAdapt: true,
-      splitScreenMode: true,
-    );
+  
     return Consumer<WorkOrderProvider>(
       builder: (context, workOrderProvider, child) {
         if (_isLoading) {

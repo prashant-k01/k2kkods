@@ -5,6 +5,7 @@ import 'package:k2k/dashboard/view/dashboard_screen.dart';
 import 'package:k2k/konkrete_klinkers/dispatch/view/dispatch_add_screen.dart';
 import 'package:k2k/konkrete_klinkers/dispatch/view/dispatch_edit_screen.dart';
 import 'package:k2k/konkrete_klinkers/dispatch/view/dispatch_list_screen.dart';
+import 'package:k2k/konkrete_klinkers/inventory/view/inventory_detailscreen.dart';
 import 'package:k2k/konkrete_klinkers/inventory/view/inventory_list.dart';
 import 'package:k2k/konkrete_klinkers/job_order/model/job_order.dart';
 import 'package:k2k/konkrete_klinkers/job_order/view/job_order_add.dart';
@@ -37,6 +38,7 @@ import 'package:k2k/konkrete_klinkers/qc_check/view/qc_check_edit.dart';
 import 'package:k2k/konkrete_klinkers/qc_check/view/qc_check_list_screen.dart';
 import 'package:k2k/konkrete_klinkers/stock_management/view/stock_add_screen.dart';
 import 'package:k2k/konkrete_klinkers/stock_management/view/stock_list_screen.dart';
+import 'package:k2k/konkrete_klinkers/stock_management/view/stock_view_screen.dart';
 import 'package:k2k/konkrete_klinkers/work_order/view/work_order_add_screen.dart';
 import 'package:k2k/konkrete_klinkers/work_order/view/work_order_detail_page.dart';
 import 'package:k2k/konkrete_klinkers/work_order/view/work_order_edit_screen.dart';
@@ -69,6 +71,15 @@ class AppRoutes {
           return InventoryListScreen();
         },
       ),
+      GoRoute(
+        path: RouteNames.inventorydetail,
+        name: RouteNames.inventorydetail,
+        builder: (BuildContext context, GoRouterState state) {
+          final productId = state.extra as String? ?? '';
+          return InventoryDetailScreen(productId: productId);
+        },
+      ),
+
       GoRoute(
         path: RouteNames.projects,
         name: RouteNames.projects,
@@ -133,6 +144,32 @@ class AppRoutes {
         },
       ),
       GoRoute(
+        path: RouteNames.stockmanagementAdd,
+        name: RouteNames.stockmanagementAdd,
+        builder: (BuildContext context, GoRouterState state) {
+          return const StockManagementFormScreen();
+        },
+      ),
+      GoRoute(
+        path: '${RouteNames.stockmanagementview}/:id',
+        name: RouteNames.stockmanagementview,
+        builder: (BuildContext context, GoRouterState state) {
+          final id =
+              state.pathParameters['id']; // Extract the id from path parameters
+          if (id == null) {
+            return const Center(child: Text('ID is required'));
+          }
+          return StockDetailsScreen(id: id);
+        },
+      ),
+      GoRoute(
+        path: RouteNames.stockmanagement,
+        name: RouteNames.stockmanagement,
+        builder: (BuildContext context, GoRouterState state) {
+          return const StockManagementListView();
+        },
+      ),
+      GoRoute(
         path: RouteNames.joborderadd,
         name: RouteNames.joborderadd,
         builder: (BuildContext context, GoRouterState state) {
@@ -158,13 +195,7 @@ class AppRoutes {
           );
         },
       ),
-      GoRoute(
-        path: RouteNames.stockmanagement,
-        name: RouteNames.stockmanagement,
-        builder: (BuildContext context, GoRouterState state) {
-          return const StockManagementListView();
-        },
-      ),
+
       GoRoute(
         path: RouteNames.dispatchAdd,
         name: RouteNames.dispatchAdd,
@@ -173,20 +204,13 @@ class AppRoutes {
         },
       ),
       GoRoute(
-        path: RouteNames.stockmanagementAdd,
-        name: RouteNames.stockmanagementAdd,
-        builder: (BuildContext context, GoRouterState state) {
-          return const StockManagementFormScreen();
-        },
+        path: '/edit-dispatch/:dispatchId',
+        name: RouteNames.dispatchEdit,
+        builder: (context, state) => EditDispatchFormScreen(
+          dispatchId: state.pathParameters['dispatchId']!,
+        ),
       ),
       GoRoute(
-      path: '/edit-dispatch/:dispatchId',
-      name: RouteNames.dispatchEdit, 
-      builder: (context, state) => EditDispatchFormScreen(
-        dispatchId: state.pathParameters['dispatchId']!,
-      ),
-    ),
-    GoRoute(
         path: RouteNames.production,
         name: RouteNames.production,
         builder: (BuildContext context, GoRouterState state) {
@@ -212,9 +236,10 @@ class AppRoutes {
           return ProductionLogScreen(
             productId: extra['productId'],
             jobOrder: extra['jobOrder'],
-          );},
-),
-  
+          );
+        },
+      ),
+
       GoRoute(
         path: RouteNames.plantsedit, // '/plants/edit/:plantId'
         name: RouteNames.plantsedit,

@@ -75,18 +75,26 @@ class _MachineAddScreenState extends State<MachineAddScreen> {
       listen: false,
     );
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBars(
-        title: _buildLogoAndTitle(),
-        leading: _buildBackButton(),
-        action: [],
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [_buildFormCard(context, machineProvider)],
+    return PopScope(
+       canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          context.go(RouteNames.machines);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBars(
+          title: _buildLogoAndTitle(),
+          leading: _buildBackButton(),
+          action: [],
+        ),
+        body: SingleChildScrollView(
+          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [_buildFormCard(context, machineProvider)],
+          ),
         ),
       ),
     );
@@ -164,6 +172,8 @@ class _MachineAddScreenState extends State<MachineAddScreen> {
                 return CustomSearchableDropdownFormField<PlantId>(
                   name: 'plant',
                   labelText: 'Plant Name',
+                  hintText: 'Select Plant Name',
+                  fillColor: Colors.white,
                   prefixIcon: Icons.factory_outlined,
                   options: provider.plant,
                   optionLabel: (plant) => plant.plantName,

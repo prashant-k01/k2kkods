@@ -66,27 +66,41 @@ class _DispatchListViewState extends State<DispatchListView> {
       margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
       child: Card(
         elevation: 0,
+        color: AppColors.cardBackground,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.r),
+          borderRadius: BorderRadius.circular(12.r),
+          side: BorderSide(color: const Color(0xFFE5E7EB), width: 1.w),
         ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20.r),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(24.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12.r),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top Header Section
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.cardHeaderStart,
+                      AppColors.cardHeaderEnd,
+                      AppColors.cardBackground,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(12.r),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.shadow.withOpacity(0.03),
+                      blurRadius: 4.r,
+                      offset: Offset(0, 1.h),
+                    ),
+                  ],
+                ),
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
@@ -97,10 +111,12 @@ class _DispatchListViewState extends State<DispatchListView> {
                           Text(
                             'Work Order: $workOrderNumber',
                             style: TextStyle(
-                              fontSize: 18.sp,
-                              color: AppTheme.primaryBlue,
+                              fontSize: 14.sp,
+                              color: AppTheme.darkGray,
                               fontWeight: FontWeight.w600,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
@@ -108,13 +124,14 @@ class _DispatchListViewState extends State<DispatchListView> {
                     PopupMenuButton<String>(
                       icon: Icon(
                         Icons.more_vert,
-                        size: 24.sp,
-                        color: const Color(0xFF64748B),
+                        size: 18.sp,
+                        color: AppColors.textSecondary,
                       ),
                       onSelected: (value) {
                         if (value == 'edit') {
                           _editDispatch(dispatchId);
                         } else if (value == 'delete') {
+                          // Add delete logic here
                         }
                       },
                       itemBuilder: (BuildContext context) => [
@@ -159,104 +176,118 @@ class _DispatchListViewState extends State<DispatchListView> {
                           ),
                         ),
                       ],
-                    ),
-                  ],
-                ),
-                SizedBox(height: 16.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.person_outline,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Client: $clientName',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
+                      offset: Offset(0, 32.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.r),
                       ),
+                      color: AppColors.cardBackground,
+                      elevation: 2,
                     ),
                   ],
                 ),
-                SizedBox(height: 8.h),
-                Row(
+              ),
+              // Body Section
+              Padding(
+                padding: EdgeInsets.all(12.w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.work_outline,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Project: $projectName',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.inventory_outlined,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Expanded(
-                      child: Text(
-                        'Products: $productNames',
-                        style: TextStyle(
-                          fontSize: 14.sp,
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.person_outline,
+                          size: 16.sp,
                           color: const Color(0xFF64748B),
                         ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Client: $clientName',
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 6.h),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.work_outline,
+                          size: 16.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Project: $projectName',
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 6.h),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.inventory_outlined,
+                          size: 16.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                        SizedBox(width: 8.w),
+                        Expanded(
+                          child: Text(
+                            'Products: $productNames',
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              color: const Color(0xFF64748B),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 6.h),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.person_outline,
+                          size: 16.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Created by: $createdBy',
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 6.h),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time_outlined,
+                          size: 16.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Created: $createdAt',
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                SizedBox(height: 8.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.person_outline,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Created by: $createdBy',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.access_time_outlined,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Created: $createdAt',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -356,99 +387,107 @@ class _DispatchListViewState extends State<DispatchListView> {
   Widget build(BuildContext context) {
     ScreenUtil.init(context);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBars(
-        title: _buildLogoAndTitle(),
-        leading: _buildBackButton(),
-        action: [_buildActionButtons()],
-      ),
-      body: Consumer<DispatchProvider>(
-        builder: (context, provider, child) {
-          if (provider.error != null && provider.dispatches.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64.sp,
-                    color: const Color(0xFFF43F5E),
-                  ),
-                  SizedBox(height: 16.h),
-                  Text(
-                    'Error Loading Dispatches',
-                    style: TextStyle(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF334155),
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          context.go(RouteNames.homeScreen);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBars(
+          title: _buildLogoAndTitle(),
+          leading: _buildBackButton(),
+          action: [_buildActionButtons()],
+        ),
+        body: Consumer<DispatchProvider>(
+          builder: (context, provider, child) {
+            if (provider.error != null && provider.dispatches.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 64.sp,
+                      color: const Color(0xFFF43F5E),
                     ),
-                  ),
-                  SizedBox(height: 8.h),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24.w),
-                    child: Text(
-                      provider.error!,
-                      textAlign: TextAlign.center,
+                    SizedBox(height: 16.h),
+                    Text(
+                      'Error Loading Dispatches',
                       style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF334155),
                       ),
                     ),
-                  ),
-                  SizedBox(height: 16.h),
-                  RefreshButton(
-                    text: 'Retry',
-                    icon: Icons.refresh,
-                    onTap: () {
-                      provider.clearError();
-                      provider.loadDispatches(refresh: true);
-                    },
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async {
-              await context.read<DispatchProvider>().loadDispatches(
-                refresh: true,
+                    SizedBox(height: 8.h),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 24.w),
+                      child: Text(
+                        provider.error!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 16.h),
+                    RefreshButton(
+                      text: 'Retry',
+                      icon: Icons.refresh,
+                      onTap: () {
+                        provider.clearError();
+                        provider.loadDispatches(refresh: true);
+                      },
+                    ),
+                  ],
+                ),
               );
-            },
-            color: const Color(0xFF3B82F6),
-            backgroundColor: Colors.white,
-            child: provider.isLoading && provider.dispatches.isEmpty
-                ? ListView.builder(
-                    itemCount: 5,
-                    itemBuilder: (context, index) => buildShimmerCard(),
-                  )
-                : provider.dispatches.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    padding: EdgeInsets.only(bottom: 80.h),
-                    itemCount:
-                        provider.dispatches.length +
-                        (provider.isLoading ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == provider.dispatches.length &&
-                          provider.isLoading) {
-                        return const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Color(0xFF3B82F6),
+            }
+
+            return RefreshIndicator(
+              onRefresh: () async {
+                await context.read<DispatchProvider>().loadDispatches(
+                  refresh: true,
+                );
+              },
+              color: const Color(0xFF3B82F6),
+              backgroundColor: Colors.white,
+              child: provider.isLoading && provider.dispatches.isEmpty
+                  ? ListView.builder(
+                      itemCount: 5,
+                      itemBuilder: (context, index) => buildShimmerCard(),
+                    )
+                  : provider.dispatches.isEmpty
+                  ? _buildEmptyState()
+                  : ListView.builder(
+                      padding: EdgeInsets.only(bottom: 80.h),
+                      itemCount:
+                          provider.dispatches.length +
+                          (provider.isLoading ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == provider.dispatches.length &&
+                            provider.isLoading) {
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Color(0xFF3B82F6),
+                                ),
                               ),
                             ),
-                          ),
-                        );
-                      }
-                      return _buildDispatchCard(provider.dispatches[index]);
-                    },
-                  ),
-          );
-        },
+                          );
+                        }
+                        return _buildDispatchCard(provider.dispatches[index]);
+                      },
+                    ),
+            );
+          },
+        ),
       ),
     );
   }

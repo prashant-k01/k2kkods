@@ -39,28 +39,35 @@ class _QcCheckFormScreenState extends State<QcCheckFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ScreenUtil.init(context);
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      resizeToAvoidBottomInset: true,
-      appBar: AppBars(
-        title: _buildLogoAndTitle(),
-        leading: _buildBackButton(),
-        action: [],
-      ),
-      body: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(),
-        behavior: HitTestBehavior.opaque,
-        child: Consumer<QcCheckProvider>(
-          builder: (context, provider, child) {
-            return ListView(
-              controller: _scrollController,
-              padding: EdgeInsets.all(24.w).copyWith(
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
-              ),
-              children: [_buildFormCard(context, provider)],
-            );
-          },
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          context.go(RouteNames.qcCheck);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        resizeToAvoidBottomInset: true,
+        appBar: AppBars(
+          title: _buildLogoAndTitle(),
+          leading: _buildBackButton(),
+          action: [],
+        ),
+        body: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          behavior: HitTestBehavior.opaque,
+          child: Consumer<QcCheckProvider>(
+            builder: (context, provider, child) {
+              return ListView(
+                controller: _scrollController,
+                padding: EdgeInsets.all(24.w).copyWith(
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
+                ),
+                children: [_buildFormCard(context, provider)],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -348,7 +355,6 @@ class _QcCheckFormScreenState extends State<QcCheckFormScreen> {
                     },
               borderRadius: BorderRadius.circular(12.r),
               child: Center(
-                
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: 16.h),
                   child: Row(

@@ -10,6 +10,7 @@ import 'package:k2k/konkrete_klinkers/master_data/machines/model/machines_model.
 import 'package:k2k/konkrete_klinkers/master_data/machines/provider/machine_provider.dart';
 import 'package:k2k/konkrete_klinkers/master_data/machines/view/machine_delete_screen.dart';
 import 'package:k2k/utils/sreen_util.dart';
+import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
@@ -160,27 +161,41 @@ class _MachinesListScreenState extends State<MachinesListScreen> {
       margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
       child: Card(
         elevation: 0,
+        color: AppColors.cardBackground,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.r),
+          borderRadius: BorderRadius.circular(12.r),
+          side: BorderSide(color: const Color(0xFFE5E7EB), width: 1.w),
         ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20.r),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(24.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12.r),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top Header Section
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.cardHeaderStart,
+                      AppColors.cardHeaderEnd,
+                      AppColors.cardBackground,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(12.r),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.shadow.withOpacity(0.03),
+                      blurRadius: 4.r,
+                      offset: Offset(0, 1.h),
+                    ),
+                  ],
+                ),
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
@@ -190,38 +205,22 @@ class _MachinesListScreenState extends State<MachinesListScreen> {
                           Text(
                             name,
                             style: TextStyle(
-                              fontSize: 18.sp,
+                              fontSize: 14.sp,
                               fontWeight: FontWeight.w600,
                               color: const Color(0xFF334155),
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           SizedBox(height: 8.h),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 12.w,
-                              vertical: 6.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                            child: Text(
-                              plantName,
-                              style: TextStyle(
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF3B82F6),
-                              ),
-                            ),
-                          ),
                         ],
                       ),
                     ),
                     PopupMenuButton<String>(
                       icon: Icon(
                         Icons.more_vert,
-                        size: 24.sp,
-                        color: const Color(0xFF64748B),
+                        size: 18.sp,
+                        color: AppColors.textSecondary,
                       ),
                       onSelected: (value) {
                         if (value == 'edit') {
@@ -277,47 +276,80 @@ class _MachinesListScreenState extends State<MachinesListScreen> {
                           ),
                         ),
                       ],
+                      offset: Offset(0, 32.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                      color: AppColors.cardBackground,
+                      elevation: 2,
                     ),
                   ],
                 ),
-                SizedBox(height: 16.h),
-                Row(
+              ),
+              // Body Section
+              Padding(
+                padding: EdgeInsets.all(12.w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.person_outline,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Created by: $createdBy',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12.w,
+                        vertical: 6.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Text(
+                        "Plant Name :$plantName",
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF3B82F6),
+                        ),
                       ),
                     ),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.person_outline,
+                          size: 16.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                        SizedBox(width: 8.w),
+
+                        Text(
+                          'Created by: $createdBy',
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 6.h),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time_outlined,
+                          size: 16.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Created: ${_formatDateTime(createdAt)}',
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
-                SizedBox(height: 8.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.access_time_outlined,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Created: ${_formatDateTime(createdAt)}',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -370,91 +402,99 @@ class _MachinesListScreenState extends State<MachinesListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBars(
-        title: _buildLogoAndTitle(),
-        leading: _buildBackButton(),
-        action: [_buildActionButtons()],
-      ),
-      body: Consumer<MachinesProvider>(
-        builder: (context, provider, child) {
-          if (provider.error != null) {
-            print('Error in MachinesProvider: ${provider.error}');
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64.sp,
-                    color: const Color(0xFFF43F5E),
-                  ),
-                  SizedBox(height: 16.h),
-                  Text(
-                    'Error Loading Machines',
-                    style: TextStyle(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF334155),
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          context.go(RouteNames.homeScreen);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBars(
+          title: _buildLogoAndTitle(),
+          leading: _buildBackButton(),
+          action: [_buildActionButtons()],
+        ),
+        body: Consumer<MachinesProvider>(
+          builder: (context, provider, child) {
+            if (provider.error != null) {
+              print('Error in MachinesProvider: ${provider.error}');
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 64.sp,
+                      color: const Color(0xFFF43F5E),
                     ),
-                  ),
-                  SizedBox(height: 8.h),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24.w),
-                    child: Text(
-                      provider.error.toString(),
-                      textAlign: TextAlign.center,
+                    SizedBox(height: 16.h),
+                    Text(
+                      'Error Loading Machines',
                       style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF334155),
                       ),
                     ),
-                  ),
-                  SizedBox(height: 16.h),
-                  RefreshButton(
-                    text: 'Retry',
-                    icon: Icons.refresh,
-                    onTap: () {
-                      print('Retrying to load machines');
-                      provider.clearError();
-                      provider.loadAllMachines(refresh: true);
-                    },
-                  ),
-                ],
-              ),
-            );
-          }
+                    SizedBox(height: 8.h),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 24.w),
+                      child: Text(
+                        provider.error.toString(),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 16.h),
+                    RefreshButton(
+                      text: 'Retry',
+                      icon: Icons.refresh,
+                      onTap: () {
+                        print('Retrying to load machines');
+                        provider.clearError();
+                        provider.loadAllMachines(refresh: true);
+                      },
+                    ),
+                  ],
+                ),
+              );
+            }
 
-          return RefreshIndicator(
-            onRefresh: () async {
-              print('Refreshing machines list');
-              await provider.loadAllMachines(refresh: true);
-            },
-            color: const Color(0xFF3B82F6),
-            backgroundColor: Colors.white,
-            child: provider.isLoading && provider.machines.isEmpty
-                ? ListView.builder(
-                    itemCount: 5,
-                    itemBuilder: (context, index) => buildShimmerCard(),
-                  )
-                : provider.machines.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: EdgeInsets.only(bottom: 16.h),
-                    itemCount:
-                        provider.machines.length + (provider.hasMore ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == provider.machines.length &&
-                          provider.hasMore) {
-                        return _buildLoadingIndicator();
-                      }
-                      return _buildMachineCard(provider.machines[index]);
-                    },
-                  ),
-          );
-        },
+            return RefreshIndicator(
+              onRefresh: () async {
+                print('Refreshing machines list');
+                await provider.loadAllMachines(refresh: true);
+              },
+              color: const Color(0xFF3B82F6),
+              backgroundColor: Colors.white,
+              child: provider.isLoading && provider.machines.isEmpty
+                  ? ListView.builder(
+                      itemCount: 5,
+                      itemBuilder: (context, index) => buildShimmerCard(),
+                    )
+                  : provider.machines.isEmpty
+                  ? _buildEmptyState()
+                  : ListView.builder(
+                      controller: _scrollController,
+                      padding: EdgeInsets.only(bottom: 16.h),
+                      itemCount:
+                          provider.machines.length + (provider.hasMore ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == provider.machines.length &&
+                            provider.hasMore) {
+                          return _buildLoadingIndicator();
+                        }
+                        return _buildMachineCard(provider.machines[index]);
+                      },
+                    ),
+            );
+          },
+        ),
       ),
     );
   }

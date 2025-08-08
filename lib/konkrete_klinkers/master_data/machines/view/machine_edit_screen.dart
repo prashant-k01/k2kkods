@@ -238,6 +238,8 @@ class _MachineEditScreenState extends State<MachineEditScreen> {
                 return CustomSearchableDropdownFormField<PlantId>(
                   name: 'plant',
                   labelText: 'Plant Name',
+                  hintText: 'Select Plant Name',
+                  fillColor: Colors.white,
                   prefixIcon: Icons.factory_outlined,
                   options: provider.plant,
                   optionLabel: (plant) => plant.plantName,

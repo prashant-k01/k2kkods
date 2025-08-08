@@ -53,45 +53,53 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
   Widget build(BuildContext context) {
     return Consumer<JobOrderProvider>(
       builder: (context, provider, _) {
-        return Scaffold(
-          backgroundColor: const Color(0xFFF8FAFC),
-          resizeToAvoidBottomInset: true,
-          appBar: AppBars(
-            title: _buildLogoAndTitle(),
-            leading: _buildBackButton(),
-            action: [],
-          ),
-          body: provider.isFormLoading
-              ? const Center(child: CircularProgressIndicator())
-              : provider.formError != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        provider.formError!,
-                        style: TextStyle(fontSize: 16.sp, color: Colors.red),
-                      ),
-                      SizedBox(height: 16.h),
-                      ElevatedButton(
-                        onPressed: () => context.go(RouteNames.jobOrder),
-                        child: const Text('Back to Job Orders'),
-                      ),
-                    ],
-                  ),
-                )
-              : GestureDetector(
-                  onTap: () => FocusScope.of(context).unfocus(),
-                  behavior: HitTestBehavior.opaque,
-                  child: ListView(
-                    controller: _scrollController,
-                    padding: EdgeInsets.all(24.w).copyWith(
-                      bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
+        return PopScope(
+          canPop: false,
+          onPopInvoked: (didPop) {
+            if (!didPop) {
+              context.go(RouteNames.jobOrder);
+            }
+          },
+          child: Scaffold(
+            backgroundColor: const Color(0xFFF8FAFC),
+            resizeToAvoidBottomInset: true,
+            appBar: AppBars(
+              title: _buildLogoAndTitle(),
+              leading: _buildBackButton(),
+              action: [],
+            ),
+            body: provider.isFormLoading
+                ? const Center(child: CircularProgressIndicator())
+                : provider.formError != null
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          provider.formError!,
+                          style: TextStyle(fontSize: 16.sp, color: Colors.red),
+                        ),
+                        SizedBox(height: 16.h),
+                        ElevatedButton(
+                          onPressed: () => context.go(RouteNames.jobOrder),
+                          child: const Text('Back to Job Orders'),
+                        ),
+                      ],
                     ),
-                    physics: const ClampingScrollPhysics(),
-                    children: [_buildFormCard(context, provider)],
+                  )
+                : GestureDetector(
+                    onTap: () => FocusScope.of(context).unfocus(),
+                    behavior: HitTestBehavior.opaque,
+                    child: ListView(
+                      controller: _scrollController,
+                      padding: EdgeInsets.all(24.w).copyWith(
+                        bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
+                      ),
+                      physics: const ClampingScrollPhysics(),
+                      children: [_buildFormCard(context, provider)],
+                    ),
                   ),
-                ),
+          ),
         );
       },
     );
@@ -221,7 +229,7 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
                     ),
                   ],
                   onChanged: (value) {
-                    provider.setSelectedWorkOrder(value as String?);
+                    provider.setSelectedWorkOrder(value);
                   },
                 );
               },

@@ -64,27 +64,41 @@ class _PackingListViewState extends State<PackingListView> {
       margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
       child: Card(
         elevation: 0,
+        color: AppColors.cardBackground,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.r),
+          borderRadius: BorderRadius.circular(12.r),
+          side: BorderSide(color: const Color(0xFFE5E7EB), width: 1.w),
         ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20.r),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(24.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12.r),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top Header Section
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.cardHeaderStart,
+                      AppColors.cardHeaderEnd,
+                      AppColors.cardBackground,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(12.r),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.shadow.withOpacity(0.03),
+                      blurRadius: 4.r,
+                      offset: Offset(0, 1.h),
+                    ),
+                  ],
+                ),
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
@@ -95,10 +109,12 @@ class _PackingListViewState extends State<PackingListView> {
                           Text(
                             'Work Order: $workOrderNumber',
                             style: TextStyle(
-                              fontSize: 18.sp,
-                              color: AppTheme.primaryBlue,
+                              fontSize: 14.sp,
+                              color: AppTheme.darkGray,
                               fontWeight: FontWeight.w600,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
@@ -106,8 +122,8 @@ class _PackingListViewState extends State<PackingListView> {
                     PopupMenuButton<String>(
                       icon: Icon(
                         Icons.more_vert,
-                        size: 24.sp,
-                        color: const Color(0xFF64748B),
+                        size: 18.sp,
+                        color: AppColors.textSecondary,
                       ),
                       itemBuilder: (BuildContext context) => [
                         PopupMenuItem<String>(
@@ -193,101 +209,115 @@ class _PackingListViewState extends State<PackingListView> {
                           );
                         }
                       },
-                    ),
-                  ],
-                ),
-                SizedBox(height: 16.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.inventory,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Product: $productName',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
+                      offset: Offset(0, 32.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.r),
                       ),
+                      color: AppColors.cardBackground,
+                      elevation: 2,
                     ),
                   ],
                 ),
-                SizedBox(height: 8.h),
-                Row(
+              ),
+              // Body Section
+              Padding(
+                padding: EdgeInsets.all(12.w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.widgets_outlined,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.inventory,
+                          size: 16.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Product: $productName',
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
                     ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Total Bundles: $totalBundles',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
-                      ),
+                    SizedBox(height: 6.h),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.widgets_outlined,
+                          size: 16.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Total Bundles: $totalBundles',
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 6.h),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.format_list_numbered,
+                          size: 16.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Total Quantity: $totalQuantity',
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 6.h),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.person_outline,
+                          size: 16.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Created by: $createdBy',
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 6.h),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time_outlined,
+                          size: 16.sp,
+                          color: AppTheme.mediumGray,
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Created: $createdAt',
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            color: AppTheme.mediumGray,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                SizedBox(height: 8.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.format_list_numbered,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Total Quantity: $totalQuantity',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.person_outline,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Created by: $createdBy',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.access_time_outlined,
-                      size: 16.sp,
-                      color: AppTheme.mediumGray,
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Created: $createdAt',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: AppTheme.mediumGray,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -382,10 +412,10 @@ class _PackingListViewState extends State<PackingListView> {
     ScreenUtil.init(context);
 
     return PopScope(
-      canPop: true,
+       canPop: false,
       onPopInvoked: (didPop) {
-        if (didPop) {
-          debugPrint('PackingListView popped');
+        if (!didPop) {
+          context.go(RouteNames.homeScreen);
         }
       },
       child: Scaffold(
@@ -397,11 +427,13 @@ class _PackingListViewState extends State<PackingListView> {
         ),
         body: Consumer<PackingProvider>(
           builder: (context, provider, child) {
-            print('Building PackingListView: '
-                'packings=${provider.packings.length}, '
-                'isLoading=${provider.isLoading}, '
-                'error=${provider.error}, '
-                'packingIds=${provider.packings.map((p) => p.id).toList()}');
+            print(
+              'Building PackingListView: '
+              'packings=${provider.packings.length}, '
+              'isLoading=${provider.isLoading}, '
+              'error=${provider.error}, '
+              'packingIds=${provider.packings.map((p) => p.id).toList()}',
+            );
 
             // Show error state only if there's an error and no packings
             if (provider.error != null && provider.packings.isEmpty) {
@@ -471,7 +503,8 @@ class _PackingListViewState extends State<PackingListView> {
               backgroundColor: Colors.white,
               child: ListView.builder(
                 padding: EdgeInsets.only(bottom: 80.h),
-                itemCount: provider.packings.length + (provider.isLoading ? 1 : 0),
+                itemCount:
+                    provider.packings.length + (provider.isLoading ? 1 : 0),
                 itemBuilder: (context, index) {
                   if (index == provider.packings.length && provider.isLoading) {
                     return const Center(
@@ -486,9 +519,11 @@ class _PackingListViewState extends State<PackingListView> {
                     );
                   }
                   final packing = provider.packings[index];
-                  print('Rendering packing card: id=${packing.id}, '
-                      'workOrder=${packing.displayWorkOrderNumber}, '
-                      'product=${packing.displayProductName}');
+                  print(
+                    'Rendering packing card: id=${packing.id}, '
+                    'workOrder=${packing.displayWorkOrderNumber}, '
+                    'product=${packing.displayProductName}',
+                  );
                   return _buildPackingCard(packing);
                 },
               ),

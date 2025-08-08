@@ -35,6 +35,14 @@ class JobOrderResponse {
             'Error parsing single JobOrder: $e for jobOrder: ${jsonEncode(dataJson['jobOrder'])}',
           );
         }
+      } else if (dataJson is Map<String, dynamic>) {
+        // Handle single job order directly in data field
+        try {
+          print('Parsing single JobOrder from data: ${jsonEncode(dataJson)}');
+          jobOrders = [JobOrderModel.fromJson(dataJson)];
+        } catch (e) {
+          print('Error parsing JobOrder from data: $e');
+        }
       } else if (dataJson is List) {
         jobOrders = dataJson
             .asMap()
@@ -104,13 +112,16 @@ class JobOrderModel {
   final String status;
   final String projectName;
   final String? createdBy;
-  final Map<String, dynamic>? workOrderDetails;
+  final String? createdAt; // Added createdAt field
+  final ClientModel? client; // Changed to ClientModel for better structure
+  final WorkOrderDetails? workOrderDetails; // Changed to WorkOrderDetails model
 
   JobOrderModel({
     this.workOrderNumber,
     required this.salesOrderNumber,
     required this.batchNumber,
     required this.jobOrders,
+    this.client,
     this.uom,
     required this.date,
     required this.jobOrderId,
@@ -118,6 +129,7 @@ class JobOrderModel {
     required this.status,
     required this.projectName,
     this.createdBy,
+    this.createdAt,
     this.workOrderDetails,
   });
 
@@ -162,6 +174,26 @@ class JobOrderModel {
         );
       }
 
+      // Parse client data
+      ClientModel? clientModel;
+      if (json['client'] != null && json['client'] is Map<String, dynamic>) {
+        try {
+          clientModel = ClientModel.fromJson(json['client'] as Map<String, dynamic>);
+        } catch (e) {
+          print('Error parsing client: $e');
+        }
+      }
+
+      // Parse work order details
+      WorkOrderDetails? workOrderDetailsModel;
+      if (json['work_order_details'] != null && json['work_order_details'] is Map<String, dynamic>) {
+        try {
+          workOrderDetailsModel = WorkOrderDetails.fromJson(json['work_order_details'] as Map<String, dynamic>);
+        } catch (e) {
+          print('Error parsing work_order_details: $e');
+        }
+      }
+
       return JobOrderModel(
         workOrderNumber: _getStringValue(json['work_order_number']),
         salesOrderNumber: _getStringValue(json['sales_order_number']) ?? '',
@@ -169,12 +201,14 @@ class JobOrderModel {
         jobOrders: jobOrderItems,
         date: DateRange.fromJson(json['date'] ?? {}),
         uom: _getStringValue(json['uom']),
-        jobOrderId: _getStringValue(json['job_order_id']) ?? '',
+        jobOrderId: _getStringValue(json['job_order_id']) ?? _getStringValue(json['_id']) ?? '',
         mongoId: _getStringValue(json['_id']) ?? '',
-        status: _getStringValue(json['status']) ?? 'Unknown',
+        status: _getStringValue(json['status']) ?? _getStringValue(json['job_order_status']) ?? 'Unknown',
         projectName: _getStringValue(json['project_name']) ?? 'N/A',
-        createdBy: _getStringValue(json['created_by']),
-        workOrderDetails: json['work_order_details'] as Map<String, dynamic>?,
+        createdBy: _extractUsername(json['created_by']),
+        createdAt: _getStringValue(json['createdAt']),
+        client: clientModel,
+        workOrderDetails: workOrderDetailsModel,
       );
     } catch (e) {
       print('Error parsing JobOrderModel: $e for JSON: ${jsonEncode(json)}');
@@ -212,12 +246,22 @@ class JobOrderModel {
     return 0;
   }
 
+  // Extract username from created_by field (handles both string and object formats)
+  static String? _extractUsername(dynamic createdBy) {
+    if (createdBy == null) return null;
+    if (createdBy is String) return createdBy;
+    if (createdBy is Map<String, dynamic>) {
+      return createdBy['username']?.toString() ?? createdBy['name']?.toString();
+    }
+    return createdBy.toString();
+  }
+
   String get actualWorkOrderNumber {
     // Prioritize work_order_details.work_order_number if available
     if (workOrderDetails != null &&
-        workOrderDetails!['work_order_number'] != null &&
-        workOrderDetails!['work_order_number'].toString().isNotEmpty) {
-      return workOrderDetails!['work_order_number'].toString();
+        workOrderDetails!.workOrderNumber != null &&
+        workOrderDetails!.workOrderNumber!.isNotEmpty) {
+      return workOrderDetails!.workOrderNumber!;
     }
     // Fallback to workOrderNumber
     return workOrderNumber ?? '';
@@ -236,7 +280,9 @@ class JobOrderModel {
       'status': status,
       'project_name': projectName,
       'created_by': createdBy,
-      'work_order_details': workOrderDetails,
+      'createdAt': createdAt,
+      'work_order_details': workOrderDetails?.toJson(),
+      'client': client?.toJson(),
     };
   }
 }
@@ -321,7 +367,7 @@ class JobOrderItem {
   static int? _getIntValue(dynamic value, String fieldName) {
     if (value == null) {
       print('Warning: $fieldName is null');
-      return 0;
+      return null; // Changed from 0 to null to distinguish between 0 and missing values
     }
     if (value is int) return value;
     if (value is double) return value.toInt();
@@ -332,11 +378,11 @@ class JobOrderItem {
         print(
           'Error parsing integer from string for $fieldName: $value, error: $e',
         );
-        return 0;
+        return null;
       }
     }
     print('Invalid type for $fieldName: $value (type: ${value.runtimeType})');
-    return 0;
+    return null;
   }
 
   Map<String, dynamic> toJson() {
@@ -387,5 +433,67 @@ class DateRange {
 
   Map<String, dynamic> toJson() {
     return {'from': from, 'to': to};
+  }
+}
+
+// New ClientModel class for better structure
+class ClientModel {
+  final String? name;
+  final String? address;
+
+  ClientModel({
+    this.name,
+    this.address,
+  });
+
+  factory ClientModel.fromJson(Map<String, dynamic> json) {
+    return ClientModel(
+      name: json['name']?.toString(),
+      address: json['address']?.toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'address': address,
+    };
+  }
+}
+
+// New WorkOrderDetails class for better structure
+class WorkOrderDetails {
+  final String? id;
+  final String? workOrderNumber;
+  final String? status;
+  final String? createdAt;
+  final String? createdBy;
+
+  WorkOrderDetails({
+    this.id,
+    this.workOrderNumber,
+    this.status,
+    this.createdAt,
+    this.createdBy,
+  });
+
+  factory WorkOrderDetails.fromJson(Map<String, dynamic> json) {
+    return WorkOrderDetails(
+      id: json['_id']?.toString(),
+      workOrderNumber: json['work_order_number']?.toString(),
+      status: json['status']?.toString(),
+      createdAt: json['created_at']?.toString(),
+      createdBy: json['created_by']?.toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      '_id': id,
+      'work_order_number': workOrderNumber,
+      'status': status,
+      'created_at': createdAt,
+      'created_by': createdBy,
+    };
   }
 }

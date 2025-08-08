@@ -16,7 +16,8 @@ class StockManagementListView extends StatefulWidget {
   const StockManagementListView({super.key});
 
   @override
-  State<StockManagementListView> createState() => _StockManagementListViewState();
+  State<StockManagementListView> createState() =>
+      _StockManagementListViewState();
 }
 
 class _StockManagementListViewState extends State<StockManagementListView> {
@@ -103,233 +104,274 @@ class _StockManagementListViewState extends State<StockManagementListView> {
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.r),
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20.r),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
-              ),
-            ],
+      child: InkWell(
+        onTap: () {
+          context.goNamed(
+            RouteNames.stockmanagementview,
+            pathParameters: {'id': transferId},
+          );
+        },
+        child: Card(
+          elevation: 0,
+          color: AppColors.cardBackground,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.r),
+            side: BorderSide(color: const Color(0xFFE5E7EB), width: 1.w),
           ),
-          child: Padding(
-            padding: EdgeInsets.all(24.w),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12.r),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                // Top Header Section
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.cardHeaderStart,
+                        AppColors.cardHeaderEnd,
+                        AppColors.cardBackground,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(12.r),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.shadow.withOpacity(0.03),
+                        blurRadius: 4.r,
+                        offset: Offset(0, 1.h),
+                      ),
+                    ],
+                  ),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 8.h,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(height: 4.h),
+                            Text(
+                              'Product: $productName',
+                              style: TextStyle(
+                                fontSize: 14.sp,
+                                color: AppTheme.darkGray,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      PopupMenuButton<String>(
+                        icon: Icon(
+                          Icons.more_vert,
+                          size: 18.sp,
+                          color: AppColors.textSecondary,
+                        ),
+                        onSelected: (value) {
+                          if (value == 'edit') {
+                            _editTransfer(transferId);
+                          } else if (value == 'delete') {
+                            // Implement delete handler
+                            // StockManagementDeleteHandler.deleteTransfer(context, transferId, productName);
+                          }
+                        },
+                        itemBuilder: (BuildContext context) => [
+                          PopupMenuItem<String>(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.edit_outlined,
+                                  size: 20.sp,
+                                  color: const Color(0xFFF59E0B),
+                                ),
+                                SizedBox(width: 8.w),
+                                Text(
+                                  'Edit',
+                                  style: TextStyle(
+                                    fontSize: 14.sp,
+                                    color: const Color(0xFF334155),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem<String>(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.delete_outline,
+                                  size: 20.sp,
+                                  color: const Color(0xFFF43F5E),
+                                ),
+                                SizedBox(width: 8.w),
+                                Text(
+                                  'Delete',
+                                  style: TextStyle(
+                                    fontSize: 14.sp,
+                                    color: const Color(0xFF334155),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        offset: Offset(0, 32.h),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8.r),
+                        ),
+                        color: AppColors.cardBackground,
+                        elevation: 2,
+                      ),
+                    ],
+                  ),
+                ),
+                // Body Section
+                Padding(
+                  padding: EdgeInsets.all(12.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildStatusContainer(status),
+                      SizedBox(height: 6.h),
+                      Row(
                         children: [
-                          SizedBox(height: 4.h),
+                          Icon(
+                            Icons.arrow_forward,
+                            size: 16.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                          SizedBox(width: 8.w),
                           Text(
-                            'Product: $productName',
+                            'From Work Order: $fromWorkOrderId',
                             style: TextStyle(
-                              fontSize: 18.sp,
-                              color: AppTheme.primaryBlue,
-                              fontWeight: FontWeight.w600,
+                              fontSize: 13.sp,
+                              color: const Color(0xFF64748B),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    PopupMenuButton<String>(
-                      icon: Icon(
-                        Icons.more_vert,
-                        size: 24.sp,
-                        color: const Color(0xFF64748B),
-                      ),
-                      onSelected: (value) {
-                        if (value == 'edit') {
-                          _editTransfer(transferId);
-                        } else if (value == 'delete') {
-                          // Implement delete handler
-                          // StockManagementDeleteHandler.deleteTransfer(context, transferId, productName);
-                        }
-                      },
-                      itemBuilder: (BuildContext context) => [
-                        PopupMenuItem<String>(
-                          value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.edit_outlined,
-                                size: 20.sp,
-                                color: const Color(0xFFF59E0B),
-                              ),
-                              SizedBox(width: 8.w),
-                              Text(
-                                'Edit',
-                                style: TextStyle(
-                                  fontSize: 14.sp,
-                                  color: const Color(0xFF334155),
-                                ),
-                              ),
-                            ],
+                      SizedBox(height: 6.h),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.arrow_back,
+                            size: 16.sp,
+                            color: const Color(0xFF64748B),
                           ),
-                        ),
-                        PopupMenuItem<String>(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.delete_outline,
-                                size: 20.sp,
-                                color: const Color(0xFFF43F5E),
-                              ),
-                              SizedBox(width: 8.w),
-                              Text(
-                                'Delete',
-                                style: TextStyle(
-                                  fontSize: 14.sp,
-                                  color: const Color(0xFF334155),
-                                ),
-                              ),
-                            ],
+                          SizedBox(width: 8.w),
+                          Text(
+                            'To Work Order: $toWorkOrderId',
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              color: const Color(0xFF64748B),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                SizedBox(height: 16.h),
-                _buildStatusContainer(status),
-                SizedBox(height: 16.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.arrow_forward,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'From Work Order: $fromWorkOrderId',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.arrow_back,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'To Work Order: $toWorkOrderId',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
+                      SizedBox(height: 6.h),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.inventory_outlined,
+                            size: 16.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                          SizedBox(width: 8.w),
+                          Text(
+                            'Quantity Transferred: $quantityTransferred',
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              color: const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.inventory_outlined,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Quantity Transferred: $quantityTransferred',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
+                      SizedBox(height: 6.h),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.person_outline,
+                            size: 16.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                          SizedBox(width: 8.w),
+                          Text(
+                            'Transferred By: $transferredBy',
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              color: const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.person_outline,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Transferred By: $transferredBy',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
+                      SizedBox(height: 6.h),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            size: 16.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                          SizedBox(width: 8.w),
+                          Text(
+                            'Transfer Date: $transferDate',
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              color: const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.calendar_today_outlined,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Transfer Date: $transferDate',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
+                      SizedBox(height: 6.h),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.storage_outlined,
+                            size: 16.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                          SizedBox(width: 8.w),
+                          Text(
+                            'Buffer Transfer: $isBufferTransfer',
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              color: const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.storage_outlined,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Buffer Transfer: $isBufferTransfer',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
+                      SizedBox(height: 6.h),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.access_time_outlined,
+                            size: 16.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                          SizedBox(width: 8.w),
+                          Text(
+                            'Created: $createdAt',
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              color: const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.access_time_outlined,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Created: $createdAt',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -430,98 +472,107 @@ class _StockManagementListViewState extends State<StockManagementListView> {
 
   @override
   Widget build(BuildContext context) {
-    ScreenUtil.init(context);
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBars(
-        title: _buildLogoAndTitle(),
-        leading: _buildBackButton(),
-        action: [_buildActionButtons()],
-      ),
-      body: Consumer<StockProvider>(
-        builder: (context, provider, child) {
-          if (provider.error != null && provider.transfers.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64.sp,
-                    color: const Color(0xFFF43F5E),
-                  ),
-                  SizedBox(height: 16.h),
-                  Text(
-                    'Error Loading Stock Transfers',
-                    style: TextStyle(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF334155),
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          context.go(RouteNames.homeScreen);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBars(
+          title: _buildLogoAndTitle(),
+          leading: _buildBackButton(),
+          action: [_buildActionButtons()],
+        ),
+        body: Consumer<StockProvider>(
+          builder: (context, provider, child) {
+            if (provider.error != null && provider.transfers.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 64.sp,
+                      color: const Color(0xFFF43F5E),
                     ),
-                  ),
-                  SizedBox(height: 8.h),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24.w),
-                    child: Text(
-                      provider.error!,
-                      textAlign: TextAlign.center,
+                    SizedBox(height: 16.h),
+                    Text(
+                      'Error Loading Stock Transfers',
                       style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF334155),
                       ),
                     ),
-                  ),
-                  SizedBox(height: 16.h),
-                  RefreshButton(
-                    text: 'Retry',
-                    icon: Icons.refresh,
-                    onTap: () {
-                      provider.clearError();
-                      provider.loadStockManagements(refresh: true);
-                    },
-                  ),
-                ],
-              ),
-            );
-          }
+                    SizedBox(height: 8.h),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 24.w),
+                      child: Text(
+                        provider.error!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 16.h),
+                    RefreshButton(
+                      text: 'Retry',
+                      icon: Icons.refresh,
+                      onTap: () {
+                        provider.clearError();
+                        provider.loadStockManagements(refresh: true);
+                      },
+                    ),
+                  ],
+                ),
+              );
+            }
 
-          return RefreshIndicator(
-            onRefresh: () async {
-              await context.read<StockProvider>().loadStockManagements(refresh: true);
-            },
-            color: const Color(0xFF3B82F6),
-            backgroundColor: Colors.white,
-            child: provider.isLoading && provider.transfers.isEmpty
-                ? ListView.builder(
-                    itemCount: 5,
-                    itemBuilder: (context, index) => buildShimmerCard(),
-                  )
-                : provider.transfers.isEmpty
-                    ? _buildEmptyState()
-                    : ListView.builder(
-                        padding: EdgeInsets.only(bottom: 80.h),
-                        itemCount: provider.transfers.length +
-                            (provider.isLoading ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index == provider.transfers.length &&
-                              provider.isLoading) {
-                            return const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(16.0),
-                                child: CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Color(0xFF3B82F6),
-                                  ),
+            return RefreshIndicator(
+              onRefresh: () async {
+                await context.read<StockProvider>().loadStockManagements(
+                  refresh: true,
+                );
+              },
+              color: const Color(0xFF3B82F6),
+              backgroundColor: Colors.white,
+              child: provider.isLoading && provider.transfers.isEmpty
+                  ? ListView.builder(
+                      itemCount: 5,
+                      itemBuilder: (context, index) => buildShimmerCard(),
+                    )
+                  : provider.transfers.isEmpty
+                  ? _buildEmptyState()
+                  : ListView.builder(
+                      padding: EdgeInsets.only(bottom: 80.h),
+                      itemCount:
+                          provider.transfers.length +
+                          (provider.isLoading ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == provider.transfers.length &&
+                            provider.isLoading) {
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Color(0xFF3B82F6),
                                 ),
                               ),
-                            );
-                          }
-                          return _buildTransferCard(provider.transfers[index]);
-                        },
-                      ),
-          );
-        },
+                            ),
+                          );
+                        }
+                        return _buildTransferCard(provider.transfers[index]);
+                      },
+                    ),
+            );
+          },
+        ),
       ),
     );
   }

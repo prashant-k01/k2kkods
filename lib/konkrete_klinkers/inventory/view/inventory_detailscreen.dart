@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
+import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/konkrete_klinkers/inventory/provider/inventory_provider.dart';
 import 'package:k2k/utils/theme.dart';
@@ -14,29 +16,38 @@ class InventoryDetailScreen extends StatefulWidget {
   _InventoryDetailScreenState createState() => _InventoryDetailScreenState();
 }
 
-class _InventoryDetailScreenState extends State<InventoryDetailScreen> with TickerProviderStateMixin {
-  late TabController _tabController;
+class _InventoryDetailScreenState extends State<InventoryDetailScreen>
+    with TickerProviderStateMixin {
+  TabController? _tabController;
+  bool _isDataLoaded = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<InventoryProvider>();
-      provider.fetchProductDetails(widget.productId).then((_) {
-        setState(() {
-          _tabController = TabController(
-            length: provider.productDetails.isNotEmpty ? provider.productDetails.length : 1,
-            vsync: this,
-          );
-        });
-      });
+      _fetchProductDetails();
     });
-    _tabController = TabController(length: 1, vsync: this); // Initial length
+  }
+
+  void _fetchProductDetails() async {
+    final provider = context.read<InventoryProvider>();
+    await provider.fetchProductDetails(widget.productId);
+
+    if (mounted && provider.productDetails.isNotEmpty) {
+      setState(() {
+        _tabController?.dispose(); // Dispose old controller if exists
+        _tabController = TabController(
+          length: provider.productDetails.length,
+          vsync: this,
+        );
+        _isDataLoaded = true;
+      });
+    }
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _tabController?.dispose();
     super.dispose();
   }
 
@@ -435,7 +446,10 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen> with Tick
             icon: Icons.business,
             children: [
               _buildDetailRow('Name:', client['name']?.toString() ?? 'N/A'),
-              _buildDetailRow('Address:', client['address']?.toString() ?? 'N/A'),
+              _buildDetailRow(
+                'Address:',
+                client['address']?.toString() ?? 'N/A',
+              ),
             ],
           ),
           _buildInfoSection(
@@ -478,154 +492,184 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen> with Tick
         color: const Color(0xFF334155),
       ),
       onPressed: () {
-        Navigator.of(context).maybePop();
+        context.go(RouteNames.inventory);
       },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    ScreenUtil.init(context);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBars(
-        title: _buildLogoAndTitle(),
-        leading: _buildBackButton(),
-        action: [],
-      ),
-      body: Consumer<InventoryProvider>(
-        builder: (context, provider, _) {
-          if (provider.isLoading) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const CircularProgressIndicator(color: Color(0xFF3B82F6)),
-                  SizedBox(height: 16.h),
-                  Text(
-                    'Loading product details...',
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          if (provider.error != null) {
-            return Center(
-              child: Container(
-                margin: EdgeInsets.all(24.w),
-                padding: EdgeInsets.all(24.w),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(16.r),
-                  border: Border.all(color: Colors.red.shade200),
-                ),
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          context.go(RouteNames.inventory);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBars(
+          title: _buildLogoAndTitle(),
+          leading: _buildBackButton(),
+          action: [],
+        ),
+        body: Consumer<InventoryProvider>(
+          builder: (context, provider, _) {
+            if (provider.isLoading) {
+              return Center(
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CircularProgressIndicator(color: Color(0xFF3B82F6)),
+                    SizedBox(height: 16.h),
+                    Text(
+                      'Loading product details...',
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            if (provider.error != null) {
+              return Center(
+                child: Container(
+                  margin: EdgeInsets.all(24.w),
+                  padding: EdgeInsets.all(24.w),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(16.r),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 48.sp,
+                        color: Colors.red.shade400,
+                      ),
+                      SizedBox(height: 16.h),
+                      Text(
+                        'Oops! Something went wrong',
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.red.shade700,
+                        ),
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        provider.error!,
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          color: Colors.red.shade600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            if (provider.productDetails.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      Icons.error_outline,
-                      size: 48.sp,
-                      color: Colors.red.shade400,
+                      Icons.inventory_2_outlined,
+                      size: 64.sp,
+                      color: const Color(0xFF64748B),
                     ),
                     SizedBox(height: 16.h),
                     Text(
-                      'Oops! Something went wrong',
+                      'No Details Available',
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 18.sp,
                         fontWeight: FontWeight.w600,
-                        color: Colors.red.shade700,
+                        color: const Color(0xFF334155),
                       ),
                     ),
                     SizedBox(height: 8.h),
                     Text(
-                      provider.error!,
+                      'Product details are not available at the moment.',
                       style: TextStyle(
                         fontSize: 14.sp,
-                        color: Colors.red.shade600,
+                        color: const Color(0xFF64748B),
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
-              ),
-            );
-          }
+              );
+            }
 
-          if (provider.productDetails.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.inventory_2_outlined,
-                    size: 64.sp,
-                    color: const Color(0xFF64748B),
-                  ),
-                  SizedBox(height: 16.h),
-                  Text(
-                    'No Details Available',
-                    style: TextStyle(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF334155),
+            // Only show TabBar and TabBarView when data is loaded and TabController is ready
+            if (!_isDataLoaded || _tabController == null) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CircularProgressIndicator(color: Color(0xFF3B82F6)),
+                    SizedBox(height: 16.h),
+                    Text(
+                      'Setting up tabs...',
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: const Color(0xFF64748B),
+                      ),
                     ),
+                  ],
+                ),
+              );
+            }
+
+            return Column(
+              children: [
+                Container(
+                  color: Colors.white,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 8.h,
                   ),
-                  SizedBox(height: 8.h),
-                  Text(
-                    'Product details are not available at the moment.',
-                    style: TextStyle(
+                  child: TabBar(
+                    controller: _tabController!,
+                    isScrollable: true,
+                    labelColor: const Color(0xFF3B82F6),
+                    unselectedLabelColor: const Color(0xFF64748B),
+                    indicatorColor: const Color(0xFF3B82F6),
+                    indicatorWeight: 3,
+                    labelStyle: TextStyle(
                       fontSize: 14.sp,
-                      color: const Color(0xFF64748B),
+                      fontWeight: FontWeight.w600,
+                    ),
+                    unselectedLabelStyle: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    tabs: List.generate(
+                      provider.productDetails.length,
+                      (index) => Tab(text: 'Product ${index + 1}'),
                     ),
                   ),
-                ],
-              ),
+                ),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController!,
+                    children: provider.productDetails
+                        .map((detail) => _buildProductDetailCard(detail))
+                        .toList(),
+                  ),
+                ),
+              ],
             );
-          }
-
-          return Column(
-            children: [
-              Container(
-                color: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                child: TabBar(
-                  controller: _tabController,
-                  isScrollable: true,
-                  labelColor: const Color(0xFF3B82F6),
-                  unselectedLabelColor: const Color(0xFF64748B),
-                  indicatorColor: const Color(0xFF3B82F6),
-                  indicatorWeight: 3,
-                  labelStyle: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  unselectedLabelStyle: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  tabs: List.generate(
-                    provider.productDetails.length,
-                    (index) => Tab(text: 'Products ${index + 1}'),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: provider.productDetails
-                      .map((detail) => _buildProductDetailCard(detail))
-                      .toList(),
-                ),
-              ),
-            ],
-          );
-        },
+          },
+        ),
       ),
     );
   }

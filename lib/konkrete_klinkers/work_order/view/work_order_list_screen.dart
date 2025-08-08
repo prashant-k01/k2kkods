@@ -7,42 +7,11 @@ import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/konkrete_klinkers/work_order/model/work_order_model.dart';
 import 'package:k2k/konkrete_klinkers/work_order/provider/work_order_provider.dart';
 import 'package:k2k/konkrete_klinkers/work_order/view/work_order_delete_screen.dart';
+import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
 // Centralized color management
-class AppColors {
-  static const Color background = Color(0xFFF8FAFC);
-  static const Color primary = Color(0xFF3B82F6);
-  static const Color error = Color(0xFFF43F5E);
-  static const Color textPrimary = Color(0xFF334155);
-  static const Color textSecondary = Color(0xFF64748B);
-  static const Color cardBackground = Color(0xFFFFFFFF);
-  static const Color cardHeaderStart = Color(0xFFEDE9FE);
-  static const Color cardHeaderEnd = Color(0xFFF5F3FF);
-  static const Color shadow = Color(0xFF6B7280);
-}
-
-// Centralized typography
-class AppTextStyles {
-  static TextStyle title(double fontSize) => TextStyle(
-    fontSize: fontSize,
-    fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
-  );
-  static TextStyle subtitle(double fontSize) => TextStyle(
-    fontSize: fontSize,
-    fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
-  );
-  static TextStyle body(double fontSize) => TextStyle(
-    fontSize: fontSize,
-    fontWeight: FontWeight.w500,
-    color: AppColors.textPrimary,
-  );
-  static TextStyle secondary(double fontSize) =>
-      TextStyle(fontSize: fontSize, color: AppColors.textSecondary);
-}
 
 class WorkOrderListView extends StatefulWidget {
   const WorkOrderListView({super.key});
@@ -426,7 +395,6 @@ class _WorkOrderListViewState extends State<WorkOrderListView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -509,13 +477,6 @@ class _WorkOrderListViewState extends State<WorkOrderListView> {
 
   @override
   Widget build(BuildContext context) {
-    // Ensure ScreenUtil is initialized in the build method
-    ScreenUtil.init(
-      context,
-      designSize: const Size(411.43, 867.43),
-      minTextAdapt: true,
-      splitScreenMode: true,
-    );
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) {

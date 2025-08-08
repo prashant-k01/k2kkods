@@ -4,23 +4,40 @@ import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/konkrete_klinkers/job_order/model/job_order.dart';
+import 'package:k2k/utils/theme.dart';
+import 'package:intl/intl.dart';
 
 class JobOrderViewScreen extends StatelessWidget {
   final JobOrderModel jobOrder;
 
   const JobOrderViewScreen({super.key, required this.jobOrder});
 
-  String _formatDateTime(DateTime? dateTime) {
-    if (dateTime == null) return 'N/A';
-    return '${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year}';
+  String _formatDateTime(String? dateTimeString) {
+    if (dateTimeString == null || dateTimeString.isEmpty) return 'N/A';
+    try {
+      final dateTime = DateTime.parse(dateTimeString);
+      return DateFormat('dd/MM/yyyy HH:mm').format(dateTime);
+    } catch (e) {
+      return dateTimeString;
+    }
+  }
+
+  String _formatDateOnly(String? dateTimeString) {
+    if (dateTimeString == null || dateTimeString.isEmpty) return 'N/A';
+    try {
+      final dateTime = DateTime.parse(dateTimeString);
+      return DateFormat('dd/MM/yyyy').format(dateTime);
+    } catch (e) {
+      return dateTimeString;
+    }
   }
 
   Widget _buildLogoAndTitle() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        SizedBox(width: 12.w),
         Text(
-          'Job Order View',
+          'Job Order Details',
           style: TextStyle(
             fontSize: 18.sp,
             fontWeight: FontWeight.w600,
@@ -32,494 +49,499 @@ class JobOrderViewScreen extends StatelessWidget {
   }
 
   Widget _buildBackButton(BuildContext context) {
-    // Specify BuildContext type
     return IconButton(
       icon: Icon(
         Icons.arrow_back_ios,
-        size: 24.sp,
+        size: 18.sp,
         color: const Color(0xFF334155),
       ),
-      onPressed: () =>
-          context.goNamed(RouteNames.jobOrder), // Use goNamed for named route
+      onPressed: () => context.goNamed(RouteNames.jobOrder),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    ScreenUtil.init(context);
-    final fromDate = DateTime.tryParse(jobOrder.date.from);
-    final toDate = DateTime.tryParse(jobOrder.date.to);
-    final clientData = jobOrder.toJson()['client'] as Map<String, dynamic>?;
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBars(
-        title: _buildLogoAndTitle(),
-        leading: _buildBackButton(context),
-        action: [],
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(24.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Job Order Header
-            Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20.r),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 20,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                padding: EdgeInsets.all(24.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Job Order NO: ${jobOrder.jobOrderId}',
-                      style: TextStyle(
-                        fontSize: 20.sp,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF334155),
-                      ),
-                    ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      'Batch No: ${jobOrder.batchNumber}',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      'Sales Order: ${jobOrder.salesOrderNumber}',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      'Status: ${jobOrder.status}',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
-                    SizedBox(height: 16.h),
-                    Container(
-                      padding: EdgeInsets.all(16.w),
-                      decoration: BoxDecoration(
-                        color: Colors.blueAccent.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(
-                          color: const Color(0xFFE2E8F0),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'From:',
-                                style: TextStyle(
-                                  fontSize: 14.sp,
-                                  color: const Color(0xFF64748B),
-                                ),
-                              ),
-                              Text(
-                                _formatDateTime(fromDate),
-                                style: TextStyle(
-                                  fontSize: 16.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF334155),
-                                ),
-                              ),
-                            ],
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'To:',
-                                style: TextStyle(
-                                  fontSize: 14.sp,
-                                  color: const Color(0xFF64748B),
-                                ),
-                              ),
-                              Text(
-                                _formatDateTime(toDate),
-                                style: TextStyle(
-                                  fontSize: 16.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF334155),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          context.go(RouteNames.jobOrder);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBars(
+          title: _buildLogoAndTitle(),
+          leading: _buildBackButton(context),
+          action: [],
+        ),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.symmetric(
+              horizontal: 24.w,
+              vertical: 12.h,
             ),
-            SizedBox(height: 24.h),
-
-            // Client Information (Conditional Rendering)
-            Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20.r),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 20,
-                      offset: const Offset(0, 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildDetailCard(
+                  headerColor: Colors.blue[50]!,
+                  title: 'Job Order Information',
+                  icon: IconContainer(
+                    icon: Icons.assignment,
+                    gradientColors: [Colors.blue.shade100, Colors.cyan.shade50],
+                    size: 40.w,
+                    borderRadius: 8.r,
+                    iconColor: Colors.blue.shade700,
+                  ),
+                  iconColor: Colors.blue,
+                  details: [
+                    DetailItem(
+                      label: 'Job Order ID',
+                      value: jobOrder.jobOrderId,
+                    ),
+                    DetailItem(
+                      label: 'Batch Number',
+                      value: jobOrder.batchNumber.toString(),
+                    ),
+                    DetailItem(
+                      label: 'Sales Order',
+                      value: jobOrder.salesOrderNumber,
+                    ),
+                    DetailItem(label: 'Status', value: jobOrder.status),
+                    DetailItem(
+                      label: 'Created By',
+                      value: jobOrder.createdBy ?? 'N/A',
+                    ),
+                    DetailItem(
+                      label: 'Created At',
+                      value: _formatDateTime(jobOrder.createdAt),
                     ),
                   ],
                 ),
-                padding: EdgeInsets.all(24.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Client Details',
-                      style: TextStyle(
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF334155),
-                      ),
-                    ),
-                    SizedBox(height: 16.h),
-                    if (clientData != null) ...[
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.person_outline,
-                            size: 20.sp,
-                            color: const Color(0xFF64748B),
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            clientData['name']?.toString() ?? 'Unknown Client',
-                            style: TextStyle(
-                              fontSize: 16.sp,
-                              color: const Color(0xFF64748B),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 8.h),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.location_on_outlined,
-                            size: 20.sp,
-                            color: const Color(0xFF64748B),
-                          ),
-                          SizedBox(width: 8.w),
-                          Expanded(
-                            child: Text(
-                              clientData['address']?.toString() ?? 'N/A',
-                              style: TextStyle(
-                                fontSize: 16.sp,
-                                color: const Color(0xFF64748B),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ] else ...[
-                      Text(
-                        'No client information available',
-                        style: TextStyle(
-                          fontSize: 16.sp,
-                          color: const Color(0xFF64748B),
-                        ),
-                      ),
+                SizedBox(height: 12.h),
+                _buildDetailCard(
+                  headerColor: Colors.green[50]!,
+                  title: 'Schedule Information',
+                  icon: IconContainer(
+                    icon: Icons.date_range,
+                    gradientColors: [
+                      Colors.green.shade100,
+                      Colors.teal.shade50,
                     ],
+                    size: 40.w,
+                    borderRadius: 8.r,
+                    iconColor: Colors.green.shade700,
+                  ),
+                  iconColor: Colors.green,
+                  details: [
+                    DetailItem(
+                      label: 'Start Date',
+                      value: _formatDateOnly(jobOrder.date.from),
+                    ),
+                    DetailItem(
+                      label: 'End Date',
+                      value: _formatDateOnly(jobOrder.date.to),
+                    ),
                   ],
                 ),
-              ),
-            ),
-            SizedBox(height: 24.h),
-
-            // Work Order Details
-            if (jobOrder.workOrderDetails != null) ...[
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20.r),
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20.r),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 20,
-                        offset: const Offset(0, 4),
+                SizedBox(height: 12.h),
+                if (jobOrder.client != null) ...[
+                  _buildDetailCard(
+                    headerColor: Colors.orange[50]!,
+                    title: 'Client Information',
+                    icon: IconContainer(
+                      icon: Icons.person,
+                      gradientColors: [
+                        Colors.orange.shade100,
+                        Colors.yellow.shade50,
+                      ],
+                      size: 40.w,
+                      borderRadius: 8.r,
+                      iconColor: Colors.orange.shade700,
+                    ),
+                    iconColor: Colors.orange,
+                    details: [
+                      DetailItem(
+                        label: 'Client Name',
+                        value: jobOrder.client?.name ?? 'N/A',
+                      ),
+                      DetailItem(
+                        label: 'Address',
+                        value: jobOrder.client?.address ?? 'N/A',
                       ),
                     ],
                   ),
-                  padding: EdgeInsets.all(24.w),
+                  SizedBox(height: 12.h),
+                ],
+                if (jobOrder.workOrderDetails != null) ...[
+                  _buildDetailCard(
+                    headerColor: Colors.purple[50]!,
+                    title: 'Work Order Details',
+                    icon: IconContainer(
+                      icon: Icons.work,
+                      gradientColors: [
+                        Colors.purple.shade100,
+                        Colors.indigo.shade50,
+                      ],
+                      size: 40.w,
+                      borderRadius: 8.r,
+                      iconColor: Colors.purple.shade700,
+                    ),
+                    iconColor: Colors.purple,
+                    details: [
+                      DetailItem(
+                        label: 'Work Order Number',
+                        value:
+                            jobOrder.workOrderDetails?.workOrderNumber ?? 'N/A',
+                      ),
+                      DetailItem(
+                        label: 'Status',
+                        value: jobOrder.workOrderDetails?.status ?? 'N/A',
+                      ),
+                      DetailItem(
+                        label: 'Created By',
+                        value: jobOrder.workOrderDetails?.createdBy ?? 'N/A',
+                      ),
+                      DetailItem(
+                        label: 'Created At',
+                        value: _formatDateTime(
+                          jobOrder.workOrderDetails?.createdAt,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 12.h),
+                ],
+                _buildDetailCard(
+                  headerColor: Colors.pink[50]!,
+                  title: 'Products Information',
+                  icon: IconContainer(
+                    icon: Icons.inventory,
+                    gradientColors: [Colors.pink.shade100, Colors.red.shade50],
+                    size: 40.w,
+                    borderRadius: 8.r,
+                    iconColor: Colors.pink.shade700,
+                  ),
+                  iconColor: Colors.pink,
+                  details: [],
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Work Order Details',
-                        style: TextStyle(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF334155),
-                        ),
-                      ),
-                      SizedBox(height: 16.h),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.work_outline,
-                            size: 20.sp,
-                            color: const Color(0xFF64748B),
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            jobOrder.workOrderDetails!['work_order_number']
-                                    ?.toString() ??
-                                'N/A',
-                            style: TextStyle(
-                              fontSize: 16.sp,
-                              color: const Color(0xFF64748B),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 8.h),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            size: 20.sp,
-                            color: const Color(0xFF64748B),
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            'Status: ${jobOrder.workOrderDetails!['status']?.toString() ?? 'N/A'}',
-                            style: TextStyle(
-                              fontSize: 16.sp,
-                              color: const Color(0xFF64748B),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(height: 24.h),
-            ],
-
-            // Products Table
-            Text(
-              'Products',
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF334155),
-              ),
-            ),
-            SizedBox(height: 16.h),
-            Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20.r),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 20,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    // Table Header
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 16.w,
-                        vertical: 12.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.blueAccent.withOpacity(0.1),
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(20.r),
-                          topRight: Radius.circular(20.r),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            flex: 2,
-                            child: Text(
-                              'Description',
-                              style: TextStyle(
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF334155),
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              'Material Code',
-                              style: TextStyle(
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF334155),
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              'Quantity',
-                              style: TextStyle(
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF334155),
-                              ),
-                              textAlign: TextAlign.right,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Table Rows
-                    ...jobOrder.jobOrders.map((product) {
-                      final scheduledDate = DateTime.tryParse(
-                        product.scheduledDate,
-                      );
+                    children: jobOrder.jobOrders.map((product) {
                       return Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 16.w,
-                          vertical: 12.h,
-                        ),
+                        margin: EdgeInsets.only(bottom: 12.h),
+                        padding: EdgeInsets.all(12.w),
                         decoration: BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(
-                              color: const Color(0xFFE2E8F0),
-                              width: 1,
-                            ),
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(8.r),
+                          border: Border.all(
+                            color: Colors.grey[200]!,
+                            width: 1.w,
                           ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  flex: 2,
-                                  child: Text(
-                                    product.description ?? 'N/A',
-                                    style: TextStyle(
-                                      fontSize: 14.sp,
-                                      color: const Color(0xFF64748B),
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    product.materialCode ?? 'N/A',
-                                    style: TextStyle(
-                                      fontSize: 14.sp,
-                                      color: const Color(0xFF64748B),
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    product.plannedQuantity.toString(),
-                                    style: TextStyle(
-                                      fontSize: 14.sp,
-                                      color: const Color(0xFF64748B),
-                                    ),
-                                    textAlign: TextAlign.right,
-                                  ),
-                                ),
-                              ],
+                            Text(
+                              product.description ?? 'No Description',
+                              style: TextStyle(
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.pink.shade700,
+                              ),
                             ),
                             SizedBox(height: 8.h),
-                            Text(
-                              'Machine: ${product.machineName ?? 'N/A'}',
-                              style: TextStyle(
-                                fontSize: 12.sp,
-                                color: const Color(0xFF64748B),
-                              ),
+                            _buildProductDetail(
+                              'Material Code',
+                              product.materialCode ?? 'N/A',
                             ),
-                            Text(
-                              'Plant: ${product.plantName ?? 'N/A'}',
-                              style: TextStyle(
-                                fontSize: 12.sp,
-                                color: const Color(0xFF64748B),
-                              ),
+                            _buildProductDetail(
+                              'Machine Name',
+                              product.machineName,
                             ),
-                            Text(
-                              'Scheduled: ${_formatDateTime(scheduledDate)}',
-                              style: TextStyle(
-                                fontSize: 12.sp,
-                                color: const Color(0xFF64748B),
-                              ),
+                            _buildProductDetail(
+                              'Plant Name',
+                              product.plantName ?? 'N/A',
                             ),
-                            Text(
-                              'Achieved: ${product.achievedQuantity ?? 0}',
-                              style: TextStyle(
-                                fontSize: 12.sp,
-                                color: const Color(0xFF64748B),
-                              ),
+                            _buildProductDetail(
+                              'Planned Quantity',
+                              product.plannedQuantity.toString(),
                             ),
-                            Text(
-                              'Rejected: ${product.rejectedQuantity ?? 0}',
-                              style: TextStyle(
-                                fontSize: 12.sp,
-                                color: const Color(0xFF64748B),
-                              ),
+                            _buildProductDetail(
+                              'Achieved Quantity',
+                              product.achievedQuantity?.toString() ?? '0',
+                              valueColor: product.achievedQuantity != null
+                                  ? (product.achievedQuantity! > 0
+                                      ? Colors.green
+                                      : Colors.grey)
+                                  : Colors.grey,
                             ),
+                            _buildProductDetail(
+                              'Rejected Quantity',
+                              product.rejectedQuantity?.toString() ?? '0',
+                              valueColor: product.rejectedQuantity != null
+                                  ? (product.rejectedQuantity! > 0
+                                      ? Colors.red
+                                      : Colors.grey)
+                                  : Colors.grey,
+                            ),
+                            _buildProductDetail(
+                              'Scheduled Date',
+                              _formatDateOnly(product.scheduledDate),
+                            ),
+                            if (product.plannedQuantity > 0) ...[
+                              SizedBox(height: 8.h),
+                              _buildProgressIndicator(product),
+                            ],
                           ],
                         ),
                       );
                     }).toList(),
-                  ],
+                  ),
                 ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProgressIndicator(JobOrderItem product) {
+    final achieved = product.achievedQuantity ?? 0;
+    final planned = product.plannedQuantity;
+    final progress = planned > 0 ? achieved / planned : 0.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Progress',
+              style: TextStyle(
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.darkGray,
+              ),
+            ),
+            Text(
+              '${(progress * 100).toStringAsFixed(1)}%',
+              style: TextStyle(
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w600,
+                color: progress >= 1.0 ? Colors.green : Colors.blue,
               ),
             ),
           ],
         ),
+        SizedBox(height: 4.h),
+        LinearProgressIndicator(
+          value: progress.clamp(0.0, 1.0),
+          backgroundColor: Colors.grey[300],
+          valueColor: AlwaysStoppedAnimation<Color>(
+            progress >= 1.0 ? Colors.green : Colors.blue,
+          ),
+          minHeight: 6.h,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProductDetail(String label, String value, {Color? valueColor}) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 4.h),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$label:',
+            style: TextStyle(
+              fontSize: 13.sp,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.darkGray,
+            ),
+          ),
+          SizedBox(width: 8.w),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 13.sp,
+                color: valueColor ?? AppTheme.mediumGray,
+                fontWeight: valueColor != null
+                    ? FontWeight.w600
+                    : FontWeight.normal,
+              ),
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildDetailCard({
+    required Color headerColor,
+    required String title,
+    required IconContainer icon,
+    required Color iconColor,
+    required List<DetailItem> details,
+    Widget? child,
+  }) {
+    return Card(
+      color: AppColors.cardBackground,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.r),
+        side: BorderSide(
+          color: const Color(0xFFE5E7EB),
+          width: 1.w,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: headerColor,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(12.r),
+                topRight: Radius.circular(12.r),
+              ),
+            ),
+            padding: EdgeInsets.symmetric(
+              horizontal: 12.w,
+              vertical: 8.h,
+            ),
+            child: ListTile(
+              leading: icon,
+              title: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w600,
+                  color: iconColor,
+                ),
+              ),
+              subtitle: Text(
+                _getSubtitleForCard(title),
+                style: TextStyle(
+                  fontSize: 12.sp,
+                  color: AppTheme.mediumGray,
+                ),
+              ),
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+          Container(
+            color: AppColors.cardBackground,
+            padding: EdgeInsets.all(12.w),
+            child:
+                child ??
+                Column(
+                  children: [
+                    SizedBox(height: 8.h),
+                    ...details.map(
+                      (detail) => Padding(
+                        padding: EdgeInsets.symmetric(
+                          vertical: 6.h,
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${detail.label}:',
+                              style: TextStyle(
+                                fontSize: 13.sp,
+                                fontWeight: FontWeight.w600,
+                                color: iconColor,
+                              ),
+                            ),
+                            SizedBox(width: 8.w),
+                            Expanded(
+                              child: Text(
+                                detail.value,
+                                style: TextStyle(
+                                  fontSize: 13.sp,
+                                  color: AppTheme.darkGray,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getSubtitleForCard(String title) {
+    switch (title) {
+      case 'Job Order Information':
+        return 'Basic job order details and status';
+      case 'Schedule Information':
+        return 'Project timeline and dates';
+      case 'Client Information':
+        return 'Customer details and contact info';
+      case 'Work Order Details':
+        return 'Work order specifications';
+      case 'Products Information':
+        return 'Product details and quantities';
+      default:
+        return 'Additional information';
+    }
+  }
+}
+
+class DetailItem {
+  final String label;
+  final String value;
+
+  DetailItem({required this.label, required this.value});
+}
+
+class IconContainer extends StatelessWidget {
+  final IconData icon;
+  final List<Color> gradientColors;
+  final double size;
+  final double borderRadius;
+  final Color iconColor;
+
+  const IconContainer({
+    Key? key,
+    required this.icon,
+    this.gradientColors = const [Colors.orange, Colors.pink],
+    this.size = 40.0, // Default size
+    this.borderRadius = 8.0,
+    this.iconColor = Colors.red,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: size.h,
+      width: size.w,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradientColors,
+        ),
+        borderRadius: BorderRadius.circular(borderRadius.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.03),
+            blurRadius: 4.r,
+            offset: Offset(0, 1.h),
+          ),
+        ],
+      ),
+      child: Icon(icon, color: iconColor, size: (size * 0.5).sp),
     );
   }
 }

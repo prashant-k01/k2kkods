@@ -265,7 +265,6 @@ class _AddDispatchFormScreenState extends State<AddDispatchFormScreen> {
                     Expanded(
                       child: CustomTextFormField(
                         name: 'qr_code',
-                        labelText: 'QR Code',
                         hintText: 'Enter QR code',
                         prefixIcon: Icons.qr_code,
                         validators: [

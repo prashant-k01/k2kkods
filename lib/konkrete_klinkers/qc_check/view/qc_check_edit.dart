@@ -48,32 +48,39 @@ class _QcCheckEditScreenState extends State<QcCheckEditScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ScreenUtil.init(context);
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      resizeToAvoidBottomInset: true,
-      appBar: AppBars(
-        title: _buildLogoAndTitle(),
-        leading: _buildBackButton(),
-        action: [],
-      ),
-      body: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(),
-        behavior: HitTestBehavior.opaque,
-        child: Consumer<QcCheckProvider>(
-          builder: (context, provider, child) {
-            final qcCheck = provider.qcChecks.firstWhere(
-              (qc) => qc.id == widget.qcCheckId,
-              orElse: () => throw Exception('QC check not found'),
-            );
-            return ListView(
-              controller: _scrollController,
-              padding: EdgeInsets.all(24.w).copyWith(
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
-              ),
-              children: [_buildFormCard(context, provider, qcCheck)],
-            );
-          },
+    return PopScope(
+       canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          context.go(RouteNames.qcCheck);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        resizeToAvoidBottomInset: true,
+        appBar: AppBars(
+          title: _buildLogoAndTitle(),
+          leading: _buildBackButton(),
+          action: [],
+        ),
+        body: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          behavior: HitTestBehavior.opaque,
+          child: Consumer<QcCheckProvider>(
+            builder: (context, provider, child) {
+              final qcCheck = provider.qcChecks.firstWhere(
+                (qc) => qc.id == widget.qcCheckId,
+                orElse: () => throw Exception('QC check not found'),
+              );
+              return ListView(
+                controller: _scrollController,
+                padding: EdgeInsets.all(24.w).copyWith(
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
+                ),
+                children: [_buildFormCard(context, provider, qcCheck)],
+              );
+            },
+          ),
         ),
       ),
     );

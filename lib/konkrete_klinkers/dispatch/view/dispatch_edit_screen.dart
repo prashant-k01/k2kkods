@@ -274,7 +274,6 @@ class _EditDispatchFormScreenState extends State<EditDispatchFormScreen> {
                 CustomTextFormField(
                   name: 'qr_code',
                   labelText: 'QR Code',
-                  hintText: 'QR code (cannot be changed)',
                   prefixIcon: Icons.qr_code,
                   initialValue: provider.qrScanData?['qr_code']?.toString() ?? 'N/A',
                   enabled: false,

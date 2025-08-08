@@ -138,9 +138,13 @@ class AppUrl {
       "$baseUrl/konkreteKlinkers/inventory";
 
   //Stock Managment
+//Stock Managment
   static const String kkStockManagement = "$baseUrl/konkreteKlinkers/transfer";
   static const String createStockManagement =
       "$baseUrl/konkreteKlinkers/transfer/create";
+  // static const String getStockManagementbyid = "$baseUrl/konkreteKlinkers/inventory";
   static const String getwobyproduct =
-      "$baseUrl/konkreteKlinkers/transfer-getworkorder?prId=";
+      "$baseUrl/konkreteKlinkers/transfer-getworkorder";
+  static const String getAchievedQuantity =
+      "$baseUrl/konkreteKlinkers/transfer-getworkorderproduct";
 }

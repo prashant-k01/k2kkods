@@ -8,6 +8,7 @@ import 'package:k2k/konkrete_klinkers/master_data/products/model/product.dart';
 import 'package:k2k/konkrete_klinkers/master_data/products/provider/product_provider.dart';
 import 'package:k2k/konkrete_klinkers/master_data/products/view/product_delete_screen.dart';
 import 'package:k2k/utils/sreen_util.dart';
+import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
@@ -102,27 +103,41 @@ class _ProductsListViewState extends State<ProductsListView> {
       margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
       child: Card(
         elevation: 0,
+        color: AppColors.cardBackground,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.r),
+          side: BorderSide(color: const Color(0xFFE5E7EB), width: 1.w),
         ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12.r),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(16.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12.r),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top Header Section
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.cardHeaderStart,
+                      AppColors.cardHeaderEnd,
+                      AppColors.cardBackground,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(12.r),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.shadow.withOpacity(0.03),
+                      blurRadius: 4.r,
+                      offset: Offset(0, 1.h),
+                    ),
+                  ],
+                ),
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
@@ -133,11 +148,11 @@ class _ProductsListViewState extends State<ProductsListView> {
                             text: TextSpan(
                               children: [
                                 TextSpan(
-                                  text: materialCode,
+                                  text: "MaterialCode :$materialCode",
                                   style: TextStyle(
                                     fontSize: 18.sp,
                                     fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF334155),
+                                    color: AppTheme.darkGray,
                                   ),
                                 ),
                               ],
@@ -145,39 +160,15 @@ class _ProductsListViewState extends State<ProductsListView> {
                             overflow: TextOverflow.ellipsis,
                             maxLines: 1,
                           ),
-                          SizedBox(height: 4.h),
-                          RichText(
-                            text: TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: 'Plant: ',
-                                  style: TextStyle(
-                                    fontSize: 16.sp,
-
-                                    color: const Color(0xFF334155),
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: plantName,
-                                  style: TextStyle(
-                                    fontSize: 16.sp,
-                                    fontWeight: FontWeight.w700,
-                                    color: const Color(0xFF3B82F6),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
+                          SizedBox(height: 8.h),
                         ],
                       ),
                     ),
                     PopupMenuButton<String>(
                       icon: Icon(
                         Icons.more_vert,
-                        size: 22.sp, // Increased slightly
-                        color: const Color(0xFF64748B),
+                        size: 18.sp,
+                        color: AppColors.textSecondary,
                       ),
                       onSelected: (value) {
                         if (value == 'edit') {
@@ -197,14 +188,14 @@ class _ProductsListViewState extends State<ProductsListView> {
                             children: [
                               Icon(
                                 Icons.edit_outlined,
-                                size: 20.sp, // Increased slightly
+                                size: 20.sp,
                                 color: const Color(0xFFF59E0B),
                               ),
                               SizedBox(width: 8.w),
                               Text(
                                 'Edit',
                                 style: TextStyle(
-                                  fontSize: 16.sp, // Increased from 14.sp
+                                  fontSize: 16.sp,
                                   color: const Color(0xFF334155),
                                 ),
                               ),
@@ -217,14 +208,14 @@ class _ProductsListViewState extends State<ProductsListView> {
                             children: [
                               Icon(
                                 Icons.delete_outline,
-                                size: 20.sp, // Increased slightly
+                                size: 20.sp,
                                 color: const Color(0xFFF43F5E),
                               ),
                               SizedBox(width: 8.w),
                               Text(
                                 'Delete',
                                 style: TextStyle(
-                                  fontSize: 16.sp, // Increased from 14.sp
+                                  fontSize: 16.sp,
                                   color: const Color(0xFF334155),
                                 ),
                               ),
@@ -232,51 +223,99 @@ class _ProductsListViewState extends State<ProductsListView> {
                           ),
                         ),
                       ],
+                      offset: Offset(0, 32.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                      color: AppColors.cardBackground,
+                      elevation: 2,
                     ),
                   ],
                 ),
-                SizedBox(height: 8.h),
-                Row(
+              ),
+              // Body Section
+              Padding(
+                padding: EdgeInsets.all(12.w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.person_outline,
-                      size: 16.sp, // Increased from 14.sp
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 4.w),
-                    Expanded(
-                      child: Text(
-                        'Created by: $createdBy',
-                        style: TextStyle(
-                          fontSize: 14.sp, // Increased from 12.sp
-                          color: const Color(0xFF64748B),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12.w,
+                        vertical: 6.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: RichText(
+                        text: TextSpan(
+                          children: [
+                            TextSpan(
+                              text: 'Plant Name: ',
+                              style: TextStyle(
+                                fontSize: 16.sp,
+                                color: const Color(0xFF334155),
+                              ),
+                            ),
+                            TextSpan(
+                              text: plantName,
+                              style: TextStyle(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF3B82F6),
+                              ),
+                            ),
+                          ],
                         ),
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,
                       ),
                     ),
+                    SizedBox(height: 6.h),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.person_outline,
+                          size: 16.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                        SizedBox(width: 8.w),
+                        Expanded(
+                          child: Text(
+                            'Created by: $createdBy',
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              color: const Color(0xFF64748B),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 6.h),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time_outlined,
+                          size: 16.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Created: ${_formatDateTime(createdAt)}',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
-                SizedBox(height: 4.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.access_time_outlined,
-                      size: 16.sp, // Increased from 14.sp
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 4.w),
-                    Text(
-                      'Created: ${_formatDateTime(createdAt)}',
-                      style: TextStyle(
-                        fontSize: 14.sp, // Increased from 12.sp
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
