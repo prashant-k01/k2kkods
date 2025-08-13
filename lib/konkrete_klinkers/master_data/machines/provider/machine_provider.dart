@@ -1,13 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:k2k/konkrete_klinkers/master_data/machines/model/machines_model.dart';
 import 'package:k2k/konkrete_klinkers/master_data/machines/repo/machines.dart';
+<<<<<<< HEAD
 
 class MachinesProvider with ChangeNotifier {
   final MachineRepository _repository = MachineRepository();
+=======
+import 'package:k2k/konkrete_klinkers/master_data/machines/repo/plants.dart';
+
+class MachinesProvider with ChangeNotifier {
+  final MachineRepository _repository;
+
+  MachinesProvider({MachineRepository? repository})
+    : _repository = repository ?? MachineRepository();
+
+  final Map<String, CreatedBy> _userCache = {};
+  final Map<String, PlantId> _plantCache = {};
+>>>>>>> 9ab28403e64048bb612375b1b7801023a8ba2d76
 
   List<MachineElement> _machines = [];
   bool _isLoading = false;
   String? _error;
+<<<<<<< HEAD
 
   int _currentPage = 1;
   int _totalPages = 1;
@@ -18,14 +32,30 @@ class MachinesProvider with ChangeNotifier {
   bool _hasPreviousPage = false;
   String _searchQuery = '';
 
+=======
+  bool _hasMore = true;
+  int _skip = 0;
+  final int _limit = 10;
+  String _searchQuery = '';
+>>>>>>> 9ab28403e64048bb612375b1b7801023a8ba2d76
   bool _isAddMachineLoading = false;
   bool _isUpdateMachinesLoading = false;
   bool _isDeleteMachinesLoading = false;
 
+<<<<<<< HEAD
+=======
+  List<PlantId> _plants = [];
+
+  void setPlants(List<PlantId> plants) {
+    _plants = plants;
+  }
+
+>>>>>>> 9ab28403e64048bb612375b1b7801023a8ba2d76
   // Getters
   List<MachineElement> get machines => _machines;
   bool get isLoading => _isLoading;
   String? get error => _error;
+<<<<<<< HEAD
   int get currentPage => _currentPage;
   int get totalPages => _totalPages;
   int get totalItems => _totalItems;
@@ -43,6 +73,19 @@ class MachinesProvider with ChangeNotifier {
       _currentPage = 1;
       _machines.clear();
     } else if (_currentPage > _totalPages) {
+=======
+  bool get hasMore => _hasMore;
+  int get limit => _limit;
+  String get searchQuery => _searchQuery;
+  bool get isAddMachineLoading => _isAddMachineLoading;
+  bool get isUpdateMachinesLoading => _isUpdateMachinesLoading;
+  bool get isDeleteMachinesLoading => _isDeleteMachinesLoading;
+
+  // Load machines with lazy loading
+  Future<void> loadAllMachines({bool refresh = false}) async {
+    if (!_hasMore && !refresh) {
+      print('No more machines to load');
+>>>>>>> 9ab28403e64048bb612375b1b7801023a8ba2d76
       return;
     }
 
@@ -52,6 +95,7 @@ class MachinesProvider with ChangeNotifier {
 
     try {
       print(
+<<<<<<< HEAD
         'Fetching machines: page=$_currentPage, limit=$_limit, search=$_searchQuery',
       );
       final response = await _repository.getAllmachines(
@@ -72,6 +116,29 @@ class MachinesProvider with ChangeNotifier {
         _currentPage = _currentPage > 1 ? _currentPage - 1 : 1;
         await loadAllMachines();
         return;
+=======
+        'Fetching machines: limit=$_limit, skip=$_skip, search=$_searchQuery',
+      );
+      final response = await _repository.getAllmachines(
+        limit: _limit,
+        skip: refresh ? 0 : _skip,
+        search: _searchQuery.isNotEmpty ? _searchQuery : null,
+      );
+
+      print('Received ${response.machines.length} machines');
+
+      if (response.machines.length > _limit) {
+        print(
+          'Warning: Received ${response.machines.length} machines, expected up to $_limit',
+        );
+      }
+
+      final newMachineIds = response.machines.map((m) => m.id).toSet();
+      final existingMachineIds = _machines.map((m) => m.id).toSet();
+      final duplicates = newMachineIds.intersection(existingMachineIds);
+      if (duplicates.isNotEmpty) {
+        print('Warning: Duplicate machine IDs detected: $duplicates');
+>>>>>>> 9ab28403e64048bb612375b1b7801023a8ba2d76
       }
 
       if (refresh) {
@@ -79,7 +146,14 @@ class MachinesProvider with ChangeNotifier {
       } else {
         _machines.addAll(response.machines);
       }
+<<<<<<< HEAD
       _updatePaginationInfo(response.pagination);
+=======
+
+      _skip = _machines.length;
+      _hasMore = response.machines.length == _limit;
+      print('Has more machines to load: $_hasMore');
+>>>>>>> 9ab28403e64048bb612375b1b7801023a8ba2d76
     } catch (e) {
       _error = _getErrorMessage(e);
       print('Error loading machines: $_error');
@@ -90,6 +164,7 @@ class MachinesProvider with ChangeNotifier {
     }
   }
 
+<<<<<<< HEAD
   // Pagination methods
   Future<void> loadPage(int page) async {
     if (page < 1 || page > _totalPages || page == _currentPage) return;
@@ -115,24 +190,79 @@ class MachinesProvider with ChangeNotifier {
   Future<void> searchMachines(String query) async {
     _searchQuery = query;
     _currentPage = 1;
+=======
+  // Search
+  Future<void> searchMachines(String query) async {
+    _searchQuery = query;
+    _hasMore = true;
+    _skip = 0;
+>>>>>>> 9ab28403e64048bb612375b1b7801023a8ba2d76
     print('Searching machines with query: $query');
     await loadAllMachines(refresh: true);
   }
 
   Future<void> clearSearch() async {
     _searchQuery = '';
+<<<<<<< HEAD
     _currentPage = 1;
+=======
+    _hasMore = true;
+    _skip = 0;
+>>>>>>> 9ab28403e64048bb612375b1b7801023a8ba2d76
     print('Clearing search query');
     await loadAllMachines(refresh: true);
   }
 
+<<<<<<< HEAD
   // Create machine
   Future<bool> createMachine(String name, String plantId) async {
+=======
+  final PlantRepository _plantRepository = PlantRepository();
+
+  List<PlantId> _plant = [];
+  bool _isAllPlantsLoading = false;
+
+  bool get isAllPlantsLoading => _isAllPlantsLoading;
+  List<PlantId> get plant => _plant;
+  Future<void> ensurePlantsLoaded({bool refresh = false}) async {
+    if (_isAllPlantsLoading) return;
+
+    _isAllPlantsLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      if (refresh || _plant.isEmpty) {
+        print('[PlantProvider] Fetching all plants...');
+        final plants = await _plantRepository.fetchAllPlants();
+        _plant = plants;
+
+        print('[PlantProvider] Loaded ${_plant.length} plants');
+      } else {
+        print(
+          '[PlantProvider] Using cached plant list with ${_plant.length} items',
+        );
+      }
+    } catch (e, stackTrace) {
+      _error = 'Failed to load plants: $e';
+      _plant = [];
+      print('[PlantProvider] Error: $e');
+      print(stackTrace);
+    } finally {
+      _isAllPlantsLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // Create machine
+  Future<bool> createMachine(String machineName, String plantId) async {
+>>>>>>> 9ab28403e64048bb612375b1b7801023a8ba2d76
     try {
       _isAddMachineLoading = true;
       _error = null;
       notifyListeners();
 
+<<<<<<< HEAD
       print('Creating machine: name=$name, plantId=$plantId');
       final machine = await _repository.createMachine(name, plantId);
 
@@ -142,6 +272,35 @@ class MachinesProvider with ChangeNotifier {
       _totalPages = (_totalItems / _limit).ceil();
       _hasNextPage = _currentPage < _totalPages;
       notifyListeners();
+=======
+      print('Creating machine: name=$machineName, plant_id=$plantId');
+
+      final machine = await _repository.createMachine(machineName, plantId);
+
+      // ✅ Attach plant details from existing plant list
+      final matchedPlant = _plants.firstWhere(
+        (plant) => plant.id == plantId,
+        orElse: () => PlantId(id: plantId, plantName: '', plantCode: ''),
+      );
+
+      // ✅ Set plant details
+      final machines = MachineElement(
+        id: machine.id,
+        name: machine.name,
+        plantId: matchedPlant, // Use the full PlantId object
+        createdBy: machine.createdBy,
+        createdAt: machine.createdAt,
+        isDeleted: false,
+        updatedAt: DateTime.now(),
+        v: 0,
+      );
+
+      // ✅ Insert at top of the list
+      _machines.insert(0, machines);
+      notifyListeners();
+
+      print('Created machine: ${machine.id} - ${machine.name}');
+>>>>>>> 9ab28403e64048bb612375b1b7801023a8ba2d76
       return true;
     } catch (e) {
       _error = _getErrorMessage(e);
@@ -154,11 +313,18 @@ class MachinesProvider with ChangeNotifier {
     }
   }
 
+<<<<<<< HEAD
   // Update machine
   Future<bool> updateMachines(
     String machineId,
     String name,
     PlantId plantId,
+=======
+  Future<bool> updateMachines(
+    String machineId,
+    String machineName,
+    String plantId,
+>>>>>>> 9ab28403e64048bb612375b1b7801023a8ba2d76
   ) async {
     _isUpdateMachinesLoading = true;
     _error = null;
@@ -166,6 +332,7 @@ class MachinesProvider with ChangeNotifier {
 
     try {
       print(
+<<<<<<< HEAD
         'Updating machine: id=$machineId, name=$name, plantId=${plantId.id}',
       );
       final machine = await _repository.updateMachine(
@@ -181,6 +348,70 @@ class MachinesProvider with ChangeNotifier {
       } else {
         print('Machine $machineId not found in local list');
       }
+=======
+        'Updating machine: id=$machineId, machine_name=$machineName, plant_id=$plantId',
+      );
+      final machine = await _repository.updateMachine(
+        machineId,
+        machineName,
+        plantId,
+      );
+
+      print(
+        'API response machine: id=${machine.id}, name=${machine.name}, '
+        'createdBy=${machine.createdBy?.email}, createdAt=${machine.createdAt}',
+      );
+
+      final matchedPlant = _plant.firstWhere(
+        (plant) => plant.id == plantId,
+        orElse: () => PlantId(id: plantId, plantName: 'Unknown', plantCode: ''),
+      );
+
+      // Find existing machine to preserve createdBy and createdAt
+      _machines.firstWhere(
+        (m) => m.id == machineId,
+        orElse: () => MachineElement(
+          id: machineId,
+          name: machineName,
+          plantId: matchedPlant,
+          createdBy: CreatedBy(id: '', email: 'Unknown'),
+          createdAt: DateTime.now(),
+          isDeleted: false,
+          updatedAt: DateTime.now(),
+          v: 0,
+        ),
+      );
+
+      // Create updated machine with full details
+      final updatedMachine = MachineElement(
+        id: machine.id,
+        name: machine.name,
+        plantId: matchedPlant,
+        createdBy: machine.createdBy,
+        createdAt: machine.createdAt,
+        isDeleted: false,
+        updatedAt: DateTime.now(),
+        v: machine.v,
+      );
+
+      print(
+        'Updated machine: id=${updatedMachine.id}, name=${updatedMachine.name}, '
+        'plantName=${updatedMachine.plantId.plantName}, '
+        'createdBy=${updatedMachine.createdBy?.email}, createdAt=${updatedMachine.createdAt}',
+      );
+
+      final index = _machines.indexWhere((m) => m.id == machineId);
+      if (index != -1) {
+        _machines.removeAt(index);
+        _machines.insert(0, updatedMachine);
+      } else {
+        print(
+          'Machine $machineId not found in local list, refreshing machines',
+        );
+        await loadAllMachines(refresh: true);
+      }
+
+>>>>>>> 9ab28403e64048bb612375b1b7801023a8ba2d76
       notifyListeners();
       return true;
     } catch (e) {
@@ -206,6 +437,7 @@ class MachinesProvider with ChangeNotifier {
       if (success) {
         print('Machine deleted: $machineId');
         _machines.removeWhere((m) => m.id == machineId);
+<<<<<<< HEAD
         _totalItems--;
         _totalPages = (_totalItems / _limit).ceil();
         if (_machines.isEmpty && _currentPage > 1) {
@@ -217,6 +449,9 @@ class MachinesProvider with ChangeNotifier {
           _hasPreviousPage = _currentPage > 1;
           notifyListeners();
         }
+=======
+        notifyListeners();
+>>>>>>> 9ab28403e64048bb612375b1b7801023a8ba2d76
         return true;
       } else {
         _error = 'Failed to delete machine';
@@ -270,6 +505,7 @@ class MachinesProvider with ChangeNotifier {
     print('Error cleared');
   }
 
+<<<<<<< HEAD
   // Internal: update pagination
   void _updatePaginationInfo(Pagination pagination) {
     _totalPages = pagination.totalPages;
@@ -282,6 +518,8 @@ class MachinesProvider with ChangeNotifier {
     );
   }
 
+=======
+>>>>>>> 9ab28403e64048bb612375b1b7801023a8ba2d76
   // Error conversion
   String _getErrorMessage(Object error) {
     if (error is Exception) return error.toString();

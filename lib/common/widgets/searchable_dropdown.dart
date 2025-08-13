@@ -9,6 +9,7 @@ class CustomSearchableDropdownFormField<T> extends StatelessWidget {
   final String? hintText;
   final String? helperText;
   final T? initialValue;
+  final dynamic isEqual;
   final List<T>? options;
   final String Function(T)? optionLabel;
   final IconData? prefixIcon;
@@ -23,6 +24,7 @@ class CustomSearchableDropdownFormField<T> extends StatelessWidget {
   final Color? fillColor;
   final Color? borderColor;
   final Color? focusedBorderColor;
+  final double? iconSize;
   final Color? errorBorderColor;
   final double? borderRadius;
   final double? borderWidth;
@@ -35,12 +37,15 @@ class CustomSearchableDropdownFormField<T> extends StatelessWidget {
   final Widget? disabledHint;
   final bool allowClear;
   final Widget? clearIcon;
+  final T? Function(T?)? valueTransformer;
 
   const CustomSearchableDropdownFormField({
     super.key,
     required this.name,
     this.labelText,
+    this.iconSize,
     this.hintText,
+    this.isEqual,
     this.helperText,
     this.initialValue,
     this.options,
@@ -69,10 +74,11 @@ class CustomSearchableDropdownFormField<T> extends StatelessWidget {
     this.disabledHint,
     this.allowClear = false,
     this.clearIcon,
+    this.valueTransformer,
   }) : assert(
-          options != null,
-          'Options must be provided for searchable dropdown',
-        );
+         options != null,
+         'Options must be provided for searchable dropdown',
+       );
 
   @override
   Widget build(BuildContext context) {
@@ -85,8 +91,10 @@ class CustomSearchableDropdownFormField<T> extends StatelessWidget {
       initialValue: initialValue,
       enabled: enabled,
       autovalidateMode: autovalidateMode ?? AutovalidateMode.onUserInteraction,
-      validator: customValidator ?? FormBuilderValidators.compose(validators ?? []),
+      validator:
+          customValidator ?? FormBuilderValidators.compose(validators ?? []),
       onSaved: onSaved,
+      valueTransformer: valueTransformer,
       builder: (FormFieldState<T> field) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -96,7 +104,8 @@ class CustomSearchableDropdownFormField<T> extends StatelessWidget {
                 padding: EdgeInsets.only(bottom: 8.h),
                 child: Text(
                   labelText!,
-                  style: labelStyle ??
+                  style:
+                      labelStyle ??
                       TextStyle(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w500,
@@ -123,7 +132,8 @@ class CustomSearchableDropdownFormField<T> extends StatelessWidget {
                   decoration: InputDecoration(
                     hintText: hintText ?? 'Select option',
                     helperText: helperText,
-                    hintStyle: hintStyle ??
+                    hintStyle:
+                        hintStyle ??
                         TextStyle(
                           fontSize: 16.sp,
                           fontWeight: FontWeight.w400,
@@ -132,22 +142,27 @@ class CustomSearchableDropdownFormField<T> extends StatelessWidget {
                     prefixIcon: prefixIcon != null
                         ? Container(
                             margin: EdgeInsets.only(left: 12.w, right: 8.w),
-                            child: Icon(prefixIcon, size: 20.r, color: primaryColor),
+                            child: Icon(
+                              prefixIcon,
+                              size: 20.r,
+                              color: primaryColor,
+                            ),
                           )
                         : null,
                     suffixIcon: allowClear && field.value != null
                         ? clearIcon ??
-                            IconButton(
-                              icon: const Icon(Icons.clear, size: 20),
-                              onPressed: () {
-                                field.didChange(null);
-                                if (onChanged != null) onChanged!(null);
-                              },
-                            )
+                              IconButton(
+                                icon: const Icon(Icons.clear, size: 20),
+                                onPressed: () {
+                                  field.didChange(null);
+                                  if (onChanged != null) onChanged!(null);
+                                },
+                              )
                         : suffixIcon ?? const Icon(Icons.arrow_drop_down),
                     filled: filled,
                     fillColor: fillColor ?? theme.colorScheme.surface,
-                    contentPadding: contentPadding ??
+                    contentPadding:
+                        contentPadding ??
                         EdgeInsets.symmetric(
                           horizontal: prefixIcon != null ? 8.w : 16.w,
                           vertical: 16.h,
@@ -156,14 +171,18 @@ class CustomSearchableDropdownFormField<T> extends StatelessWidget {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(borderRadius ?? 12.r),
                       borderSide: BorderSide(
-                        color: borderColor ?? theme.colorScheme.outline.withOpacity(0.3),
+                        color:
+                            borderColor ??
+                            theme.colorScheme.outline.withOpacity(0.3),
                         width: borderWidth ?? 1.5,
                       ),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(borderRadius ?? 12.r),
                       borderSide: BorderSide(
-                        color: borderColor ?? theme.colorScheme.outline.withOpacity(0.3),
+                        color:
+                            borderColor ??
+                            theme.colorScheme.outline.withOpacity(0.3),
                         width: borderWidth ?? 1.5,
                       ),
                     ),
@@ -202,9 +221,11 @@ class CustomSearchableDropdownFormField<T> extends StatelessWidget {
                   ),
                   child: Text(
                     field.value != null
-                        ? optionLabel?.call(field.value!) ?? field.value.toString()
+                        ? optionLabel?.call(field.value!) ??
+                              field.value.toString()
                         : hintText ?? 'Select option',
-                    style: textStyle ??
+                    style:
+                        textStyle ??
                         TextStyle(
                           fontSize: 16.sp,
                           fontWeight: FontWeight.w400,
@@ -258,10 +279,12 @@ class _SearchableDropdownDialog<T> extends StatefulWidget {
   });
 
   @override
-  _SearchableDropdownDialogState<T> createState() => _SearchableDropdownDialogState<T>();
+  _SearchableDropdownDialogState<T> createState() =>
+      _SearchableDropdownDialogState<T>();
 }
 
-class _SearchableDropdownDialogState<T> extends State<_SearchableDropdownDialog<T>> {
+class _SearchableDropdownDialogState<T>
+    extends State<_SearchableDropdownDialog<T>> {
   late List<T> filteredOptions;
   final TextEditingController _searchController = TextEditingController();
 
@@ -292,9 +315,7 @@ class _SearchableDropdownDialogState<T> extends State<_SearchableDropdownDialog<
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.r),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
       child: Container(
         constraints: BoxConstraints(
           maxHeight: widget.menuMaxHeight ?? 300.h,
@@ -317,11 +338,12 @@ class _SearchableDropdownDialogState<T> extends State<_SearchableDropdownDialog<
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8.r),
-                    borderSide: BorderSide(
-                      color: theme.primaryColor,
-                    ),
+                    borderSide: BorderSide(color: theme.primaryColor),
                   ),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 12.h,
+                  ),
                 ),
               ),
             ),
@@ -342,8 +364,10 @@ class _SearchableDropdownDialogState<T> extends State<_SearchableDropdownDialog<
                         final option = filteredOptions[index];
                         return ListTile(
                           title: Text(
-                            widget.optionLabel?.call(option) ?? option.toString(),
-                            style: widget.textStyle ??
+                            widget.optionLabel?.call(option) ??
+                                option.toString(),
+                            style:
+                                widget.textStyle ??
                                 TextStyle(
                                   fontSize: 16.sp,
                                   fontWeight: FontWeight.w400,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_debouncer/flutter_debouncer.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
@@ -8,8 +9,7 @@ import 'package:k2k/common/widgets/dropdown.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
-import 'package:k2k/konkrete_klinkers/master_data/clients/provider/clients_provider.dart';
-import 'package:k2k/konkrete_klinkers/master_data/projects/provider/projects_provider.dart';
+import 'package:k2k/konkrete_klinkers/master_data/products/provider/product_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -22,42 +22,125 @@ class AddProductFormScreen extends StatefulWidget {
 
 class _AddProductFormScreenState extends State<AddProductFormScreen> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
+  final ScrollController _scrollController = ScrollController();
+  final Map<String, FocusNode> _focusNodes = {
+    'plant': FocusNode(),
+    'material_code': FocusNode(),
+    'description': FocusNode(),
+    'no_of_pieces_per_punch': FocusNode(),
+    'uom': FocusNode(),
+    'area_per_unit': FocusNode(),
+    'qty_in_bundle': FocusNode(),
+  };
+  bool _showAreaPerUnit = true;
+  final Debouncer _scrollDebouncer = Debouncer();
 
   @override
   void initState() {
     super.initState();
-    // Defer loading clients until after the build phase
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final clientsProvider = Provider.of<ClientsProvider>(
+      final productProvider = Provider.of<ProductProvider>(
         context,
         listen: false,
       );
-      clientsProvider.loadAllClientsForDropdown(
-        refresh: true,
-      ); // Load all clients for dropdown
+      productProvider.initializeEditForm('').then((_) {
+        if (productProvider.plants.isEmpty ||
+            productProvider.plants.every((plant) => plant['id']!.isEmpty)) {
+          context.showErrorSnackbar(
+            "No valid plants available. Please try again later.",
+          );
+        } else {
+          _formKey.currentState?.fields['plant']?.didChange(
+            productProvider.plants.firstWhere(
+              (plant) => plant['id']!.isNotEmpty,
+            )['display'],
+          );
+        }
+      });
     });
+  }
+
+  double? _calculateArea(String description) {
+    try {
+      final RegExp dimensionRegex = RegExp(
+        r'(\d+)X(\d+)X(\d+)MM',
+        caseSensitive: false,
+      );
+      final match = dimensionRegex.firstMatch(description);
+
+      if (match != null) {
+        final length = double.parse(match.group(1)!);
+        final width = double.parse(match.group(2)!);
+        return (length / 1000) * (width / 1000);
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  void _scrollToFocusedField(BuildContext context, FocusNode focusNode) {
+    if (focusNode.hasFocus) {
+      _scrollDebouncer.debounce(
+        duration: const Duration(milliseconds: 100),
+        onDebounce: () {
+          final RenderObject? renderObject = context.findRenderObject();
+          if (renderObject is RenderBox) {
+            final position = renderObject.localToGlobal(Offset.zero).dy;
+            final screenHeight = MediaQuery.of(context).size.height;
+            final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+
+            double targetOffset = _scrollController.offset + position;
+            if (position + 200.h > screenHeight - keyboardHeight) {
+              targetOffset =
+                  _scrollController.offset +
+                  (position - (screenHeight - keyboardHeight - 200.h));
+            }
+
+            _scrollController.animateTo(
+              targetOffset.clamp(
+                0.0,
+                _scrollController.position.maxScrollExtent,
+              ),
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
+          }
+        },
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _focusNodes.forEach((_, node) => node.dispose());
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final projectProvider = Provider.of<ProjectProvider>(
-      context,
-      listen: false,
-    );
-    final clientsProvider = Provider.of<ClientsProvider>(context);
+    final productProvider = Provider.of<ProductProvider>(context);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
+      resizeToAvoidBottomInset: true,
       appBar: AppBars(
         title: _buildLogoAndTitle(),
         leading: _buildBackButton(),
         action: [],
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(24.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [_buildFormCard(context, projectProvider, clientsProvider)],
+      body: GestureDetector(
+        onTap: () {
+          FocusScope.of(context).unfocus();
+        },
+        behavior: HitTestBehavior.opaque,
+        child: SingleChildScrollView(
+          controller: _scrollController,
+          padding: EdgeInsets.all(
+            24.w,
+          ).copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 24.h),
+          child: Column(children: [_buildFormCard(context, productProvider)]),
         ),
       ),
     );
@@ -68,7 +151,7 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          'Add Project',
+          'Add Product',
           style: TextStyle(
             fontSize: 18.sp,
             fontWeight: FontWeight.w600,
@@ -89,19 +172,14 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
             color: const Color(0xFF334155),
           ),
           onPressed: () {
-            context.go(RouteNames.projects);
+            context.go(RouteNames.products);
           },
-          tooltip: 'Back',
         );
       },
     );
   }
 
-  Widget _buildFormCard(
-    BuildContext context,
-    ProjectProvider projectProvider,
-    ClientsProvider clientsProvider,
-  ) {
+  Widget _buildFormCard(BuildContext context, ProductProvider productProvider) {
     return Container(
       padding: EdgeInsets.all(24.w),
       decoration: BoxDecoration(
@@ -121,7 +199,7 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Project Details',
+              'Product Details',
               style: TextStyle(
                 fontSize: 18.sp,
                 fontWeight: FontWeight.w600,
@@ -134,48 +212,47 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
               style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
             ),
             SizedBox(height: 24.h),
-            Consumer<ClientsProvider>(
-              builder: (context, clientsProvider, _) {
-                final clients = clientsProvider
-                    .allClients; // Use allClients instead of clients
-                final clientNames = clients
-                    .map((client) => client.name)
-                    .toList();
-
-                return CustomSearchableDropdownFormField(
-                  name: 'plant',
-                  labelText: 'Plant Name',
-                  hintText: 'Select Plant Name',
-                  prefixIcon: Icons.person,
-                  options: clientsProvider.isAllClientsLoading
-                      ? ['Loading...']
-                      : clientNames.isEmpty
-                      ? ['No clients available']
-                      : clientNames,
-                  fillColor: const Color(0xFFF8FAFC),
-                  borderColor: Colors.grey.shade300,
-                  focusedBorderColor: const Color(0xFF3B82F6),
-                  borderRadius: 12.r,
-                  validators: [
-                    FormBuilderValidators.required(
-                      errorText: 'Please select a client',
-                    ),
-                  ],
-                  enabled:
-                      !clientsProvider.isAllClientsLoading &&
-                      clientNames.isNotEmpty,
-                );
+            CustomSearchableDropdownFormField(
+              name: 'plant',
+              labelText: 'Plant',
+              hintText: 'Select Plant',
+              prefixIcon: Icons.factory,
+              initialValue: productProvider.plants.isNotEmpty
+                  ? productProvider.plants.firstWhere(
+                      (plant) => plant['id']!.isNotEmpty,
+                      orElse: () => {'display': 'No valid plants'},
+                    )['display']
+                  : null,
+              options: productProvider.plants.isEmpty
+                  ? ['No plants available']
+                  : productProvider.plants
+                        .where((plant) => plant['id']!.isNotEmpty)
+                        .map((plant) => plant['display']!)
+                        .toList(),
+              fillColor: const Color(0xFFF8FAFC),
+              borderColor: Colors.grey.shade300,
+              focusedBorderColor: const Color(0xFF3B82F6),
+              borderRadius: 12.r,
+              validators: [
+                FormBuilderValidators.required(
+                  errorText: 'Please select a plant',
+                ),
+              ],
+              enabled: productProvider.plants.any(
+                (plant) => plant['id']!.isNotEmpty,
+              ),
+              onChanged: (value) {
+                print('Dropdown onChanged: $value');
+                _formKey.currentState?.fields['plant']?.didChange(value);
               },
             ),
-
-            SizedBox(height: 24.h),
+            SizedBox(height: 18.h),
             CustomTextFormField(
               name: 'material_code',
-              // keyboardType:,
               labelText: 'Material Code',
-              hintText: 'Enter Material Code ',
+              hintText: 'Enter Material Code',
+              focusNode: _focusNodes['material_code'],
               prefixIcon: Icons.business,
-
               validators: [
                 FormBuilderValidators.required(),
                 FormBuilderValidators.minLength(2),
@@ -184,42 +261,64 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
               borderColor: Colors.grey.shade300,
               focusedBorderColor: const Color(0xFF3B82F6),
               borderRadius: 12.r,
+              onTap: () =>
+                  _scrollToFocusedField(context, _focusNodes['material_code']!),
             ),
+            SizedBox(height: 18.h),
             CustomTextFormField(
               name: 'description',
-              // keyboardType:,
-              labelText: 'Description (e.g. Drain 600X300X100MM)',
-              hintText: 'Enter description (e.g. Drain 600X300X100MM)',
-              prefixIcon: Icons.business,
-
-              validators: [
-                FormBuilderValidators.required(),
-                FormBuilderValidators.minLength(2),
-              ],
+              labelText: 'Description (e.g. 600X300X100MM)',
+              hintText: 'Enter description (e.g. 600X300X100MM)',
+              focusNode: _focusNodes['description'],
+              prefixIcon: Icons.description,
+              validators: [FormBuilderValidators.required()],
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
               focusedBorderColor: const Color(0xFF3B82F6),
               borderRadius: 12.r,
+              onChanged: (value) {
+                if (value != null && _showAreaPerUnit) {
+                  final area = _calculateArea(value);
+                  if (area != null) {
+                    _formKey.currentState?.fields['area_per_unit']?.didChange(
+                      area.toStringAsFixed(4),
+                    );
+                  }
+                }
+              },
+              onTap: () =>
+                  _scrollToFocusedField(context, _focusNodes['description']!),
             ),
+            SizedBox(height: 18.h),
             CustomTextFormField(
               name: 'no_of_pieces_per_punch',
-              // keyboardType:,
+              keyboardType: TextInputType.number,
               labelText: 'No Of Pieces Per Punch',
               hintText: 'Enter No Of Pieces Per Punch',
-              prefixIcon: Icons.business,
-
+              focusNode: _focusNodes['no_of_pieces_per_punch'],
+              prefixIcon: Icons.numbers,
               validators: [
                 FormBuilderValidators.required(),
-                FormBuilderValidators.minLength(2),
+                FormBuilderValidators.numeric(),
+                FormBuilderValidators.min(
+                  0,
+                  errorText: 'Quantity must be positive',
+                ),
               ],
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
               focusedBorderColor: const Color(0xFF3B82F6),
               borderRadius: 12.r,
+              onTap: () => _scrollToFocusedField(
+                context,
+                _focusNodes['no_of_pieces_per_punch']!,
+              ),
             ),
+            SizedBox(height: 18.h),
             CustomDropdownFormField<String>(
               name: 'uom',
               labelText: 'UOM',
+              initialValue: 'Square Meter/No',
               items: ["Square Meter/No", "Meter/No"]
                   .map(
                     (item) => DropdownMenuItem<String>(
@@ -228,35 +327,85 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
                     ),
                   )
                   .toList(),
-              hintText: 'UOM',
+              hintText: 'Select UOM',
               prefixIcon: Icons.workspaces,
-              validators: [
-                FormBuilderValidators.required(),
-                FormBuilderValidators.minLength(2),
-              ],
+              validators: [FormBuilderValidators.required()],
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
               focusedBorderColor: const Color(0xFF3B82F6),
               borderRadius: 12.r,
+              onChanged: (value) {
+                setState(() {
+                  _showAreaPerUnit = value == "Square Meter/No";
+                });
+                productProvider.setShowAreaPerUnit(value == "Square Meter/No");
+                if (!productProvider.showAreaPerUnit) {
+                  _formKey.currentState?.fields['area_per_unit']?.didChange('');
+                } else {
+                  final description =
+                      _formKey.currentState?.fields['description']?.value;
+                  if (description != null && description.isNotEmpty) {
+                    final area = productProvider.calculateArea(description);
+                    if (area != null) {
+                      _formKey.currentState?.fields['area_per_unit']?.didChange(
+                        area.toStringAsFixed(4),
+                      );
+                    }
+                  }
+                }
+              },
             ),
-
+            SizedBox(height: 18.h),
+            if (_showAreaPerUnit)
+              CustomTextFormField(
+                name: 'area_per_unit',
+                labelText: 'Area per unit (Sqmt)',
+                hintText: 'Enter or adjust area per unit',
+                focusNode: _focusNodes['area_per_unit'],
+                prefixIcon: Icons.area_chart,
+                keyboardType: TextInputType.number,
+                validators: [
+                  FormBuilderValidators.required(),
+                  FormBuilderValidators.numeric(),
+                  FormBuilderValidators.min(
+                    0,
+                    errorText: 'Area must be positive',
+                  ),
+                ],
+                fillColor: const Color(0xFFF8FAFC),
+                borderColor: Colors.grey.shade300,
+                focusedBorderColor: const Color(0xFF3B82F6),
+                borderRadius: 12.r,
+                onTap: () => _scrollToFocusedField(
+                  context,
+                  _focusNodes['area_per_unit']!,
+                ),
+              ),
+            SizedBox(height: 18.h),
             CustomTextFormField(
               name: 'qty_in_bundle',
-              // keyboardType:,
+              keyboardType: TextInputType.number,
               labelText: 'Quantity in bundle',
-              hintText: 'Quantity in bundle',
-              prefixIcon: Icons.workspaces,
+              hintText: 'Enter quantity in bundle',
+              focusNode: _focusNodes['qty_in_bundle'],
+              prefixIcon: Icons.inventory,
               validators: [
                 FormBuilderValidators.required(),
-                FormBuilderValidators.minLength(2),
+                FormBuilderValidators.numeric(),
+                FormBuilderValidators.min(
+                  0,
+                  errorText: 'Quantity must be positive',
+                ),
               ],
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
               focusedBorderColor: const Color(0xFF3B82F6),
               borderRadius: 12.r,
+              onTap: () =>
+                  _scrollToFocusedField(context, _focusNodes['qty_in_bundle']!),
             ),
             SizedBox(height: 40.h),
-            Consumer<ProjectProvider>(
+            Consumer<ProductProvider>(
               builder: (context, provider, _) => SizedBox(
                 width: double.infinity,
                 height: 56.h,
@@ -269,7 +418,9 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
     );
   }
 
-  Widget _buildSubmitButton(BuildContext context, ProjectProvider provider) {
+  Widget _buildSubmitButton(BuildContext context, ProductProvider provider) {
+    final isLoading = provider.isAddProductLoading;
+
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -289,45 +440,54 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: provider.isAddProjectLoading
-              ? null
-              : () => _submitForm(context, provider),
+          onTap: isLoading ? null : () => _submitForm(context, provider),
           borderRadius: BorderRadius.circular(12.r),
           child: Center(
-            child: provider.isAddProjectLoading
-                ? Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                      SizedBox(width: 12.w),
-                      Text(
-                        'Creating Project...',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w600,
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 16.h),
+              child: isLoading
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
                         ),
-                      ),
-                    ],
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.add_circle, color: Colors.white, size: 20.sp),
-                      SizedBox(width: 8.w),
-                      Text(
-                        'Create Project',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w600,
+                        SizedBox(width: 12.w),
+                        Text(
+                          'Creating Product...',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.add_circle,
+                          color: Colors.white,
+                          size: 20.sp,
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Create Product',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
           ),
         ),
       ),
@@ -336,32 +496,82 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
 
   Future<void> _submitForm(
     BuildContext context,
-    ProjectProvider provider,
+    ProductProvider provider,
   ) async {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       final formData = _formKey.currentState!.value;
-      final clientsProvider = Provider.of<ClientsProvider>(
-        context,
-        listen: false,
-      );
 
-      final selectedClientName = formData['client'] as String?;
-      if (selectedClientName == null) {
-        context.showErrorSnackbar("Please select a client.");
+      final selectedPlantDisplay = formData['plant'] as String?;
+      print('Form plant value: $selectedPlantDisplay');
+
+      // Check if plant is selected
+      if (selectedPlantDisplay == null || selectedPlantDisplay.isEmpty) {
+        context.showErrorSnackbar("Please select a plant.");
         return;
       }
 
-      final selectedClient = clientsProvider.allClients.firstWhere(
-        (client) => client.name == selectedClientName,
-      );
-
-      if (selectedClient.id.isEmpty) {
+      // Check if plants are available
+      if (provider.plants.isEmpty) {
         context.showErrorSnackbar(
-          "Selected client not found. Please try again.",
+          "No plants available. Please refresh and try again.",
         );
         return;
       }
 
+      print(
+        'Available plants: ${provider.plants.map((p) => "${p['display']} (ID: ${p['id']})").toList()}',
+      );
+
+      // Find the selected plant
+      final selectedPlant = provider.plants.firstWhere(
+        (plant) => plant['display']?.trim() == selectedPlantDisplay.trim(),
+        orElse: () {
+          print('No plant found for display: $selectedPlantDisplay');
+          return {'id': '', 'display': ''};
+        },
+      );
+
+      // Validate plant ID
+      if (selectedPlant['id'] == null || selectedPlant['id']!.isEmpty) {
+        // Try to reload plants if all IDs are empty
+        try {
+          context.showInfoSnackbar("Refreshing plant data...");
+          await provider.initializeEditForm(''); // This will reload plants
+
+          if (provider.plants.isEmpty ||
+              provider.plants.every((plant) => plant['id']!.isEmpty)) {
+            context.showErrorSnackbar(
+              "All plants have invalid IDs. Please contact support or check the plant configuration.",
+            );
+            return;
+          }
+
+          // Try to find the plant again after refresh
+          final refreshedPlant = provider.plants.firstWhere(
+            (plant) => plant['display']?.trim() == selectedPlantDisplay.trim(),
+            orElse: () => {'id': '', 'display': ''},
+          );
+
+          if (refreshedPlant['id']!.isEmpty) {
+            context.showErrorSnackbar(
+              "Selected plant '$selectedPlantDisplay' has no valid ID even after refresh.",
+            );
+            return;
+          }
+
+          // Use the refreshed plant
+          selectedPlant['id'];
+        } catch (e) {
+          context.showErrorSnackbar(
+            "Failed to refresh plant data: ${e.toString()}",
+          );
+          return;
+        }
+      }
+
+      print('Selected plant ID: ${selectedPlant['id']}');
+
+      // Show loading dialog
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -385,7 +595,7 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
                 const CircularProgressIndicator(color: Color(0xFF3B82F6)),
                 SizedBox(height: 16.h),
                 Text(
-                  'Creating Project...',
+                  'Creating Product...',
                   style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w500,
@@ -398,20 +608,30 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
         ),
       );
 
-      final success = await provider.createProject(
-        formData['name'],
-        formData['address'],
-        selectedClient.id,
+      // Create the product
+      final success = await provider.createProduct(
+        plantId: selectedPlant['id']!,
+        materialCode: formData['material_code'],
+        description: formData['description'],
+        uom: [formData['uom']],
+        areas: {
+          formData['uom']:
+              double.tryParse(formData['area_per_unit'] ?? '0') ?? 0.0,
+        },
+        noOfPiecesPerPunch:
+            int.tryParse(formData['no_of_pieces_per_punch'] ?? '0') ?? 0,
+        qtyInBundle: int.tryParse(formData['qty_in_bundle'] ?? '0') ?? 0,
       );
 
+      // Close loading dialog
       Navigator.of(context).pop();
 
       if (success && context.mounted) {
-        context.showSuccessSnackbar("Project successfully created");
-        context.go(RouteNames.projects);
+        context.showSuccessSnackbar("Product successfully created");
+        context.go(RouteNames.products);
       } else {
         context.showErrorSnackbar(
-          "Failed to create project: ${provider.error?.replaceFirst('Exception: ', '') ?? 'Unknown error. Please try again.'}",
+          "Failed to create Product: ${provider.error?.replaceFirst('Exception: ', '') ?? 'Unknown error. Please try again.'}",
         );
       }
     } else {

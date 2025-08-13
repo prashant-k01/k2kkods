@@ -6,8 +6,15 @@ class RouteNames {
   static const String clientsadd = '/clientsadd';
   static const String clientsedit = '/clients/edit/:clientId';
   static const String clients = '/clients';
+  //plants
+  static const String plants = '/plants';
   static const String plantsadd = '/plantsadd';
   static const String clientsadd = '/clientsadd';
   static const String plantsedit = '/plants/edit/:plantId';
-  static const String clientsedit = '/clients/edit/:clientId';
+  //projects
+  static const String projects = '/projects';
+  static const String products= '/products';
+  static const String projectsadd = '/projectsadd';
+static const String projectsedit = '/projects/edit/:projectsId'; // Verify this
+
 }

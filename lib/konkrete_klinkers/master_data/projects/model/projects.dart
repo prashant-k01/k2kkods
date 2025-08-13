@@ -2,27 +2,58 @@ import 'dart:convert';
 
 class ProjectModelResponse {
   final List<ProjectModel> projectModels;
-  final Pagination pagination;
   final String message;
   final bool success;
 
   ProjectModelResponse({
     required this.projectModels,
-    required this.pagination,
     required this.message,
     required this.success,
   });
 
   factory ProjectModelResponse.fromJson(Map<String, dynamic> json) {
-    var projectModelsList = json['data']['projects'] as List<dynamic>? ?? [];
-    return ProjectModelResponse(
-      projectModels: projectModelsList
-          .map((projectModelJson) => ProjectModel.fromJson(projectModelJson))
-          .toList(),
-      pagination: Pagination.fromJson(json['data']['pagination'] ?? {}),
-      message: json['message'] ?? '',
-      success: json['success'] ?? true,
-    );
+    try {
+      final dataJson = json['data'];
+      if (dataJson == null) {
+        print('Error: data field is null in JSON response: $json');
+        return ProjectModelResponse(
+          projectModels: [],
+          message: json['message']?.toString() ?? 'No data field in response',
+          success: json['success'] as bool? ?? false,
+        );
+      }
+
+      final projectModels = (dataJson as List<dynamic>)
+          .map((projectModelJson) {
+            try {
+              if (projectModelJson is Map<String, dynamic>) {
+                return ProjectModel.fromJson(projectModelJson);
+              } else {
+                print('Error: Project item is not a Map: $projectModelJson');
+                return null;
+              }
+            } catch (e) {
+              print('Error parsing project: $e for item: $projectModelJson');
+              return null;
+            }
+          })
+          .where((item) => item != null)
+          .cast<ProjectModel>()
+          .toList();
+
+      return ProjectModelResponse(
+        projectModels: projectModels,
+        message: json['message']?.toString() ?? '',
+        success: json['success'] as bool? ?? true,
+      );
+    } catch (e) {
+      print('Error parsing ProjectModelResponse: $e for JSON: $json');
+      return ProjectModelResponse(
+        projectModels: [],
+        message: 'Failed to parse response: $e',
+        success: false,
+      );
+    }
   }
 }
 
@@ -52,6 +83,10 @@ class ProjectModel {
   factory ProjectModel.fromJson(Map<String, dynamic> json) {
     try {
       final id = json['_id']?.toString() ?? json['id']?.toString() ?? '';
+      if (id.isEmpty) {
+        print('Warning: Project ID is empty in JSON: $json');
+      }
+
       final name = json['name']?.toString() ?? '';
       final address = json['address']?.toString() ?? '';
 
@@ -84,6 +119,7 @@ class ProjectModel {
         final createdAtStr = json['createdAt']?.toString();
         createdAt = createdAtStr != null ? DateTime.parse(createdAtStr) : DateTime.now();
       } catch (e) {
+        print('Error parsing createdAt: $e for JSON: $json');
         createdAt = DateTime.now();
       }
 
@@ -92,10 +128,13 @@ class ProjectModel {
         final updatedAtStr = json['updatedAt']?.toString();
         updatedAt = updatedAtStr != null ? DateTime.parse(updatedAtStr) : DateTime.now();
       } catch (e) {
+        print('Error parsing updatedAt: $e for JSON: $json');
         updatedAt = DateTime.now();
       }
 
-      final version = (json['__v'] ?? json['v'] ?? 0) as int;
+      final version = json['__v'] is num
+          ? (json['__v'] as num).toInt()
+          : (json['v'] is num ? (json['v'] as num).toInt() : 0);
 
       return ProjectModel(
         id: id,
@@ -109,7 +148,7 @@ class ProjectModel {
         version: version,
       );
     } catch (e) {
-      print('Error parsing ProjectModel: $e');
+      print('Error parsing ProjectModel: $e for JSON: $json');
       rethrow;
     }
   }
@@ -171,7 +210,7 @@ class Client {
       final address = json['address']?.toString() ?? '';
       return Client(id: id, name: name, address: address);
     } catch (e) {
-      print('Error parsing Client: $e');
+      print('Error parsing Client: $e for JSON: $json');
       return Client(id: '', name: '', address: '');
     }
   }
@@ -200,10 +239,10 @@ class CreatedBy {
     try {
       final id = json['_id']?.toString() ?? json['id']?.toString() ?? '';
       final email = json['email']?.toString() ?? '';
-      final username = json['username']?.toString() ?? '';
+      final username = json['username']?.toString() ?? 'Unknown';
       return CreatedBy(id: id, email: email, username: username);
     } catch (e) {
-      print('Error parsing CreatedBy: $e');
+      print('Error parsing CreatedBy: $e for JSON: $json');
       return CreatedBy(id: '', email: '', username: 'Unknown');
     }
   }
@@ -213,38 +252,6 @@ class CreatedBy {
       '_id': id,
       'email': email,
       'username': username,
-    };
-  }
-}
-
-class Pagination {
-  final int total;
-  final int page;
-  final int limit;
-  final int totalPages;
-
-  Pagination({
-    required this.total,
-    required this.page,
-    required this.limit,
-    required this.totalPages,
-  });
-
-  factory Pagination.fromJson(Map<String, dynamic> json) {
-    return Pagination(
-      total: json['total']?.toInt() ?? 0,
-      page: json['page']?.toInt() ?? 1,
-      limit: json['limit']?.toInt() ?? 10,
-      totalPages: json['totalPages']?.toInt() ?? 1,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'total': total,
-      'page': page,
-      'limit': limit,
-      'totalPages': totalPages,
     };
   }
 }

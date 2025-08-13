@@ -36,87 +36,93 @@ class ProductModel {
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
     try {
+      // Handle ID field
       final id = json['_id']?.toString() ?? json['id']?.toString() ?? '';
-      if (id.isEmpty) {
-        print('Warning: Product ID is empty in JSON: $json');
-      }
-
+      
+      // Handle plant data
       final plantData = json['plant'];
-      if (plantData == null) {
-        print('Error: plant field is null in JSON: $json');
+      PlantModel plant;
+      if (plantData is Map<String, dynamic>) {
+        plant = PlantModel.fromJson(plantData);
+      } else {
+        // Create a default plant if plant data is missing or invalid
+        plant = PlantModel(
+          id: '',
+          plantCode: '',
+          plantName: 'Unknown Plant',
+          createdBy: CreatedBy(id: '', email: '', username: ''),
+          isDeleted: false,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          version: 0,
+        );
       }
-      final plant = plantData is Map<String, dynamic>
-          ? PlantModel.fromJson(plantData)
-          : PlantModel(
-              id: '',
-              plantCode: '',
-              plantName: '',
-              createdBy: CreatedBy(id: '', email: '', username: ''),
-              isDeleted: false,
-              createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
-              version: 0,
-            );
 
+      // Handle basic fields
       final materialCode = json['material_code']?.toString() ?? '';
-      if (materialCode.isEmpty) {
-        print('Warning: material_code is empty in JSON: $json');
-      }
-
       final description = json['description']?.toString() ?? '';
+      
+      // Handle UOM field
       final uom = json['uom'] != null
           ? List<String>.from(json['uom'].map((x) => x.toString()))
-          : <String>[];
-      final areas = json['areas'] != null
-          ? Map<String, double>.from(
-              (json['areas'] as Map).map(
-                (key, value) => MapEntry(
-                  key.toString(),
-                  value is num ? value.toDouble() : (double.tryParse(value.toString()) ?? 0.0),
-                ),
-              ),
-            )
-          : <String, double>{};
-      final noOfPiecesPerPunch = json['no_of_pieces_per_punch'] is num
-          ? (json['no_of_pieces_per_punch'] as num).toInt()
-          : 0;
-      final qtyInBundle = json['qty_in_bundle'] is num
-          ? (json['qty_in_bundle'] as num).toInt()
-          : 0;
+          : <String>['Square Metre/No']; // Default UOM
 
+      // Handle areas - this is the key fix for your API response
+      final areas = <String, double>{};
+      
+      if (json['areas'] != null && json['areas'] is Map) {
+        // New format with areas map
+        final areasMap = json['areas'] as Map;
+        for (var entry in areasMap.entries) {
+          final key = entry.key.toString();
+          final value = entry.value;
+          if (value is num) {
+            areas[key] = value.toDouble();
+          } else if (value is String) {
+            areas[key] = double.tryParse(value) ?? 0.0;
+          }
+        }
+      } else if (json['area'] != null) {
+        // Old format with single area field - this matches your API response
+        final areaValue = json['area'];
+        final uomKey = uom.isNotEmpty ? uom.first : 'Square Metre/No';
+        
+        if (areaValue is num) {
+          areas[uomKey] = areaValue.toDouble();
+        } else if (areaValue is String) {
+          areas[uomKey] = double.tryParse(areaValue) ?? 0.0;
+        }
+      }
+      
+      // If no areas data found, set default
+      if (areas.isEmpty) {
+        final uomKey = uom.isNotEmpty ? uom.first : 'Square Metre/No';
+        areas[uomKey] = 0.0;
+      }
+
+      // Handle numeric fields
+      final noOfPiecesPerPunch = _parseIntSafely(json['no_of_pieces_per_punch']);
+      final qtyInBundle = _parseIntSafely(json['qty_in_bundle']);
+
+      // Handle created_by
       final createdByData = json['created_by'];
-      final createdBy = createdByData is Map<String, dynamic>
-          ? CreatedBy.fromJson(createdByData)
-          : CreatedBy(id: '', email: '', username: '');
+      CreatedBy createdBy;
+      if (createdByData is Map<String, dynamic>) {
+        createdBy = CreatedBy.fromJson(createdByData);
+      } else {
+        createdBy = CreatedBy(id: '', email: '', username: 'Unknown');
+      }
 
-      final status = json['status']?.toString() ?? '';
+      // Handle other fields
+      final status = json['status']?.toString() ?? 'Active';
       final isDeleted = json['isDeleted'] as bool? ?? false;
 
-      DateTime createdAt;
-      try {
-        final createdAtStr = json['createdAt']?.toString();
-        createdAt = createdAtStr != null
-            ? DateTime.parse(createdAtStr)
-            : DateTime.now();
-      } catch (e) {
-        print('Error parsing createdAt: $e for JSON: $json');
-        createdAt = DateTime.now();
-      }
+      // Handle dates
+      final createdAt = _parseDateSafely(json['createdAt']);
+      final updatedAt = _parseDateSafely(json['updatedAt']);
 
-      DateTime updatedAt;
-      try {
-        final updatedAtStr = json['updatedAt']?.toString();
-        updatedAt = updatedAtStr != null
-            ? DateTime.parse(updatedAtStr)
-            : DateTime.now();
-      } catch (e) {
-        print('Error parsing updatedAt: $e for JSON: $json');
-        updatedAt = DateTime.now();
-      }
-
-      final version = json['__v'] is num
-          ? (json['__v'] as num).toInt()
-          : (json['v'] is num ? (json['v'] as num).toInt() : 0);
+      // Handle version
+      final version = _parseIntSafely(json['__v'] ?? json['v']);
 
       return ProductModel(
         id: id,
@@ -135,9 +141,58 @@ class ProductModel {
         version: version,
       );
     } catch (e) {
-      print('Error parsing ProductModel: $e for JSON: $json');
-      rethrow;
+      print('Error parsing ProductModel: $e');
+      print('JSON data: $json');
+      
+      // Return a default ProductModel to prevent crashes
+      return ProductModel(
+        id: json['_id']?.toString() ?? '',
+        plant: PlantModel(
+          id: '',
+          plantCode: '',
+          plantName: 'Unknown Plant',
+          createdBy: CreatedBy(id: '', email: '', username: ''),
+          isDeleted: false,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          version: 0,
+        ),
+        materialCode: json['material_code']?.toString() ?? 'Unknown',
+        description: json['description']?.toString() ?? '',
+        uom: ['Square Metre/No'],
+        areas: {'Square Metre/No': 0.0},
+        noOfPiecesPerPunch: 0,
+        qtyInBundle: 0,
+        createdBy: CreatedBy(id: '', email: '', username: 'Unknown'),
+        status: 'Active',
+        isDeleted: false,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        version: 0,
+      );
     }
+  }
+
+  // Helper method to safely parse integers
+  static int _parseIntSafely(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is double) return value.round();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  // Helper method to safely parse dates
+  static DateTime _parseDateSafely(dynamic value) {
+    if (value == null) return DateTime.now();
+    if (value is String) {
+      try {
+        return DateTime.parse(value);
+      } catch (e) {
+        return DateTime.now();
+      }
+    }
+    return DateTime.now();
   }
 
   Map<String, dynamic> toJson() {
@@ -196,108 +251,73 @@ class ProductModel {
 
 class ProductResponse {
   final List<ProductModel> data;
-  final Pagination pagination;
   final String message;
   final bool success;
 
   ProductResponse({
     required this.data,
-    required this.pagination,
     required this.message,
     required this.success,
   });
 
   factory ProductResponse.fromJson(Map<String, dynamic> json) {
     try {
-      final dataJson = json['data'];
-      if (dataJson == null) {
-        print('Error: data field is null in JSON response: $json');
-        return ProductResponse(
-          data: [],
-          pagination: Pagination(total: 0, page: 1, limit: 10, totalPages: 1),
-          message: json['message']?.toString() ?? 'No data field in response',
-          success: json['success'] as bool? ?? false,
-        );
+      // Handle different response structures
+      List<ProductModel> products = [];
+      
+      // Check if it's a direct array or wrapped in data field
+      List<dynamic>? dataList;
+      
+      if (json['data'] is List) {
+        dataList = json['data'] as List<dynamic>;
+      } else if (json is List) {
+        dataList = json as List<dynamic>;
       }
-
-      final productsJson = dataJson['products'] as List<dynamic>?;
-      if (productsJson == null) {
-        print('Error: products field is null or not a list in JSON: $json');
-        return ProductResponse(
-          data: [],
-          pagination: Pagination.fromJson(dataJson['pagination'] ?? {}),
-          message: json['message']?.toString() ?? 'No products field in response',
-          success: json['success'] as bool? ?? false,
-        );
-      }
-
-      final products = productsJson
-          .map((item) {
-            try {
-              if (item is Map<String, dynamic>) {
-                return ProductModel.fromJson(item);
-              } else {
-                print('Error: Product item is not a Map: $item');
+      
+      if (dataList != null) {
+        products = dataList
+            .where((item) => item is Map<String, dynamic>)
+            .map((item) {
+              try {
+                return ProductModel.fromJson(item as Map<String, dynamic>);
+              } catch (e) {
+                print('Error parsing individual product: $e');
                 return null;
               }
-            } catch (e) {
-              print('Error parsing product: $e for item: $item');
-              return null;
-            }
-          })
-          .where((item) => item != null)
-          .cast<ProductModel>()
-          .toList();
+            })
+            .where((product) => product != null)
+            .cast<ProductModel>()
+            .toList();
+      }
 
       return ProductResponse(
         data: products,
-        pagination: Pagination.fromJson(dataJson['pagination'] ?? {}),
         message: json['message']?.toString() ?? '',
         success: json['success'] as bool? ?? true,
       );
     } catch (e) {
-      print('Error parsing ProductResponse: $e for JSON: $json');
+      print('Error parsing ProductResponse: $e');
+      print('Response JSON: $json');
       return ProductResponse(
         data: [],
-        pagination: Pagination(total: 0, page: 1, limit: 10, totalPages: 1),
-        message: 'Failed to parse response: $e',
+        message: 'Failed to parse response',
         success: false,
       );
     }
   }
 }
 
-class Pagination {
-  final int total;
-  final int page;
-  final int limit;
-  final int totalPages;
-
-  Pagination({
-    required this.total,
-    required this.page,
-    required this.limit,
-    required this.totalPages,
-  });
-
-  factory Pagination.fromJson(Map<String, dynamic> json) {
-    return Pagination(
-      total: json['total'] is num ? (json['total'] as num).toInt() : 0,
-      page: json['page'] is num ? (json['page'] as num).toInt() : 1,
-      limit: json['limit'] is num ? (json['limit'] as num).toInt() : 10,
-      totalPages: json['totalPages'] is num ? (json['totalPages'] as num).toInt() : 1,
+ProductResponse productResponseFromJson(String str) {
+  try {
+    final decoded = json.decode(str);
+    return ProductResponse.fromJson(decoded);
+  } catch (e) {
+    print('Error decoding JSON string: $e');
+    print('JSON string: $str');
+    return ProductResponse(
+      data: [],
+      message: 'Invalid JSON format',
+      success: false,
     );
   }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'total': total,
-      'page': page,
-      'limit': limit,
-      'totalPages': totalPages,
-    };
-  }
 }
-
-ProductResponse productResponseFromJson(String str) =>
-    ProductResponse.fromJson(json.decode(str));

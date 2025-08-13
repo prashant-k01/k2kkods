@@ -3,46 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:k2k/api_services/api_services.dart';
 import 'package:k2k/konkrete_klinkers/master_data/clients/model/clients_model.dart';
-import 'package:k2k/shared_preference/shared_preference.dart';
-
-class PaginationInfo {
-  final int total;
-  final int page;
-  final int limit;
-  final int totalPages;
-  final bool hasNextPage;
-  final bool hasPreviousPage;
-
-  PaginationInfo({
-    required this.total,
-    required this.page,
-    required this.limit,
-    required this.totalPages,
-    required this.hasNextPage,
-    required this.hasPreviousPage,
-  });
-
-  factory PaginationInfo.fromJson(Map<String, dynamic> json) {
-    final page = json['page'] ?? 1;
-    final totalPages = json['totalPages'] ?? 1;
-
-    return PaginationInfo(
-      total: json['total'] ?? 0,
-      page: page,
-      limit: json['limit'] ?? 10,
-      totalPages: totalPages,
-      hasNextPage: page < totalPages,
-      hasPreviousPage: page > 1,
-    );
-  }
-}
-
-class PaginatedClientsResponse {
-  final List<ClientsModel> clients;
-  final PaginationInfo pagination;
-
-  PaginatedClientsResponse({required this.clients, required this.pagination});
-}
+import 'package:k2k/api_services/shared_preference/shared_preference.dart';
 
 class ClientRepository {
   Future<Map<String, String>> get headers async {
@@ -57,60 +18,81 @@ class ClientRepository {
   ClientsModel? _lastCreatedClient;
   ClientsModel? get lastCreatedClient => _lastCreatedClient;
 
-  Future<PaginatedClientsResponse> getAllClients({
-    int page = 1,
-    int limit = 10,
+  Future<List<ClientsModel>> getAllClients({
+    required int skip,
+    required int limit,
     String? search,
   }) async {
     try {
       final authHeaders = await headers;
+      print('Headers: $authHeaders'); // Debug
       final uri = Uri.parse(AppUrl.fetchClientDetailsUrl).replace(
         queryParameters: {
-          'page': page.toString(),
+          'skip': skip.toString(),
           'limit': limit.toString(),
           if (search != null && search.isNotEmpty) 'search': search,
         },
       );
+      print('Request URL: $uri'); // Debug
 
       final response = await http
           .get(uri, headers: authHeaders)
           .timeout(const Duration(seconds: 30));
+      print('Response status: ${response.statusCode}, body: ${response.body}'); // Debug
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-        List<dynamic> clientsJson = [];
-        PaginationInfo paginationInfo;
+        print('Decoded JSON: $jsonData'); // Debug
+        List<dynamic> clientsJson;
 
-        if (jsonData is Map<String, dynamic> && jsonData.containsKey('data')) {
-          final data = jsonData['data'];
-          paginationInfo = PaginationInfo.fromJson(data['pagination'] ?? {});
-          clientsJson = (data['clients'] as List?) ?? [];
+        // Handle various response structures
+        if (jsonData is Map<String, dynamic>) {
+          if (jsonData.containsKey('data')) {
+            final data = jsonData['data'];
+            if (data is List) {
+              clientsJson = data;
+            } else if (data is Map<String, dynamic>) {
+              clientsJson = data['clients'] ?? data['items'] ?? [];
+            } else {
+              throw Exception('Unexpected data structure: ${data.runtimeType}');
+            }
+          } else if (jsonData.containsKey('clients')) {
+            clientsJson = jsonData['clients'] ?? [];
+          } else {
+            throw Exception('Response missing expected keys: $jsonData');
+          }
+        } else if (jsonData is List) {
+          clientsJson = jsonData;
         } else {
-          throw Exception('Unexpected response structure: ${jsonData.runtimeType}');
+          throw Exception('Unexpected response type: ${jsonData.runtimeType}');
         }
 
         final clients = clientsJson
-            .whereType<Map<String, dynamic>>()
-            .map((clientJson) => ClientsModel.fromJson(clientJson))
+            .where((item) => item is Map<String, dynamic>)
+            .cast<Map<String, dynamic>>()
+            .map((clientJson) {
+              print('Parsing client: $clientJson'); // Debug
+              try {
+                return ClientsModel.fromJson(clientJson);
+              } catch (e) {
+                print('Error parsing client: $e, JSON: $clientJson');
+                rethrow;
+              }
+            })
             .toList();
 
-        return PaginatedClientsResponse(
-          clients: clients,
-          pagination: paginationInfo,
-        );
+        print('Parsed clients: ${clients.length}'); // Debug
+        return clients;
       } else {
-        throw Exception(
-          'Failed to load clients: ${response.statusCode} - ${response.body}',
-        );
+        throw Exception('Failed to load clients: ${response.statusCode} - ${response.body}');
       }
     } on SocketException catch (e) {
       throw Exception('No internet connection: $e');
-    } on HttpException catch (e) {
-      throw Exception('Network error occurred: $e');
     } on FormatException catch (e) {
-      throw Exception('Invalid response format: $e');
+      throw Exception('Invalid JSON format: $e');
     } catch (e) {
-      throw Exception('Error loading clients: $e');
+      print('Error in getAllClients: $e'); // Debug
+      rethrow;
     }
   }
 

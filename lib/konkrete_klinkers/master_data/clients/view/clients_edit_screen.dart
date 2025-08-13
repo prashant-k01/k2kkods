@@ -166,7 +166,6 @@ class _EditClientFormScreenState extends State<EditClientFormScreen> {
               validators: [
                 FormBuilderValidators.required(),
                 FormBuilderValidators.minLength(3),
-                FormBuilderValidators.maxLength(20),
               ],
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,

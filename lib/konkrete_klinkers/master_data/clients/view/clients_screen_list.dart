@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart' hide ScreenUtil;
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/list_helper/add_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
-import 'package:k2k/common/list_helper/shimmer.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/konkrete_klinkers/master_data/clients/provider/clients_provider.dart';
 import 'package:k2k/konkrete_klinkers/master_data/clients/view/clients_delete_screen.dart';
-import 'package:k2k/utils/sreen_util.dart';
+import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
@@ -25,7 +24,10 @@ class _ClientsListViewState extends State<ClientsListView> {
   @override
   void initState() {
     super.initState();
-    _initializeData();
+    // Defer data loading until after the build phase
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeData();
+    });
   }
 
   @override
@@ -34,17 +36,13 @@ class _ClientsListViewState extends State<ClientsListView> {
     super.dispose();
   }
 
-  void _initializeData() async {
+  void _initializeData() {
     if (!_isInitialized) {
       _isInitialized = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          final provider = context.read<ClientsProvider>();
-          if (provider.clients.isEmpty && provider.error == null) {
-            provider.loadAllClients();
-          }
-        }
-      });
+      final provider = context.read<ClientsProvider>();
+      if (provider.clients.isEmpty && provider.error == null) {
+        provider.loadClients();
+      }
     }
   }
 
@@ -57,195 +55,72 @@ class _ClientsListViewState extends State<ClientsListView> {
     }
   }
 
-  String _formatDateTime(DateTime dateTime) {
+  String _formatDateTime(DateTime? dateTime) {
+    if (dateTime == null) return 'N/A';
     return '${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year}';
   }
 
   String _getCreatedBy(dynamic createdBy) {
     if (createdBy is Map<String, dynamic>) {
-      return createdBy['username'] ?? 'Unknown';
+      return createdBy['username']?.toString() ?? 'Unknown';
     }
     return createdBy?.toString() ?? 'Unknown';
-  }
-
-  Widget _buildLogoAndTitle() {
-    return Row(
-      children: [
-        SizedBox(width: 8.w),
-        Text(
-          'Client Management',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF334155),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBackButton() {
-    return IconButton(
-      icon: Icon(
-        Icons.arrow_back_ios,
-        size: 24.sp,
-        color: const Color(0xFF334155),
-      ),
-      onPressed: () {
-        context.go(RouteNames.homeScreen);
-      },
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Padding(
-      padding: EdgeInsets.only(right: 16.w),
-      child: TextButton(
-        onPressed: () {
-          context.goNamed(RouteNames.clientsadd);
-        },
-        child: Row(
-          children: [
-            Icon(Icons.add, size: 20.sp, color: const Color(0xFF3B82F6)),
-            SizedBox(width: 4.w),
-            Text(
-              'Add Client',
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF3B82F6),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPaginationInfo() {
-    return Consumer<ClientsProvider>(
-      builder: (context, provider, child) {
-        if (provider.totalItems == 0 || provider.totalPages == 1) {
-          return const SizedBox.shrink();
-        }
-
-        return Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(16.r),
-                topRight: Radius.circular(16.r),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 12.r,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildNavButton(
-                  icon: Icons.arrow_back_ios,
-                  onPressed: provider.hasPreviousPage
-                      ? () => provider.previousPage()
-                      : null,
-                  tooltip: 'Previous Page',
-                ),
-                Text(
-                  '${provider.currentPage}/${provider.totalPages}',
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF334155),
-                  ),
-                ),
-                _buildNavButton(
-                  icon: Icons.arrow_forward_ios,
-                  onPressed: provider.hasNextPage
-                      ? () => provider.nextPage()
-                      : null,
-                  tooltip: 'Next Page',
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildNavButton({
-    required IconData icon,
-    required VoidCallback? onPressed,
-    required String tooltip,
-  }) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(12.r),
-        child: Container(
-          padding: EdgeInsets.all(12.w),
-          decoration: BoxDecoration(
-            color: onPressed != null
-                ? const Color(0xFF3B82F6)
-                : const Color(0xFFCBD5E1),
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-          child: Icon(icon, size: 24.sp, color: Colors.white),
-        ),
-      ),
-    );
   }
 
   Widget _buildClientCard(dynamic client) {
     final clientData = client is Map<String, dynamic>
         ? client
         : client.toJson();
-    final clientId = clientData['_id'] ?? clientData['id'] ?? '';
-    final name = clientData['name'] ?? 'Unknown Client';
-    final address = clientData['address'] ?? 'N/A';
+    final clientId =
+        clientData['_id']?.toString() ?? clientData['id']?.toString() ?? '';
+    final name = clientData['name']?.toString() ?? 'Unknown Client';
+    final address = clientData['address']?.toString() ?? 'N/A';
     final createdBy = _getCreatedBy(
       clientData['created_by'] ?? clientData['createdBy'],
     );
     final createdAt = clientData['createdAt'] != null
-        ? DateTime.tryParse(clientData['createdAt'].toString()) ??
-              DateTime.now()
-        : DateTime.now();
+        ? DateTime.tryParse(clientData['createdAt'].toString())
+        : null;
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
       child: Card(
         elevation: 0,
+        color: AppColors.cardBackground,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.r),
+          borderRadius: BorderRadius.circular(12.r),
+          side: BorderSide(color: const Color(0xFFE5E7EB), width: 1.w),
         ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20.r),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(24.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12.r),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top Header Section
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.cardHeaderStart,
+                      AppColors.cardHeaderEnd,
+                      AppColors.cardBackground,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(12.r),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.shadow.withOpacity(0.03),
+                      blurRadius: 4.r,
+                      offset: Offset(0, 1.h),
+                    ),
+                  ],
+                ),
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
@@ -255,38 +130,22 @@ class _ClientsListViewState extends State<ClientsListView> {
                           Text(
                             name,
                             style: TextStyle(
-                              fontSize: 18.sp,
+                              fontSize: 14.sp,
                               fontWeight: FontWeight.w600,
                               color: const Color(0xFF334155),
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           SizedBox(height: 8.h),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 12.w,
-                              vertical: 6.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                            child: Text(
-                              address,
-                              style: TextStyle(
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF3B82F6),
-                              ),
-                            ),
-                          ),
                         ],
                       ),
                     ),
                     PopupMenuButton<String>(
                       icon: Icon(
                         Icons.more_vert,
-                        size: 24.sp,
-                        color: const Color(0xFF64748B),
+                        size: 18.sp,
+                        color: AppColors.textSecondary,
                       ),
                       onSelected: (value) {
                         if (value == 'edit') {
@@ -341,48 +200,135 @@ class _ClientsListViewState extends State<ClientsListView> {
                           ),
                         ),
                       ],
+                      offset: Offset(0, 32.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                      color: AppColors.cardBackground,
+                      elevation: 2,
                     ),
                   ],
                 ),
-                SizedBox(height: 16.h),
-                Row(
+              ),
+              // Body Section
+              Padding(
+                padding: EdgeInsets.all(12.w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.person_outline,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Created by: $createdBy',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12.w,
+                        vertical: 6.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Text(
+                        "Address :$address",
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF3B82F6),
+                        ),
                       ),
                     ),
+                    SizedBox(height: 6.h),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.person_outline,
+                          size: 16.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Created by: $createdBy',
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 6.h),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time_outlined,
+                          size: 16.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Created: ${_formatDateTime(createdAt)}',
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
-                SizedBox(height: 8.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.access_time_outlined,
-                      size: 16.sp,
-                      color: const Color(0xFF64748B),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Created: ${_formatDateTime(createdAt)}',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLogoAndTitle() {
+    return Row(
+      children: [
+        SizedBox(width: 8.w),
+        Text(
+          'Clients',
+          style: TextStyle(
+            fontSize: 18.sp,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF334155),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBackButton() {
+    return IconButton(
+      icon: Icon(
+        Icons.arrow_back_ios,
+        size: 24.sp,
+        color: const Color(0xFF334155),
+      ),
+      onPressed: () {
+        context.go(RouteNames.homeScreen);
+      },
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Padding(
+      padding: EdgeInsets.only(right: 16.w),
+      child: TextButton(
+        onPressed: () {
+          context.goNamed(RouteNames.clientsadd);
+        },
+        child: Row(
+          children: [
+            Icon(Icons.add, size: 20.sp, color: const Color(0xFF3B82F6)),
+            SizedBox(width: 4.w),
+            Text(
+              'Add Client',
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF3B82F6),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -427,108 +373,99 @@ class _ClientsListViewState extends State<ClientsListView> {
   Widget build(BuildContext context) {
     ScreenUtil.init(context);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBars(
-        title: _buildLogoAndTitle(),
-        leading: _buildBackButton(),
-        action: [_buildActionButtons()],
-      ),
-      body: Stack(
-        children: [
-          Consumer<ClientsProvider>(
-            builder: (context, provider, child) {
-              if (provider.error != null) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 64.sp,
-                        color: const Color(0xFFF43F5E),
-                      ),
-                      SizedBox(height: 16.h),
-                      Text(
-                        'Error Loading Clients',
-                        style: TextStyle(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF334155),
-                        ),
-                      ),
-                      SizedBox(height: 8.h),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 24.w),
-                        child: Text(
-                          provider.error!,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            color: const Color(0xFF64748B),
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 16.h),
-                      RefreshButton(
-                        text: 'Retry',
-                        icon: Icons.refresh,
-                        onTap: () {
-                          provider.clearError();
-                          provider.loadAllClients(refresh: true);
-                        },
-                      ),
-                    ],
-                  ),
-                );
-              }
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          context.go(RouteNames.homeScreen);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBars(
+          title: _buildLogoAndTitle(),
+          leading: _buildBackButton(),
+          action: [_buildActionButtons()],
+        ),
+        body: Consumer<ClientsProvider>(
+          builder: (context, provider, child) {
+            // Show full-screen loader during initial load
+            if (provider.isLoading &&
+                provider.clients.isEmpty &&
+                provider.error == null) {
+              return const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF3B82F6)),
+                ),
+              );
+            }
 
-              return GestureDetector(
-                onHorizontalDragEnd: (details) {
-                  if (details.primaryVelocity! > 0 &&
-                      provider.hasPreviousPage) {
-                    provider.previousPage();
-                  } else if (details.primaryVelocity! < 0 &&
-                      provider.hasNextPage) {
-                    provider.nextPage();
-                  }
-                },
+            if (provider.error != null && provider.clients.isEmpty) {
+              return Center(
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Expanded(
-                      child: RefreshIndicator(
-                        onRefresh: () async {
-                          await provider.loadAllClients(refresh: true);
-                        },
-                        color: const Color(0xFF3B82F6),
-                        backgroundColor: Colors.white,
-                        child: provider.isLoading && provider.clients.isEmpty
-                            ? ListView.builder(
-                                itemCount: 5,
-                                itemBuilder: (context, index) =>
-                                    buildShimmerCard(),
-                              )
-                            : provider.clients.isEmpty
-                            ? _buildEmptyState()
-                            : ListView.builder(
-                                controller: _scrollController,
-                                padding: EdgeInsets.only(bottom: 80.h),
-                                itemCount: provider.clients.length,
-                                itemBuilder: (context, index) {
-                                  return _buildClientCard(
-                                    provider.clients[index],
-                                  );
-                                },
-                              ),
+                    Icon(
+                      Icons.error_outline,
+                      size: 64.sp,
+                      color: const Color(0xFFF43F5E),
+                    ),
+                    SizedBox(height: 16.h),
+                    Text(
+                      'Error Loading Clients',
+                      style: TextStyle(
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF334155),
                       ),
+                    ),
+                    SizedBox(height: 8.h),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 24.w),
+                      child: Text(
+                        provider.error!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 16.h),
+                    RefreshButton(
+                      text: 'Retry',
+                      icon: Icons.refresh,
+                      onTap: () {
+                        provider.clearError();
+                        provider.loadClients(refresh: true);
+                      },
                     ),
                   ],
                 ),
               );
-            },
-          ),
-          _buildPaginationInfo(),
-        ],
+            }
+
+            return RefreshIndicator(
+              onRefresh: () async {
+                await context.read<ClientsProvider>().loadClients(
+                  refresh: true,
+                );
+              },
+              color: const Color(0xFF3B82F6),
+              backgroundColor: Colors.white,
+              child: provider.clients.isEmpty
+                  ? _buildEmptyState()
+                  : ListView.builder(
+                      controller: _scrollController,
+                      padding: EdgeInsets.only(bottom: 80.h),
+                      itemCount: provider.clients.length,
+                      itemBuilder: (context, index) {
+                        return _buildClientCard(provider.clients[index]);
+                      },
+                    ),
+            );
+          },
+        ),
       ),
     );
   }

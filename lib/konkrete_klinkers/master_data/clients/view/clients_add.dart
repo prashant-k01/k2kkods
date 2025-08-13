@@ -21,23 +21,31 @@ class AddClientFormScreen extends StatelessWidget {
       listen: false,
     );
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: const Text('Create New Client'),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF334155),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => context.go(RouteNames.clients),
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          context.go(RouteNames.clients);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBar(
+          title: const Text('Create New Client'),
+          backgroundColor: Colors.white,
+          foregroundColor: const Color(0xFF334155),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios),
+            onPressed: () => context.go(RouteNames.clients),
+          ),
         ),
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(24.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [_buildFormCard(context, clientsProvider)],
+        body: SingleChildScrollView(
+          padding: EdgeInsets.all(24.w),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [_buildFormCard(context, clientsProvider)],
+          ),
         ),
       ),
     );

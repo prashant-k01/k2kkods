@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:k2k/api_services/api_services.dart';
 import 'package:k2k/login/model/login.dart';
-import 'package:k2k/shared_preference/shared_preference.dart';
+import 'package:k2k/api_services/shared_preference/shared_preference.dart';
 
 class LoginProvider with ChangeNotifier {
   LoginModel _loginModel = LoginModel(

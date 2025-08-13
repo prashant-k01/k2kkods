@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:k2k/api_services/shared_preference/shared_preference.dart';
 import 'package:k2k/app/routes_name.dart';
 
 class MenuItem {
@@ -37,9 +38,10 @@ class SubMenuItem {
 
 class MenuSection {
   final String? heading;
+  final String? imagePath; // Add image path for section
   final List<MenuItem> items;
 
-  MenuSection({this.heading, required this.items});
+  MenuSection({this.heading, this.imagePath, required this.items});
 }
 
 class EnhancedMenuDrawer extends StatefulWidget {
@@ -53,6 +55,9 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
     with TickerProviderStateMixin {
   late AnimationController _logoAnimationController;
   late Animation<double> _logoAnimation;
+
+  // Track current selected section for logo switching
+  String currentLogo = 'assets/images/login_image_1.png'; // Default logo
 
   List<MenuSection> menuSections = [
     // Main Dashboard Section
@@ -69,6 +74,7 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
     // Data Management Section
     MenuSection(
       heading: "FALCON FACADE",
+      imagePath: "assets/images/falcon.png",
       items: [
         MenuItem(title: 'Work Order', icon: Icons.work_outline),
         MenuItem(title: 'Job Order', icon: Icons.work_outline),
@@ -134,46 +140,47 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
 
     MenuSection(
       heading: "KONKRETE KLINKERS",
+      imagePath: "assets/images/konkrete_klinkers.png",
       items: [
         MenuItem(
           title: 'Work Orders',
           icon: Icons.person_outline,
-          route: '/profile',
+          route: RouteNames.workorders,
         ),
         MenuItem(
           title: 'Job Order/Planning',
           icon: Icons.shopping_bag_outlined,
-          route: '/productexplore',
+          route: RouteNames.jobOrder,
         ),
         MenuItem(
           title: 'Production',
           icon: Icons.bookmarks_outlined,
-          route: '/my-bookings',
+          route: RouteNames.production,
         ),
         MenuItem(
           title: 'QC Check',
           icon: Icons.miscellaneous_services_outlined,
-          route: '/myservices',
+          route: RouteNames.qcCheck,
         ),
         MenuItem(
           title: 'Packing',
           icon: Icons.shopping_cart_outlined,
-          route: '/cart',
+          route: RouteNames.packing,
         ),
         MenuItem(
           title: 'Dispatch',
           icon: Icons.shopping_cart_outlined,
-          route: '/cart',
+          route: RouteNames.dispatch,
         ),
         MenuItem(
           title: 'Inventory',
           icon: Icons.shopping_cart_outlined,
-          route: '/cart',
+          route: RouteNames.inventory,
         ),
         MenuItem(
           title: 'Stock Management',
           icon: Icons.shopping_cart_outlined,
-          route: '/cart',
+          route: RouteNames.stockmanagement,
         ),
         MenuItem(
           title: "Master Data",
@@ -194,7 +201,11 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
                 SubMenuItem(
                   title: 'Machines',
                   icon: Icons.visibility,
+<<<<<<< HEAD
                   route: '/machines',
+=======
+                  route: RouteNames.machines,
+>>>>>>> 9ab28403e64048bb612375b1b7801023a8ba2d76
                   isExpanded: false,
                 ),
               ],
@@ -224,6 +235,7 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
 
     MenuSection(
       heading: "IRON SMITH",
+      imagePath: "assets/images/iron_smith.png",
       items: [
         MenuItem(title: 'Work Order', icon: Icons.work_outline),
         MenuItem(title: 'Job Order/planning', icon: Icons.assignment_outlined),
@@ -240,7 +252,7 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
             SubMenuItem(
               title: 'Machines',
               icon: Icons.factory_outlined,
-              route: '/settings/plant',
+              route: RouteNames.ismachine,
               isExpanded: false,
             ),
             SubMenuItem(
@@ -319,6 +331,17 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
     super.dispose();
   }
 
+  void _updateLogo(String? imagePath) {
+    if (imagePath != null) {
+      setState(() {
+        currentLogo = imagePath;
+      });
+      // Restart logo animation for visual feedback
+      _logoAnimationController.reset();
+      _logoAnimationController.forward();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -331,7 +354,7 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
           backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
           child: Column(
             children: [
-              // Logo Section - Reduced padding
+              // Logo Section - Dynamic logo based on selection
               Container(
                 padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 16.w),
                 child: AnimatedBuilder(
@@ -340,7 +363,7 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
                     return Transform.scale(
                       scale: _logoAnimation.value,
                       child: Image.asset(
-                        'assets/images/login_image_1.png',
+                        currentLogo,
                         width: 140.w,
                         height: 40.h,
                         fit: BoxFit.contain,
@@ -348,7 +371,7 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
                           return Icon(
                             Icons.precision_manufacturing_outlined,
                             size: 28.sp,
-                            color: Colors.white,
+                            color: isDark ? Colors.white : Colors.grey.shade700,
                           );
                         },
                       ),
@@ -367,8 +390,41 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Section Heading - Reduced spacing
-                        if (section.heading != null)
+                        // Section Heading - Image instead of text
+                        if (section.heading != null &&
+                            section.imagePath != null)
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 20.w,
+                              vertical: 12.h, // Increased vertical padding
+                            ),
+                            margin: EdgeInsets.only(
+                              top: sectionIndex == 0 ? 0 : 8.h,
+                            ),
+                            child: Image.asset(
+                              section.imagePath!,
+                              width: 250.w, // Even wider for better visibility
+                              height: 45.h, // Taller for better proportion
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) {
+                                // Fallback to text if image fails to load
+                                return Text(
+                                  section.heading!,
+                                  style: TextStyle(
+                                    color: isDark
+                                        ? Colors.grey.shade400
+                                        : Colors.grey.shade600,
+                                    fontSize: 15.sp,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.8,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        // Fallback for sections without images
+                        if (section.heading != null &&
+                            section.imagePath == null)
                           Container(
                             padding: EdgeInsets.symmetric(
                               horizontal: 20.w,
@@ -391,7 +447,14 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
                           ),
                         // Section Items
                         ...section.items
-                            .map((item) => _buildMenuItem(item, isDark, 0))
+                            .map(
+                              (item) => _buildMenuItem(
+                                item,
+                                isDark,
+                                0,
+                                section.imagePath,
+                              ),
+                            )
                             .toList(),
                       ],
                     );
@@ -399,7 +462,6 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
                 ),
               ),
 
-              // Logout Button
               Container(
                 padding: EdgeInsets.all(12.w),
                 decoration: BoxDecoration(
@@ -432,10 +494,8 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: () {
-                        Navigator.pop(context);
-                        // Add logout functionality
-                        // context.go('/login');
+                      onTap: () async {
+                        confirmLogout(context);
                       },
                       borderRadius: BorderRadius.circular(12.r),
                       child: Container(
@@ -471,7 +531,12 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
     );
   }
 
-  Widget _buildMenuItem(MenuItem item, bool isDark, int level) {
+  Widget _buildMenuItem(
+    MenuItem item,
+    bool isDark,
+    int level,
+    String? sectionImagePath,
+  ) {
     return Column(
       children: [
         AnimatedContainer(
@@ -526,7 +591,15 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
                 setState(() {
                   item.isExpanded = !item.isExpanded;
                 });
+                // Update logo when expanding a menu item
+                if (item.isExpanded && sectionImagePath != null) {
+                  _updateLogo(sectionImagePath);
+                }
               } else {
+                // Update logo when selecting a menu item
+                if (sectionImagePath != null) {
+                  _updateLogo(sectionImagePath);
+                }
                 Navigator.pop(context);
                 if (item.route != null) {
                   context.push(item.route!);
@@ -547,7 +620,12 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
             child: Column(
               children: item.subItems!
                   .map(
-                    (subItem) => _buildSubMenuItem(subItem, isDark, level + 1),
+                    (subItem) => _buildSubMenuItem(
+                      subItem,
+                      isDark,
+                      level + 1,
+                      sectionImagePath,
+                    ),
                   )
                   .toList(),
             ),
@@ -556,7 +634,12 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
     );
   }
 
-  Widget _buildSubMenuItem(SubMenuItem subItem, bool isDark, int level) {
+  Widget _buildSubMenuItem(
+    SubMenuItem subItem,
+    bool isDark,
+    int level,
+    String? sectionImagePath,
+  ) {
     double leftPadding = (level * 12.0).w;
 
     return Column(
@@ -616,7 +699,15 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
                 setState(() {
                   subItem.isExpanded = !subItem.isExpanded;
                 });
+                // Update logo when expanding a sub menu item
+                if (subItem.isExpanded && sectionImagePath != null) {
+                  _updateLogo(sectionImagePath);
+                }
               } else {
+                // Update logo when selecting a sub menu item
+                if (sectionImagePath != null) {
+                  _updateLogo(sectionImagePath);
+                }
                 Navigator.pop(context);
                 if (subItem.route != null) {
                   context.push(subItem.route!);
@@ -640,8 +731,12 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
             child: Column(
               children: subItem.subItems!
                   .map(
-                    (nestedSubItem) =>
-                        _buildSubMenuItem(nestedSubItem, isDark, level + 1),
+                    (nestedSubItem) => _buildSubMenuItem(
+                      nestedSubItem,
+                      isDark,
+                      level + 1,
+                      sectionImagePath,
+                    ),
                   )
                   .toList(),
             ),
@@ -650,3 +745,4 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
     );
   }
 }
+

@@ -1,36 +1,39 @@
 class AppUrl {
-  //   static const String baseUrl = 'https://k2k_new-iot-backend-2.onrender.com';
-  //   static const String baseUrl = 'https://k2k-iot-backend-2.onrender.com/api/';
-  static const String baseUrl = 'http://3.6.6.231/api';
+  // static const String baseUrl/api = 'http://3.6.6.231/api';
+  static const String baseUrl = 'https://k2k-backend-1.onrender.com';
 
-  static const String loginUrl = '$baseUrl/users/login';
+  static const String loginUrl = '$baseUrl/api/users/login';
   //Plants Urls
-  static const String allPlantsUrl = '$baseUrl/konkreteKlinkers/helpers/plants';
-  static const String addPlantUrl = '$baseUrl/konkreteKlinkers/helpers/plant';
+  static const String allPlantsUrl =
+      '$baseUrl/api/konkreteKlinkers/helpers/plants';
+  static const String addPlantUrl =
+      '$baseUrl/api/konkreteKlinkers/helpers/plant';
 
   static const String updatePlanturl =
-      '$baseUrl/konkreteKlinkers/helpers/plants';
+      '$baseUrl/api/konkreteKlinkers/helpers/plants';
   static const String deletePlantUrl =
-      '$baseUrl/konkreteKlinkers/helpers/plants/delete';
+      '$baseUrl/api/konkreteKlinkers/helpers/plants/delete';
 
-  static const String addMachineUrl =
-      '$baseUrl/konkreteKlinkers/helpers/machine';
-  static const String fetchMachineUrl =
-      '$baseUrl/konkreteKlinkers/helpers/machines';
-  static const String deleteMachineUrl =
-      '$baseUrl/konkreteKlinkers/helpers/machines/delete';
-  static const String updateMachineurl =
-      '$baseUrl/konkreteKlinkers/helpers/machines/';
+  //Machine's Urls
+  static const String createMachineUrl =
+      '$baseUrl/api/konkreteKlinkers/helpers/machine';
+  static const String fetchMachineDetailsUrl =
+      '$baseUrl/api/api/konkreteKlinkers/helpers/machines';
+  static const String updateMachineDetailsUrl =
+      '$baseUrl/api/konkreteKlinkers/helpers/machines';
+  static const String deleteMachineDetailsUrl =
+      '$baseUrl/api/konkreteKlinkers/helpers/machines/delete';
 
   //Client's Urls
   static const String createClientUrl =
-      '$baseUrl/konkreteKlinkers/helpers/clients';
+      '$baseUrl/api/konkreteKlinkers/helpers/clients';
   static const String fetchClientDetailsUrl =
-      '$baseUrl/konkreteKlinkers/helpers/clients';
+      '$baseUrl/api/konkreteKlinkers/helpers/clients';
+
   static const String updateClientDetailsUrl =
-      '$baseUrl/konkreteKlinkers/helpers/clients';
+      '$baseUrl/api/konkreteKlinkers/helpers/clients';
   static const String deleteClientDetailsUrl =
-      '$baseUrl/konkreteKlinkers/helpers/clients/delete';
+      '$baseUrl/api/konkreteKlinkers/helpers/clients/delete';
 
   //Machine's Urls
   static const String createMachineUrl =
@@ -44,94 +47,135 @@ class AppUrl {
 
   //projects's Urls
   static const String createProjectUrl =
-      '$baseUrl/konkreteKlinkers/helpers/projects';
+      '$baseUrl/api/konkreteKlinkers/helpers/projects';
   static const String fetchProjectDetailsUrl =
-      '$baseUrl/konkreteKlinkers/helpers/projects';
+      '$baseUrl/api/konkreteKlinkers/helpers/projects';
   static const String updateProjectDetailsUrl =
-      '$baseUrl/konkreteKlinkers/helpers/projects';
+      '$baseUrl/api/konkreteKlinkers/helpers/projects';
   static const String deleteProjectDetailsUrl =
-      '$baseUrl/konkreteKlinkers/helpers/projects/delete';
+      '$baseUrl/api/konkreteKlinkers/helpers/projects/delete';
+
+  //inventory
+  static const String getinventory =
+      'http://3.6.6.231/api/konkreteKlinkers/inventories';
 
   //Products's Urls
   static const String createproductUrl =
-      '$baseUrl/konkreteKlinkers/helpers/products';
+      '$baseUrl/api/konkreteKlinkers/helpers/products';
   static const String fetchproductDetailsUrl =
-      '$baseUrl/konkreteKlinkers/helpers/products';
+      '$baseUrl/api/konkreteKlinkers/helpers/products';
   static const String updateproductDetailsUrl =
-      '$baseUrl/konkreteKlinkers/helpers/products';
+      '$baseUrl/api/konkreteKlinkers/helpers/products';
   static const String deleteproductDetailsUrl =
-      '$baseUrl/konkreteKlinkers/helpers/products/delete';
+      '$baseUrl/api/konkreteKlinkers/helpers/products/delete';
 
   //WorkOrder's Urls
   static const String createWorkOrderUrl =
-      '$baseUrl/konkreteKlinkers/workorder/create';
+      '$baseUrl/api/konkreteKlinkers/workorder/create';
   static const String updateWorkOrderUrl =
-      '$baseUrl/konkreteKlinkers/workorders';
+      '$baseUrl/api/konkreteKlinkers/workorders';
   static const String fetchWorkOrderDetailsUrl =
-      '$baseUrl/konkreteKlinkers/workorders';
+      '$baseUrl/api/konkreteKlinkers/workorders';
   static const String updateWorkOrderDetailsUrl =
-      '$baseUrl/konkreteKlinkers/workorders';
+      '$baseUrl/api/konkreteKlinkers/workorders';
   static const String deleteWorkOrderDetailsUrl =
-      '$baseUrl/konkreteKlinkers/workorders-delete';
+      '$baseUrl/api/konkreteKlinkers/workorders-delete';
   static const String getWOProjectbyClient =
-      '$baseUrl/konkreteKlinkers/workorders-getProject?clientId=';
-
-  //JobOrder
-  static const String joborder = "$baseUrl/konkreteKlinkers/joborders";
+      '$baseUrl/api/konkreteKlinkers/workorders-getProject?clientId=';
+  static const String getjoborder = "$baseUrl/api/konkreteKlinkers/joborders";
   static const String createJoborder =
-      "$baseUrl/konkreteKlinkers/joborder/create";
+      "$baseUrl/api/konkreteKlinkers/joborder/create";
   static const String getproductsbyworkOrder =
-      "$baseUrl/dropdown/products?work_order_id=";
+      "$baseUrl/api/dropdown/products?work_order_id=";
+  static const String updateJobOrder =
+      "$baseUrl/api/konkreteKlinkers/joborders";
+
+  static const String deleteJobOrder =
+      "$baseUrl/api/konkreteKlinkers/joborders/delete";
+  static const String getjoborderbyId =
+      "$baseUrl/api/konkreteKlinkers/joborders";
   static const String getJOMachinesbyProduct =
-      "$baseUrl/konkreteKlinkers/joborder-getMachine?material_code=";
+      "$baseUrl/api/konkreteKlinkers/joborder-getMachine?material_code=";
 
   //production
   static const String getProductionJoborderBydate =
-      "$baseUrl/konkreteKlinkers/production";
+      "$baseUrl/api/konkreteKlinkers/production";
   static const String startTheProduction =
-      "$baseUrl/konkreteKlinkers/production/action";
+      "$baseUrl/api/konkreteKlinkers/production/action";
   static const String addDownTime =
-      "$baseUrl/konkreteKlinkers/production/downtime";
+      "$baseUrl/api/konkreteKlinkers/production/downtime";
   static const String fetchDownTimeLogs =
-      "$baseUrl/konkreteKlinkers/production/downtime?product_id=";
+      "$baseUrl/api/konkreteKlinkers/production/downtime?product_id=";
   static const String fetchProductionLogs =
-      "$baseUrl/konkreteKlinkers/production/log?product_id=";
+      "$baseUrl/api/konkreteKlinkers/production/log?product_id=";
   static const String updatedProduction =
-      "$baseUrl/konkreteKlinkers/updated-production";
+      "$baseUrl/api/konkreteKlinkers/updated-production?product_id=";
 
   //Qc check
-  static const String getKKqcCheckData = "$baseUrl/konkreteKlinkers/qc-check";
-  static const String createKKQcCheckUrl = "$baseUrl/konkreteKlinkers/qc-check";
+  static const String getKKqcCheckData =
+      "$baseUrl/api/konkreteKlinkers/qc-check";
+  static const String createKKQcCheckUrl =
+      "$baseUrl/api/konkreteKlinkers/qc-check";
   static const String getProductByjobOrder =
-      "$baseUrl/konkreteKlinkers/qc-check/products?id=";
+      "$baseUrl/api/konkreteKlinkers/qc-check/products?id=";
+  static const String getDropdownJobOrder =
+      "https://k2k.kods.work/api/dropdown/joborders";
+  static const String deleteQcCheck =
+      "$baseUrl/api/konkreteKlinkers/qc-check/delete";
 
   //Packing
-  static const String kkpacking = "$baseUrl/konkreteKlinkers/packing";
-  static const String kkpackingByID = "$baseUrl/konkreteKlinkers/packing/get";
-  static const String createPacking =
-      "$baseUrl/konkreteKlinkers/packing/create";
+  static const String getpacking = "$baseUrl/api/konkreteKlinkers/packing";
+  static const String getpackingqr =
+      "$baseUrl/api/konkreteKlinkers/packing/create";
+  static const String kkpackingByID =
+      "$baseUrl/api/konkreteKlinkers/packing/get";
+  static const String createPacking = "$baseUrl/api/konkreteKlinkers/packing";
+
+  static const String deletePacking =
+      "$baseUrl/api/konkreteKlinkers/packing/delete";
+
   static const String getpackingbundlesizeurl =
-      "$baseUrl/konkreteKlinkers/packing/bundlesize";
+      "$baseUrl/api/konkreteKlinkers/packing/bundlesize";
+
+  static const String fetchProductDetailsUrl =
+      'https://k2k.kods.work/api/dropdown/products';
 
   //Dispatch
-  static const String kkdispatch = "$baseUrl/konkreteKlinkers/dispatch";
+  static const String kkdispatch = "$baseUrl/api/konkreteKlinkers/dispatch";
   static const String createdispatch =
-      "$baseUrl/konkreteKlinkers/dispatch/create";
+      "$baseUrl/api/konkreteKlinkers/dispatch/create";
   static const String getdispatchbundlesizeurl =
-      "$baseUrl/konkreteKlinkers/dispatch/bundlesize";
+      "$baseUrl/api/konkreteKlinkers/dispatch/bundlesize";
+  static const String qrScanUrl =
+      "$baseUrl/api/konkreteKlinkers/dispatch/qrscan";
 
   //Inventory
-  static const String kkinventories = "$baseUrl/konkreteKlinkers/inventories";
+  static const String kkinventories =
+      "$baseUrl/api/konkreteKlinkers/inventories";
   static const String createinventories =
-      "$baseUrl/konkreteKlinkers/inventories/create";
+      "$baseUrl/api/konkreteKlinkers/inventories/create";
   static const String getinventoriesbyid =
-      "$baseUrl/konkreteKlinkers/inventory";
+      "$baseUrl/api/konkreteKlinkers/inventory";
 
   //Stock Managment
-  static const String kkStockManagement = "$baseUrl/konkreteKlinkers/transfer";
+  //Stock Managment
+  static const String kkStockManagement =
+      "$baseUrl/api/konkreteKlinkers/transfer";
   static const String createStockManagement =
-      "$baseUrl/konkreteKlinkers/transfer/create";
-  // static const String getStockManagementbyid = "$baseUrl/konkreteKlinkers/inventory";
+      "$baseUrl/api/konkreteKlinkers/transfer/create";
+  // static const String getStockManagementbyid = "$baseUrl/api/konkreteKlinkers/inventory";
   static const String getwobyproduct =
-      "$baseUrl/konkreteKlinkers/transfer-getworkorder?prId=";
+      "$baseUrl/api/konkreteKlinkers/transfer-getworkorder";
+  static const String getAchievedQuantity =
+      "$baseUrl/api/konkreteKlinkers/transfer-getworkorderproduct";
+
+  ////////////////////////////IRON SMITH///////////////////////////////////////////////////////
+  //machines
+  static const String baseUrlIronSmith = 'https://k2k.kods.work/api/ironSmith';
+  //
+
+  static const String getIsMachines = "$baseUrl/helpers/machines";
+
+  // https://k2k.kods.work/api/ironSmith/helpers/machines
+  static const String addIsMachines = "$baseUrl/helpers/machines";
 }
