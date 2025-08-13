@@ -5,8 +5,10 @@ import 'package:k2k/common/list_helper/add_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
 import 'package:k2k/common/list_helper/shimmer.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/custom_card.dart';
 import 'package:k2k/konkrete_klinkers/stock_management/model/stock.dart';
 import 'package:k2k/konkrete_klinkers/stock_management/provider/stock_provider.dart';
+import 'package:k2k/konkrete_klinkers/stock_management/view/stock_view_screen.dart';
 import 'package:k2k/utils/sreen_util.dart';
 import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
@@ -102,282 +104,132 @@ class _StockManagementListViewState extends State<StockManagementListView> {
     final createdAt = transfer.createdAt.toString().split('.')[0];
     final productName = transfer.productName;
 
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
-      child: InkWell(
-        onTap: () {
-          context.goNamed(
-            RouteNames.stockmanagementview,
-            pathParameters: {'id': transferId},
-          );
-        },
-        child: Card(
-          elevation: 0,
-          color: AppColors.cardBackground,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.r),
-            side: BorderSide(color: const Color(0xFFE5E7EB), width: 1.w),
+    return CustomCard(
+      title: productName,
+
+      leading: IconContainer(
+        icon: Icons.swap_horiz_outlined,
+        gradientColors: [Colors.deepPurple.shade50, Colors.deepPurple.shade100],
+        size: 48.sp,
+        borderRadius: 12.r,
+        iconColor: AppTheme.primaryPurple,
+      ),
+      onTap: () {
+        context.goNamed(
+          RouteNames.stockmanagementview,
+          pathParameters: {'id': transferId},
+        );
+      },
+      headerGradient: AppTheme.cardGradientList,
+      borderRadius: 12,
+      backgroundColor: Colors.white,
+      borderColor: const Color(0xFFE5E7EB),
+      borderWidth: 1,
+      elevation: 0,
+      margin: EdgeInsets.symmetric(vertical: 6.h, horizontal: 8.w),
+      onMenuSelected: (value) {
+        if (value == 'edit') {
+          _editTransfer(transferId);
+        } else if (value == 'delete') {
+          // Implement delete handler
+          // StockManagementDeleteHandler.deleteTransfer(context, transferId, productName);
+        }
+      },
+      menuItems: [
+        PopupMenuItem<String>(
+          value: 'edit',
+          child: Row(
+            children: [
+              Icon(
+                Icons.edit_outlined,
+                size: 20.sp,
+                color: const Color(0xFFF59E0B),
+              ),
+              SizedBox(width: 8.w),
+              Text(
+                'Edit',
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: const Color(0xFF334155),
+                ),
+              ),
+            ],
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12.r),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        PopupMenuItem<String>(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(
+                Icons.delete_outline,
+                size: 20.sp,
+                color: const Color(0xFFF43F5E),
+              ),
+              SizedBox(width: 8.w),
+              Text(
+                'Delete',
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: const Color(0xFF334155),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+      bodyItems: [
+        _buildStatusContainer(status),
+        SizedBox(height: 8.h),
+        _infoRow(Icons.arrow_forward, 'From Work Order', fromWorkOrderId),
+        SizedBox(height: 6.h),
+        _infoRow(Icons.arrow_back, 'To Work Order', toWorkOrderId),
+        SizedBox(height: 6.h),
+        _infoRow(
+          Icons.inventory_outlined,
+          'Quantity Transferred',
+          quantityTransferred,
+        ),
+        SizedBox(height: 6.h),
+        _infoRow(Icons.person_outline, 'Transferred By', transferredBy),
+        SizedBox(height: 6.h),
+        _infoRow(Icons.calendar_today_outlined, 'Transfer Date', transferDate),
+        SizedBox(height: 6.h),
+        _infoRow(Icons.storage_outlined, 'Buffer Transfer', isBufferTransfer),
+        SizedBox(height: 6.h),
+        _infoRow(Icons.access_time_outlined, 'Created', createdAt),
+      ],
+    );
+  }
+
+  Widget _infoRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 18.sp, color: AppTheme.primaryPurple),
+        SizedBox(width: 8.w),
+        Expanded(
+          child: RichText(
+            text: TextSpan(
               children: [
-                // Top Header Section
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.cardHeaderStart,
-                        AppColors.cardHeaderEnd,
-                        AppColors.cardBackground,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(12.r),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.shadow.withOpacity(0.03),
-                        blurRadius: 4.r,
-                        offset: Offset(0, 1.h),
-                      ),
-                    ],
-                  ),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12.w,
-                    vertical: 8.h,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(height: 4.h),
-                            Text(
-                              'Product: $productName',
-                              style: TextStyle(
-                                fontSize: 14.sp,
-                                color: AppTheme.darkGray,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      PopupMenuButton<String>(
-                        icon: Icon(
-                          Icons.more_vert,
-                          size: 18.sp,
-                          color: AppColors.textSecondary,
-                        ),
-                        onSelected: (value) {
-                          if (value == 'edit') {
-                            _editTransfer(transferId);
-                          } else if (value == 'delete') {
-                            // Implement delete handler
-                            // StockManagementDeleteHandler.deleteTransfer(context, transferId, productName);
-                          }
-                        },
-                        itemBuilder: (BuildContext context) => [
-                          PopupMenuItem<String>(
-                            value: 'edit',
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.edit_outlined,
-                                  size: 20.sp,
-                                  color: const Color(0xFFF59E0B),
-                                ),
-                                SizedBox(width: 8.w),
-                                Text(
-                                  'Edit',
-                                  style: TextStyle(
-                                    fontSize: 14.sp,
-                                    color: const Color(0xFF334155),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem<String>(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.delete_outline,
-                                  size: 20.sp,
-                                  color: const Color(0xFFF43F5E),
-                                ),
-                                SizedBox(width: 8.w),
-                                Text(
-                                  'Delete',
-                                  style: TextStyle(
-                                    fontSize: 14.sp,
-                                    color: const Color(0xFF334155),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                        offset: Offset(0, 32.h),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                        color: AppColors.cardBackground,
-                        elevation: 2,
-                      ),
-                    ],
+                TextSpan(
+                  text: '$label: ',
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    color: Colors.black,
+                    fontWeight: FontWeight.w600, // label in black
                   ),
                 ),
-                // Body Section
-                Padding(
-                  padding: EdgeInsets.all(12.w),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildStatusContainer(status),
-                      SizedBox(height: 6.h),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.arrow_forward,
-                            size: 16.sp,
-                            color: const Color(0xFF64748B),
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            'From Work Order: $fromWorkOrderId',
-                            style: TextStyle(
-                              fontSize: 13.sp,
-                              color: const Color(0xFF64748B),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 6.h),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.arrow_back,
-                            size: 16.sp,
-                            color: const Color(0xFF64748B),
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            'To Work Order: $toWorkOrderId',
-                            style: TextStyle(
-                              fontSize: 13.sp,
-                              color: const Color(0xFF64748B),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 6.h),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.inventory_outlined,
-                            size: 16.sp,
-                            color: const Color(0xFF64748B),
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            'Quantity Transferred: $quantityTransferred',
-                            style: TextStyle(
-                              fontSize: 13.sp,
-                              color: const Color(0xFF64748B),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 6.h),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.person_outline,
-                            size: 16.sp,
-                            color: const Color(0xFF64748B),
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            'Transferred By: $transferredBy',
-                            style: TextStyle(
-                              fontSize: 13.sp,
-                              color: const Color(0xFF64748B),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 6.h),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today_outlined,
-                            size: 16.sp,
-                            color: const Color(0xFF64748B),
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            'Transfer Date: $transferDate',
-                            style: TextStyle(
-                              fontSize: 13.sp,
-                              color: const Color(0xFF64748B),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 6.h),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.storage_outlined,
-                            size: 16.sp,
-                            color: const Color(0xFF64748B),
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            'Buffer Transfer: $isBufferTransfer',
-                            style: TextStyle(
-                              fontSize: 13.sp,
-                              color: const Color(0xFF64748B),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 6.h),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.access_time_outlined,
-                            size: 16.sp,
-                            color: const Color(0xFF64748B),
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            'Created: $createdAt',
-                            style: TextStyle(
-                              fontSize: 13.sp,
-                              color: const Color(0xFF64748B),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                TextSpan(
+                  text: value,
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    color: Colors.black54, // value in grey
                   ),
                 ),
               ],
             ),
           ),
         ),
-      ),
+      ],
     );
   }
 
@@ -472,11 +324,13 @@ class _StockManagementListViewState extends State<StockManagementListView> {
 
   @override
   Widget build(BuildContext context) {
+    ScreenUtil.init(context);
+
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) {
         if (!didPop) {
-          context.go(RouteNames.homeScreen);
+          context.go(RouteNames.homeScreen); // Adjust route as needed
         }
       },
       child: Scaffold(

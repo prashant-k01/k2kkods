@@ -3,253 +3,782 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/widgets/animation_progress_bar.dart';
+import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/custom_card.dart';
+import 'package:k2k/konkrete_klinkers/stock_management/view/stock_view_screen.dart';
+import 'package:k2k/utils/theme.dart';
+import 'package:provider/provider.dart';
+import 'package:k2k/konkrete_klinkers/work_order/model/work_order_detail_model.dart';
+import 'package:k2k/konkrete_klinkers/work_order/provider/work_order_provider.dart'; // Assuming the provider file is named work_order_provider.dart
 
-class WorkOrderDetailsPage extends StatelessWidget {
-  const WorkOrderDetailsPage({super.key});
+class WorkOrderDetailsPage extends StatefulWidget {
+  final String workOrderId;
+
+  const WorkOrderDetailsPage({super.key, required this.workOrderId});
+
+  @override
+  State<WorkOrderDetailsPage> createState() => _WorkOrderDetailsPageState();
+}
+
+class _WorkOrderDetailsPageState extends State<WorkOrderDetailsPage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = Provider.of<WorkOrderProvider>(context, listen: false);
+      provider.getWorkOrderById(widget.workOrderId);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF3E8FF),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment(0, -1.1),
-            radius: 1.8,
-            colors: [Color(0xFFA87BFF), Color(0xFFE9DDFC), Color(0xFFFFFFFF)],
-            stops: [0.0, 0.45, 1.0],
-          ),
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          context.go(RouteNames.workorders);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBars(
+          title: _buildLogoAndTitle(),
+          leading: _buildBackButton(),
         ),
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 50.h),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                GestureDetector(
-                  onTap: () => context.goNamed(RouteNames.workorders),
-                  child: Container(
-                    padding: EdgeInsets.all(10.w),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.rectangle,
-                      borderRadius: BorderRadius.circular(12.r),
+
+        body: SafeArea(
+          child: Consumer<WorkOrderProvider>(
+            builder: (context, provider, child) {
+              if (provider.isWorkOrderByIdLoading) {
+                return Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppTheme.primaryBlue,
                     ),
-                    child: Icon(
-                      Icons.arrow_back_ios_new_rounded,
-                      size: 24.sp,
-                      color: Colors.purple,
-                    ),
+                    strokeWidth: 4.0,
                   ),
-                ),
-                SizedBox(width: 30.w),
-                Text(
-                  'Work Order Details',
-                  style: TextStyle(
-                    fontSize: 20.sp,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 18.h),
-            Text(
-              'Clients, Work Order, Products, Job Orders',
-              style: TextStyle(
-                fontSize: 28.sp,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            SizedBox(height: 24.h),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Stack(
-                alignment: Alignment.centerLeft,
-                children: [
-                  LinearProgressIndicator(
-                    value: 0.6,
-                    minHeight: 16.h,
-                    backgroundColor: Colors.white,
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                      Colors.deepPurple,
-                    ),
-                  ),
-                  Positioned.fill(
-                    child: Center(
-                      child: Text(
-                        '60%',
+                );
+              }
+              if (provider.workOrderByIdError != null) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 60.sp,
+                        color: AppTheme.errorColor,
+                      ),
+                      SizedBox(height: 16.h),
+                      Text(
+                        'Error Loading Data',
                         style: TextStyle(
-                          color: Colors.white,
+                          fontSize: 20.sp,
                           fontWeight: FontWeight.bold,
-                          fontSize: 12,
+                          color: AppTheme.darkGray,
                         ),
                       ),
-                    ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        provider.workOrderByIdError!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          color: AppTheme.mediumGray,
+                        ),
+                      ),
+                      SizedBox(height: 16.h),
+                      ElevatedButton(
+                        onPressed: () {
+                          provider.getWorkOrderById(widget.workOrderId);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryBlue,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 24.w,
+                            vertical: 12.h,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8.r),
+                          ),
+                          elevation: 2,
+                        ),
+                        child: Text('Retry', style: TextStyle(fontSize: 16.sp)),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-            SizedBox(height: 24.h),
-            Expanded(
-              child: GridView.count(
-                crossAxisCount: 2,
-                mainAxisSpacing: 20,
-                crossAxisSpacing: 20,
-                childAspectRatio: 1.0,
-                children: [
-                  WorkCard(
-                    icon: Icons.person,
-                    title: 'Clients',
-                    subtitle: 'Acme Inc.',
-                    onTap: () {
-                      showWorkOrderDetailDialog(context, [
+                );
+              }
+              final workOrder = provider.workOrderById;
+              if (workOrder == null) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        size: 60.sp,
+                        color: AppTheme.primaryBlue,
+                      ),
+                      SizedBox(height: 16.h),
+                      Text(
+                        'No Data Available',
+                        style: TextStyle(
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.darkGray,
+                        ),
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        'Please check the work order ID or try again later.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          color: AppTheme.mediumGray,
+                        ),
+                      ),
+                      SizedBox(height: 16.h),
+                      ElevatedButton(
+                        onPressed: () {
+                          provider.getWorkOrderById(widget.workOrderId);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryBlue,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 24.w,
+                            vertical: 12.h,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8.r),
+                          ),
+                          elevation: 2,
+                        ),
+                        child: Text(
+                          'Refresh',
+                          style: TextStyle(fontSize: 16.sp),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              double progress = 0.0;
+              if (workOrder.products.isNotEmpty) {
+                double totalAchieved = workOrder.products.fold(
+                  0.0,
+                  (sum, p) => sum + p.achievedQuantity,
+                );
+                double totalQty = workOrder.products.fold(
+                  0.0,
+                  (sum, p) => sum + p.qtyInNos,
+                );
+                progress = totalQty > 0 ? totalAchieved / totalQty : 0.0;
+              }
+
+              return SingleChildScrollView(
+                padding: EdgeInsets.all(4.w), // Match StockDetailsScreen
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: 20.h),
+                    AnimatedProgressBar(progress: progress),
+                    SizedBox(height: 16.h),
+                    _buildDetailCard(
+                      headerGradient: AppTheme.cardGradientYellow,
+                      title: 'Client Details',
+                      subtitle: 'Client Information',
+                      icon: IconContainer(
+                        icon: Icons.person,
+                        gradientColors: [
+                          Colors.orange.shade100,
+                          Colors.yellow.shade50,
+                        ],
+                        size: 48,
+                        borderRadius: 12,
+                        iconColor: Colors.orange.shade700,
+                      ),
+                      iconColor: Colors.orange,
+                      onTap: () {
+                        final fields = [
+                          WorkOrderField(
+                            label: "Client Name",
+                            value: workOrder.clientId.name,
+                          ),
+                          WorkOrderField(
+                            label: "Project Name",
+                            value: workOrder.projectId?.name,
+                          ),
+                          WorkOrderField(
+                            label: "Location",
+                            value: workOrder.clientId.address,
+                          ),
+                        ];
+                        showWorkOrderDetailDialog(
+                          context,
+                          fields,
+                          title: 'Client Details',
+                        );
+                      },
+                      details: [
+                        WorkOrderField(
+                          label: "Client Name",
+                          value: workOrder.clientId.name,
+                        ),
+                        WorkOrderField(
+                          label: "Project Name",
+                          value: workOrder.projectId?.name ?? 'N/A',
+                        ),
+                        WorkOrderField(
+                          label: "Location",
+                          value: workOrder.clientId.address,
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16.h),
+                    _buildDetailCard(
+                      headerGradient: AppTheme.cardGradientBlue,
+                      title: 'Progress',
+                      subtitle: 'Work Order Progress',
+                      icon: IconContainer(
+                        icon: Icons.playlist_add_check_circle,
+                        gradientColors: [
+                          Colors.blue.shade100,
+                          Colors.cyan.shade50,
+                        ],
+                        size: 48,
+                        borderRadius: 12,
+                        iconColor: Colors.blue.shade700,
+                      ),
+                      iconColor: Colors.blue,
+                      onTap: () {
+                        final fields = [
+                          WorkOrderField(label: "Planning", value: "Completed"),
+                          WorkOrderField(
+                            label: "Development",
+                            value: "In Progress",
+                          ),
+                          WorkOrderField(label: "Testing", value: "Pending"),
+                          WorkOrderField(label: "Deployment", value: "Pending"),
+                        ];
+                        showWorkOrderDetailDialog(
+                          context,
+                          fields,
+                          title: 'In Progress Details',
+                        );
+                      },
+                      details: [
+                        WorkOrderField(label: "Planning", value: "Completed"),
+                        WorkOrderField(
+                          label: "Development",
+                          value: "In Progress",
+                        ),
+                        WorkOrderField(label: "Testing", value: "Pending"),
+                        WorkOrderField(label: "Deployment", value: "Pending"),
+                      ],
+                    ),
+                    SizedBox(height: 16.h),
+                    _buildDetailCard(
+                      headerGradient: AppTheme.cardGradientRed,
+                      title: 'Work Orders',
+                      subtitle: 'Work Order Information',
+                      icon: IconContainer(
+                        icon: Icons.folder,
+                        gradientColors: [
+                          Colors.red.shade100,
+                          Colors.pink.shade50,
+                        ],
+                        size: 48,
+                        borderRadius: 12,
+                        iconColor: Colors.red.shade700,
+                      ),
+                      iconColor: Colors.red,
+                      onTap: () {
+                        final fields = [
+                          WorkOrderField(
+                            label: "Work Order Number",
+                            value: workOrder.workOrderNumber,
+                          ),
+                          WorkOrderField(
+                            label: "Created At",
+                            value: DateFormat(
+                              'dd-MM-yyyy',
+                            ).format(workOrder.date!),
+                          ),
+                          WorkOrderField(
+                            label: "Created By",
+                            value: workOrder.createdBy.username,
+                          ),
+                          WorkOrderField(
+                            label: "Target Date",
+                            value: workOrder.products.isNotEmpty
+                                ? workOrder.products
+                                      .map(
+                                        (p) => p.deliveryDate != null
+                                            ? DateFormat(
+                                                'dd-MM-yyyy',
+                                              ).format(p.deliveryDate!)
+                                            : "No date",
+                                      )
+                                      .join(", ")
+                                : "No products",
+                          ),
+                          WorkOrderField(
+                            label: "Status",
+                            value: workOrder.status,
+                          ),
+                          WorkOrderField(
+                            label: "Buffer Stock",
+                            value: workOrder.bufferStock,
+                          ),
+                          if (workOrder.files.isNotEmpty)
+                            WorkOrderField(
+                              label: "Files",
+                              value: workOrder.files
+                                  .map((f) => f.fileName)
+                                  .toList(),
+                            ),
+                        ];
+                        showWorkOrderDetailDialog(
+                          context,
+                          fields,
+                          title: 'Work Order Details',
+                        );
+                      },
+                      details: [
                         WorkOrderField(
                           label: "Work Order Number",
-                          value: "hdiwufhiuowc",
+                          value: workOrder.workOrderNumber,
                         ),
                         WorkOrderField(
                           label: "Created At",
-                          value: DateTime(2025, 7, 25, 9, 44),
+                          value: DateFormat(
+                            'dd-MM-yyyy',
+                          ).format(workOrder.date!),
                         ),
                         WorkOrderField(
                           label: "Created By",
-                          value: "admin (Admin)",
+                          value: workOrder.createdBy.username,
                         ),
                         WorkOrderField(
-                          label: "Files",
-                          value: "/documents/work_order.pdf",
+                          label: "Status",
+                          value: workOrder.status,
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16.h),
+                    _buildDetailCard(
+                      headerGradient: AppTheme.cardGradientGreen,
+                      title: 'Products',
+                      subtitle: '${workOrder.products.length} Products',
+                      icon: IconContainer(
+                        icon: Icons.auto_graph,
+                        gradientColors: [
+                          Colors.green.shade100,
+                          Colors.teal.shade50,
+                        ],
+                        size: 48,
+                        borderRadius: 12,
+                        iconColor: Colors.green.shade700,
+                      ),
+                      iconColor: Colors.green,
+                      onTap: () {
+                        showListDetailsDialog(
+                          context,
+                          'Products Overview',
+                          workOrder.products,
+                          (dynamic product) {
+                            final p = product as WODDataProduct;
+                            return [
+                              WorkOrderField(
+                                label: "Name",
+                                value: p.product.description,
+                              ),
+                              WorkOrderField(
+                                label: "Material Code",
+                                value: p.product.materialCode,
+                              ),
+                              WorkOrderField(label: "UOM", value: p.uom),
+                              WorkOrderField(
+                                label: "PO Quantity",
+                                value: p.poQuantity,
+                              ),
+                              WorkOrderField(
+                                label: "Quantity in Nos",
+                                value: p.qtyInNos,
+                              ),
+                              WorkOrderField(
+                                label: "Achieved",
+                                value: p.achievedQuantity,
+                              ),
+                              WorkOrderField(
+                                label: "Packed",
+                                value: p.packedQuantity,
+                              ),
+                              WorkOrderField(
+                                label: "Dispatched",
+                                value: p.dispatchedQuantity,
+                              ),
+                            ];
+                          },
+                          itemName: 'Product',
+                        );
+                      },
+                      details: [
+                        WorkOrderField(
+                          label: "Total Products",
+                          value: '${workOrder.products.length}',
                         ),
                         WorkOrderField(
-                          label: "Dates",
-                          value: DateTime(2025, 7, 19),
+                          label: "Sample Product",
+                          value: workOrder.products.isNotEmpty
+                              ? workOrder.products[0].product.description
+                              : 'N/A',
                         ),
-                        WorkOrderField(label: "Status", value: "Pending"),
-                        WorkOrderField(label: "Buffer Stock", value: "No"),
-                      ]);
-                    },
-                  ),
-                  WorkCard(
-                    icon: Icons.playlist_add_check_circle,
-                    title: 'Projects',
-                    subtitle: 'In Progress',
-                  ),
-                  WorkCard(
-                    icon: Icons.folder,
-                    title: 'Work Orders',
-                    subtitle: 'May 20, 2024',
-                  ),
-                  WorkCard(
-                    icon: Icons.auto_graph,
-                    title: 'Products',
-                    subtitle: 'Los Angeles',
-                  ),
-                  WorkCard(
-                    icon: Icons.location_city,
-                    title: 'Job Order',
-                    subtitle: 'Installation',
-                  ),
-                  WorkCard(
-                    icon: Icons.engineering_outlined,
-                    title: 'Packing Details',
-                    subtitle: 'John Smith',
-                  ),
-                  WorkCard(
-                    icon: Icons.engineering_outlined,
-                    title: 'Dispatch Details',
-                    subtitle: 'John Smith',
-                  ),
-                  WorkCard(
-                    icon: Icons.engineering_outlined,
-                    title: 'Qc Details',
-                    subtitle: 'John Smith',
-                  ),
-                ],
-              ),
-            ),
-          ],
+                      ],
+                    ),
+                    SizedBox(height: 16.h),
+                    _buildDetailCard(
+                      headerGradient: AppTheme.cardGradientYellow,
+                      title: 'Job Order',
+                      subtitle: workOrder.jobOrders.isNotEmpty
+                          ? '${workOrder.jobOrders.length} Job Orders'
+                          : 'No Job Orders',
+                      icon: IconContainer(
+                        icon: Icons.location_city,
+                        gradientColors: [
+                          Colors.orange.shade100,
+                          Colors.yellow.shade50,
+                        ],
+                        size: 48,
+                        borderRadius: 12,
+                        iconColor: Colors.orange.shade700,
+                      ),
+                      iconColor: Colors.orange,
+                      onTap: () {
+                        showListDetailsDialog(
+                          context,
+                          'Job Order Details',
+                          workOrder.jobOrders,
+                          (dynamic jobOrder) {
+                            final jo = jobOrder as WODJobOrder;
+                            return [
+                              WorkOrderField(
+                                label: "Job Order ID",
+                                value: jo.jobOrderId,
+                              ),
+                              WorkOrderField(
+                                label: "Sales Order Number",
+                                value: jo.salesOrderNumber,
+                              ),
+                              WorkOrderField(
+                                label: "Batch Number",
+                                value: jo.batchNumber,
+                              ),
+                              WorkOrderField(label: "Status", value: jo.status),
+                            ];
+                          },
+                          itemName: 'Job Order',
+                        );
+                      },
+                      details: [
+                        WorkOrderField(
+                          label: "Total Job Orders",
+                          value: '${workOrder.jobOrders.length}',
+                        ),
+                        WorkOrderField(
+                          label: "Sample Job Order",
+                          value: workOrder.jobOrders.isNotEmpty
+                              ? workOrder.jobOrders[0].jobOrderId
+                              : 'N/A',
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16.h),
+                    _buildDetailCard(
+                      headerGradient: AppTheme.cardGradientBlue,
+                      title: 'Packing Details',
+                      subtitle: workOrder.packings.isNotEmpty
+                          ? '${workOrder.packings.length} Packings'
+                          : 'No Packings',
+                      icon: IconContainer(
+                        icon: Icons.engineering_outlined,
+                        gradientColors: [
+                          Colors.blue.shade100,
+                          Colors.cyan.shade50,
+                        ],
+                        size: 48,
+                        borderRadius: 12,
+                        iconColor: Colors.blue.shade700,
+                      ),
+                      iconColor: Colors.blue,
+                      onTap: () {
+                        showListDetailsDialog(
+                          context,
+                          'Packing Details',
+                          workOrder.packings,
+                          (dynamic packing) {
+                            final pk = packing as WODPacking;
+                            return [
+                              WorkOrderField(label: "SL No", value: pk.slNo),
+                              WorkOrderField(
+                                label: "Product",
+                                value: pk.product,
+                              ),
+                              WorkOrderField(label: "Date", value: pk.date),
+                              WorkOrderField(
+                                label: "Total Qty",
+                                value: pk.totalQty,
+                              ),
+                            ];
+                          },
+                          itemName: 'Packing',
+                        );
+                      },
+                      details: [
+                        WorkOrderField(
+                          label: "Total Packings",
+                          value: '${workOrder.packings.length}',
+                        ),
+                        WorkOrderField(
+                          label: "Sample Packing",
+                          value: workOrder.packings.isNotEmpty
+                              ? workOrder.packings[0].product
+                              : 'N/A',
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16.h),
+                    _buildDetailCard(
+                      headerGradient: AppTheme.cardGradientRed,
+                      title: 'Dispatch Details',
+                      subtitle: workOrder.dispatches.isNotEmpty
+                          ? '${workOrder.dispatches.length} Dispatches'
+                          : 'No Dispatches',
+                      icon: IconContainer(
+                        icon: Icons.engineering_outlined,
+                        gradientColors: [
+                          Colors.red.shade100,
+                          Colors.pink.shade50,
+                        ],
+                        size: 48,
+                        borderRadius: 12,
+                        iconColor: Colors.red.shade700,
+                      ),
+                      iconColor: Colors.red,
+                      onTap: () {
+                        showListDetailsDialog(
+                          context,
+                          'Dispatch Details',
+                          workOrder.dispatches,
+                          (dynamic dispatch) {
+                            final dp = dispatch as WODDispatch;
+                            return [
+                              WorkOrderField(label: "SL No", value: dp.slNo),
+                              WorkOrderField(
+                                label: "Product",
+                                value: dp.product,
+                              ),
+                              WorkOrderField(label: "Date", value: dp.date),
+                              WorkOrderField(
+                                label: "Total Qty",
+                                value: dp.totalQty,
+                              ),
+                            ];
+                          },
+                          itemName: 'Dispatch',
+                        );
+                      },
+                      details: [
+                        WorkOrderField(
+                          label: "Total Dispatches",
+                          value: '${workOrder.dispatches.length}',
+                        ),
+                        WorkOrderField(
+                          label: "Sample Dispatch",
+                          value: workOrder.dispatches.isNotEmpty
+                              ? workOrder.dispatches[0].product
+                              : 'N/A',
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16.h),
+                    _buildDetailCard(
+                      headerGradient: AppTheme.cardGradientGreen,
+                      title: 'QC Details',
+                      subtitle: workOrder.qcDetails.isNotEmpty
+                          ? '${workOrder.qcDetails.length} QC Details'
+                          : 'No QC Details',
+                      icon: IconContainer(
+                        icon: Icons.engineering_outlined,
+                        gradientColors: [
+                          Colors.green.shade100,
+                          Colors.teal.shade50,
+                        ],
+                        size: 48,
+                        borderRadius: 12,
+                        iconColor: Colors.green.shade700,
+                      ),
+                      iconColor: Colors.green,
+                      onTap: () {
+                        showListDetailsDialog(
+                          context,
+                          'QC Details',
+                          workOrder.qcDetails,
+                          (dynamic qc) {
+                            final q = qc as WODQcDetail;
+                            return [
+                              WorkOrderField(label: "SL No", value: q.slNo),
+                              WorkOrderField(
+                                label: "Product",
+                                value: q.product,
+                              ),
+                              WorkOrderField(
+                                label: "Recycled Quantity",
+                                value: q.recycledQuantity,
+                              ),
+                              WorkOrderField(
+                                label: "Rejected Quantity",
+                                value: q.rejectedQuantity,
+                              ),
+                            ];
+                          },
+                          itemName: 'QC',
+                        );
+                      },
+                      details: [
+                        WorkOrderField(
+                          label: "Total QC Details",
+                          value: '${workOrder.qcDetails.length}',
+                        ),
+                        WorkOrderField(
+                          label: "Sample QC",
+                          value: workOrder.qcDetails.isNotEmpty
+                              ? workOrder.qcDetails[0].product
+                              : 'N/A',
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
   }
-}
 
-class WorkCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback? onTap;
-
-  const WorkCard({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.deepPurple.shade100,
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
+  Widget _buildLogoAndTitle() {
+    return Row(
+      children: [
+        SizedBox(width: 8.w),
+        Text(
+          'Work Order Details',
+          style: TextStyle(
+            fontSize: 18.sp,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF334155),
+          ),
         ),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      ],
+    );
+  }
+
+  Widget _buildBackButton() {
+    return IconButton(
+      icon: Icon(
+        Icons.arrow_back_ios,
+        size: 24.sp,
+        color: const Color(0xFF334155),
+      ),
+      onPressed: () {
+        context.go(RouteNames.workorders);
+      },
+    );
+  }
+
+  Widget _buildDetailCard({
+    required Gradient headerGradient,
+    required String title,
+    required String subtitle,
+    required IconContainer icon,
+    required Color iconColor,
+    required List<WorkOrderField> details,
+    required VoidCallback onTap,
+  }) {
+    return CustomCard(
+      title: title,
+      subtitle: subtitle,
+      leading: icon,
+      headerGradient: headerGradient,
+      borderRadius: 12,
+      backgroundColor: Colors.white,
+      borderColor: Colors.grey.withOpacity(0.15),
+      borderWidth: 0,
+      elevation: 2,
+      onTap: onTap,
+      bodyItems: [
+        SizedBox(height: 8.h),
+        ...details.map(
+          (detail) => Padding(
+            padding: EdgeInsets.symmetric(vertical: 6.h),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: EdgeInsets.all(10.w),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.grey[100],
+                Text(
+                  '${detail.label}:',
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                    color: iconColor,
                   ),
-                  child: Icon(icon, color: Colors.purple, size: 24.sp),
                 ),
-                Container(
-                  padding: EdgeInsets.all(8.w),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.grey[100],
-                  ),
-                  child: Icon(
-                    Icons.arrow_outward,
-                    size: 24.sp,
-                    color: Colors.black54,
+                SizedBox(width: 10.w),
+                Expanded(
+                  child: Text(
+                    detail.value?.toString() ?? 'N/A',
+                    style: TextStyle(fontSize: 14.sp, color: AppTheme.darkGray),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: const TextStyle(fontSize: 13, color: Colors.black54),
-            ),
-          ],
+          ),
         ),
-      ),
+      ],
+    );
+  }
+
+  void showWorkOrderDetailDialog(
+    BuildContext context,
+    List<WorkOrderField> fields, {
+    String title = "Work Order Details",
+  }) {
+    showGeneralDialog(
+      barrierLabel: "Details",
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.4),
+      transitionDuration: const Duration(milliseconds: 200),
+      context: context,
+      pageBuilder: (_, __, ___) {
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+          child: Center(
+            child: WorkOrderDialog(fields: fields, title: title),
+          ),
+        );
+      },
+      transitionBuilder: (_, animation, __, child) {
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(scale: animation, child: child),
+        );
+      },
     );
   }
 }
@@ -261,35 +790,15 @@ class WorkOrderField {
   WorkOrderField({required this.label, this.value});
 }
 
-void showWorkOrderDetailDialog(
-  BuildContext context,
-  List<WorkOrderField> fields,
-) {
-  showGeneralDialog(
-    barrierLabel: "Work Order",
-    barrierDismissible: true,
-    barrierColor: Colors.black.withOpacity(0.4), // background dim
-    transitionDuration: const Duration(milliseconds: 200),
-    context: context,
-    pageBuilder: (_, __, ___) {
-      return BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5), // Glass effect
-        child: Center(child: WorkOrderDialog(fields: fields)),
-      );
-    },
-    transitionBuilder: (_, animation, __, child) {
-      return FadeTransition(
-        opacity: animation,
-        child: ScaleTransition(scale: animation, child: child),
-      );
-    },
-  );
-}
-
 class WorkOrderDialog extends StatelessWidget {
   final List<WorkOrderField> fields;
+  final String title;
 
-  const WorkOrderDialog({super.key, required this.fields});
+  const WorkOrderDialog({
+    super.key,
+    required this.fields,
+    this.title = "Work Order Details",
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -305,15 +814,18 @@ class WorkOrderDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 🔹 Header Row
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.assignment, color: Colors.deepPurple, size: 26),
-                SizedBox(width: 10),
+              children: [
+                const Icon(
+                  Icons.assignment,
+                  color: Colors.deepPurple,
+                  size: 26,
+                ),
+                const SizedBox(width: 10),
                 Text(
-                  "Work Order Details",
-                  style: TextStyle(
+                  title,
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Colors.deepPurple,
@@ -322,8 +834,6 @@ class WorkOrderDialog extends StatelessWidget {
               ],
             ),
             SizedBox(height: 30.h),
-
-            // 🔹 Field Cards
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
@@ -337,6 +847,8 @@ class WorkOrderDialog extends StatelessWidget {
                           "${dt.day.toString().padLeft(2, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.year}, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} ${dt.hour >= 12 ? 'PM' : 'AM'}";
                     } else if (field.label.toLowerCase().contains("file")) {
                       displayValue = field.value.toString().split('/').last;
+                    } else if (field.value is List) {
+                      displayValue = field.value.join(", ");
                     } else {
                       displayValue = field.value.toString();
                     }
@@ -391,10 +903,7 @@ class WorkOrderDialog extends StatelessWidget {
                 ),
               ),
             ),
-
             const SizedBox(height: 10),
-
-            // 🔹 Close Button: Real UI Style (bottom right aligned TextButton)
             Align(
               alignment: Alignment.centerRight,
               child: TextButton.icon(
@@ -413,5 +922,209 @@ class WorkOrderDialog extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+void showListDetailsDialog(
+  BuildContext context,
+  String title,
+  List<dynamic> items,
+  List<WorkOrderField> Function(dynamic item) getFields, {
+  String itemName = 'Item',
+}) {
+  showGeneralDialog(
+    barrierLabel: "List Details",
+    barrierDismissible: true,
+    barrierColor: Colors.black.withOpacity(0.4),
+    transitionDuration: const Duration(milliseconds: 200),
+    context: context,
+    pageBuilder: (_, __, ___) {
+      return BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+        child: Center(
+          child: ListDetailsDialog(
+            title: title,
+            items: items,
+            getFields: getFields,
+            itemName: itemName,
+          ),
+        ),
+      );
+    },
+    transitionBuilder: (_, animation, __, child) {
+      return FadeTransition(
+        opacity: animation,
+        child: ScaleTransition(scale: animation, child: child),
+      );
+    },
+  );
+}
+
+class ListDetailsDialog extends StatelessWidget {
+  final String title;
+  final List<dynamic> items;
+  final List<WorkOrderField> Function(dynamic item) getFields;
+  final String itemName;
+
+  const ListDetailsDialog({
+    super.key,
+    required this.title,
+    required this.items,
+    required this.getFields,
+    required this.itemName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: Colors.white.withOpacity(0.85),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.75,
+          minWidth: MediaQuery.of(context).size.width * 0.85,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.assignment,
+                  color: Colors.deepPurple,
+                  size: 26,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.deepPurple,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 30.h),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(children: _buildContent()),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.backspace, color: Colors.deepPurple),
+                label: const Text(
+                  "Close",
+                  style: TextStyle(
+                    color: Colors.deepPurple,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildContent() {
+    List<Widget> content = [];
+    if (items.isEmpty) {
+      content.add(
+        const Center(
+          child: Text(
+            'No details available yet.',
+            style: TextStyle(fontSize: 16, color: Colors.black54),
+          ),
+        ),
+      );
+    } else {
+      for (int i = 0; i < items.length; i++) {
+        if (i > 0) {
+          content.add(SizedBox(height: 20.h));
+        }
+        content.add(
+          Text(
+            '$itemName ${i + 1}',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.deepPurple,
+            ),
+          ),
+        );
+        final fields = getFields(items[i]);
+        content.addAll(
+          fields.map((field) {
+            String displayValue;
+            if (field.value == null) {
+              displayValue = "-";
+            } else if (field.value is DateTime) {
+              final dt = field.value as DateTime;
+              displayValue =
+                  "${dt.day.toString().padLeft(2, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.year}, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} ${dt.hour >= 12 ? 'PM' : 'AM'}";
+            } else if (field.label.toLowerCase().contains("file")) {
+              displayValue = field.value.toString().split('/').last;
+            } else if (field.value is List) {
+              displayValue = field.value.join(", ");
+            } else {
+              displayValue = field.value.toString();
+            }
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.deepPurple.withOpacity(0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 4,
+                    child: Text(
+                      "${field.label}:",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    flex: 6,
+                    child: Text(
+                      displayValue,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black54,
+                      ),
+                      textAlign: TextAlign.right,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        );
+      }
+    }
+    return content;
   }
 }

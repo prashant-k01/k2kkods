@@ -4,9 +4,10 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:k2k/api_services/api_services.dart';
+import 'package:k2k/api_services/shared_preference/shared_preference.dart';
 import 'package:k2k/konkrete_klinkers/work_order/model/client_model.dart';
+import 'package:k2k/konkrete_klinkers/work_order/model/work_order_detail_model.dart';
 import 'package:k2k/konkrete_klinkers/work_order/model/work_order_model.dart';
-import 'package:k2k/shared_preference/shared_preference.dart';
 
 class WorkOrderRepository {
   bool isAddWorkOrderLoading = false;
@@ -245,6 +246,40 @@ class WorkOrderRepository {
           '📝 [WorkOrderRepository] Error fetching work order $id: $e\n$stackTrace',
         );
       }
+      throw Exception('Failed to load work order: $e');
+    }
+  }
+
+  Future<WODData?> getWorkOrderById(String id) async {
+    try {
+      final Map<String, String> authHeaders = await headers;
+      final Uri uri = Uri.parse('${AppUrl.fetchWorkOrderDetailsUrl}/$id');
+
+      final http.Response response = await http
+          .get(uri, headers: authHeaders)
+          .timeout(const Duration(seconds: 30));
+      print('API Response Status: ${response.statusCode}'); // Debug log
+      print('API Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonData = json.decode(response.body);
+
+        final workOrderDetails = WODWorkOrderDetails.fromJson(jsonData);
+
+        // Return the first item from data list or null
+        return workOrderDetails.data;
+      } else if (response.statusCode == 404) {
+        return null;
+      } else {
+        throw Exception(
+          'Failed to load work order: ${response.statusCode} - ${response.body}',
+        );
+      }
+    } on SocketException {
+      throw Exception('No internet connection. Please check your network.');
+    } on FormatException catch (e) {
+      throw Exception('Invalid data format: ${e.message}');
+    } catch (e) {
       throw Exception('Failed to load work order: $e');
     }
   }

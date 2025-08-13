@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:k2k/api_services/api_services.dart'; // Ensure this has the inventory URL constants
 import 'package:k2k/konkrete_klinkers/inventory/model/inventory.dart';
-import 'package:k2k/shared_preference/shared_preference.dart';
+import 'package:k2k/api_services/shared_preference/shared_preference.dart';
 
 class InventoryRepository {
   Future<Map<String, String>> get headers async {

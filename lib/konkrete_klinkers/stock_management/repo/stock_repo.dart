@@ -2,9 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:k2k/api_services/api_services.dart';
+import 'package:k2k/api_services/shared_preference/shared_preference.dart';
 import 'package:k2k/konkrete_klinkers/stock_management/model/stock.dart';
-
-import 'package:k2k/shared_preference/shared_preference.dart';
 
 class StockManagementRepository {
   Future<Map<String, String>> get headers async {
@@ -55,10 +54,18 @@ class StockManagementRepository {
     }
   }
 
-  Future<List<Datum>> getAllProducts({String? search}) async {
+  Future<List<Datum>> getAllProducts({
+    String? search,
+    int skip = 0,
+    int limit = 10,
+  }) async {
     try {
       final Map<String, String> authHeaders = await headers;
-      final Map<String, String> queryParams = {};
+      final Map<String, String> queryParams = {
+        if (search != null && search.isNotEmpty) 'search': search,
+        'skip': skip.toString(),
+        'limit': limit.toString(),
+      };
 
       final Uri uri = Uri.parse(
         AppUrl.fetchproductDetailsUrl,

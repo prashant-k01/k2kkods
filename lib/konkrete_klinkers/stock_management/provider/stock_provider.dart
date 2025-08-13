@@ -19,6 +19,8 @@ class StockProvider with ChangeNotifier {
   final List<Datum> _allProducts = [];
   bool _isProductsLoading = false;
   bool _hasMoreProducts = true;
+  int _productSkip = 0;
+  final int _productLimit = 10;
 
   List<Datum> get allProducts => _allProducts;
 
@@ -185,6 +187,7 @@ class StockProvider with ChangeNotifier {
   }) async {
     if (refresh) {
       _allProducts.clear();
+      _productSkip = 0;
       _hasMoreProducts = true;
     }
 
@@ -197,13 +200,15 @@ class StockProvider with ChangeNotifier {
     try {
       final response = await _repository.getAllProducts(
         search: searchQuery?.isNotEmpty == true ? searchQuery : null,
-      
+        skip: _productSkip,
+        limit: _productLimit,
       );
       if (response.isEmpty) {
         _hasMoreProducts = false;
       } else {
         _allProducts.addAll(response as Iterable<Datum>);
-      
+        _productSkip += response.length;
+        _hasMoreProducts = response.length == _productLimit;
       }
     } catch (e) {
       _error = _getErrorMessage(e);

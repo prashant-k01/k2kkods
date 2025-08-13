@@ -5,7 +5,7 @@ import 'package:k2k/api_services/api_services.dart';
 import 'package:k2k/konkrete_klinkers/production/model/common_model.dart';
 import 'package:k2k/konkrete_klinkers/production/model/production_logs_model.dart';
 import 'package:k2k/konkrete_klinkers/production/model/production_model.dart';
-import 'package:k2k/shared_preference/shared_preference.dart';
+import 'package:k2k/api_services/shared_preference/shared_preference.dart';
 import 'package:intl/intl.dart';
 
 class ProductionRepository {

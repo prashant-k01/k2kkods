@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart' hide ScreenUtil;
+import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/list_helper/add_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
+import 'package:k2k/common/list_helper/shimmer.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/custom_card.dart';
+import 'package:k2k/common/widgets/gradient_icon_button.dart';
+import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/konkrete_klinkers/work_order/model/work_order_model.dart';
 import 'package:k2k/konkrete_klinkers/work_order/provider/work_order_provider.dart';
 import 'package:k2k/konkrete_klinkers/work_order/view/work_order_delete_screen.dart';
+import 'package:k2k/utils/sreen_util.dart';
 import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
-
-// Centralized color management
 
 class WorkOrderListView extends StatefulWidget {
   const WorkOrderListView({super.key});
@@ -71,18 +74,18 @@ class _WorkOrderListViewState extends State<WorkOrderListView> {
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: AppTextStyles.body(13.sp)),
+        content: Text(message, style: AppTextStyles.body(14.sp)),
         backgroundColor: AppColors.error,
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
-        margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+        margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
       ),
     );
   }
 
   String _formatDateTime(DateTime? dateTime) {
-    if (dateTime == null) return 'Unknown Date';
+    if (dateTime == null) return 'N/A';
     return '${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year}';
   }
 
@@ -116,147 +119,58 @@ class _WorkOrderListViewState extends State<WorkOrderListView> {
     final createdBy = _getCreatedBy(workOrder.createdBy);
     final createdAt = _formatDateTime(workOrder.createdAt);
 
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: 6.h, horizontal: 8.w),
-      width: double.infinity,
-      child: Card(
-        elevation: 0,
-        color: AppColors.cardBackground,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.r),
-          side: BorderSide(color: const Color(0xFFE5E7EB), width: 1.w),
+    return CustomCard(
+      title: workOrderNumber,
+      leading: Icon(Icons.description_outlined, size: 20.sp),
+      onTap: () {
+        if (workOrderId.isEmpty) {
+          context.showErrorSnackbar('Invalid Work Order No');
+          return;
+        }
+        context.goNamed(
+          RouteNames.workorderdetail,
+          pathParameters: {'id': workOrderId},
+        );
+      },
+      menuItems: [
+        _popupItem(Icons.edit_outlined, 'Edit', AppColors.primary),
+        _popupItem(Icons.delete_outline, 'Delete', AppColors.error),
+      ],
+      onMenuSelected: (value) {
+        if (value == 'edit') {
+          _editWorkOrder(workOrder.id);
+        } else if (value == 'delete') {
+          WorkOrderDeleteHandler.deleteWorkOrder(
+            context,
+            workOrder.id,
+            workOrderNumber,
+          );
+        }
+      },
+      bodyItems: [
+        _infoRow(Icons.business_outlined, 'Client', clientName, fontSize: 13),
+        SizedBox(height: 6.h),
+        _infoRow(
+          Icons.folder_open_outlined,
+          'Project',
+          projectName,
+          fontSize: 13,
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12.r),
-          child: InkWell(
-            onTap: () => context.goNamed(RouteNames.workorderdetail),
-            borderRadius: BorderRadius.circular(12.r),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Top Header Section
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.cardHeaderStart,
-                        AppColors.cardHeaderEnd,
-                        AppColors.cardBackground,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(12.r),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.shadow.withOpacity(0.03),
-                        blurRadius: 4.r,
-                        offset: Offset(0, 1.h),
-                      ),
-                    ],
-                  ),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12.w,
-                    vertical: 8.h,
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.description_outlined,
-                        color: Colors.deepPurple,
-                        size: 18.sp,
-                      ),
-                      SizedBox(width: 8.w),
-                      Expanded(
-                        child: Text(
-                          workOrderNumber,
-                          style: AppTextStyles.subtitle(14.sp),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      PopupMenuButton<String>(
-                        icon: Icon(
-                          Icons.more_vert,
-                          size: 18.sp,
-                          color: AppColors.textSecondary,
-                        ),
-                        onSelected: (value) {
-                          if (value == 'edit') {
-                            _editWorkOrder(workOrderId);
-                          } else if (value == 'delete') {
-                            WorkOrderDeleteHandler.deleteWorkOrder(
-                              context,
-                              workOrderId,
-                              workOrderNumber,
-                            );
-                          }
-                        },
-                        itemBuilder: (context) => [
-                          _popupItem(
-                            Icons.edit_outlined,
-                            'Edit',
-                            AppColors.primary,
-                          ),
-                          _popupItem(
-                            Icons.delete_outline,
-                            'Delete',
-                            AppColors.error,
-                          ),
-                        ],
-                        offset: Offset(0, 32.h),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                        color: AppColors.cardBackground,
-                        elevation: 2,
-                      ),
-                    ],
-                  ),
-                ),
-                // Body Section
-                Padding(
-                  padding: EdgeInsets.all(12.w),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _infoRow(
-                        Icons.business_outlined,
-                        'Client',
-                        clientName,
-                        fontSize: 13,
-                      ),
-                      SizedBox(height: 6.h),
-                      _infoRow(
-                        Icons.folder_open_outlined,
-                        'Project',
-                        projectName,
-                        fontSize: 13,
-                      ),
-                      SizedBox(height: 8.h),
-                      _infoRow(
-                        Icons.person_outline,
-                        'Created by',
-                        createdBy,
-                        fontSize: 12,
-                      ),
-                      SizedBox(height: 6.h),
-                      _infoRow(
-                        Icons.access_time_outlined,
-                        'Created',
-                        createdAt,
-                        fontSize: 12,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+        SizedBox(height: 8.h),
+        _infoRow(Icons.person_outline, 'Created by', createdBy, fontSize: 12),
+        SizedBox(height: 6.h),
+        _infoRow(
+          Icons.access_time_outlined,
+          'Created',
+          createdAt,
+          fontSize: 12,
         ),
-      ),
+      ],
+      headerGradient: AppTheme.cardGradientList,
+      backgroundColor: AppColors.cardBackground,
+      borderColor: const Color(0xFFE5E7EB),
+      borderRadius: 12.r,
+      margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
     );
   }
 
@@ -327,27 +241,6 @@ class _WorkOrderListViewState extends State<WorkOrderListView> {
     );
   }
 
-  Widget _buildActionButtons() {
-    return Padding(
-      padding: EdgeInsets.only(right: 12.w),
-      child: TextButton(
-        onPressed: () => context.goNamed(RouteNames.workordersadd),
-        child: Row(
-          children: [
-            Icon(Icons.add, size: 18.sp, color: AppColors.primary),
-            SizedBox(width: 4.w),
-            Text(
-              'Add Work Order',
-              style: AppTextStyles.body(
-                13.sp,
-              ).copyWith(color: AppColors.primary),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -380,92 +273,6 @@ class _WorkOrderListViewState extends State<WorkOrderListView> {
     );
   }
 
-  Widget _buildShimmerCard() {
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: 6.h, horizontal: 8.w),
-      child: Card(
-        elevation: 0,
-        color: AppColors.cardBackground,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.r),
-          side: BorderSide(color: const Color(0xFFE5E7EB), width: 1.w),
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(12.w),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.cardHeaderStart,
-                      AppColors.cardHeaderEnd,
-                      AppColors.cardBackground,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(12.r),
-                  ),
-                ),
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 18.sp,
-                      height: 18.sp,
-                      color: Colors.grey[300],
-                    ),
-                    SizedBox(width: 8.w),
-                    Expanded(
-                      child: Container(height: 14.sp, color: Colors.grey[300]),
-                    ),
-                    Container(
-                      width: 18.sp,
-                      height: 18.sp,
-                      color: Colors.grey[300],
-                    ),
-                  ],
-                ),
-              ),
-              // Body
-              Padding(
-                padding: EdgeInsets.all(12.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: List.generate(
-                    4,
-                    (index) => Padding(
-                      padding: EdgeInsets.only(bottom: 6.h),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 18.sp,
-                            height: 18.sp,
-                            color: Colors.grey[300],
-                          ),
-                          SizedBox(width: 6.w),
-                          Expanded(
-                            child: Container(
-                              height: 13.sp,
-                              color: Colors.grey[300],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildLoadingIndicator() {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 16.h),
@@ -477,103 +284,114 @@ class _WorkOrderListViewState extends State<WorkOrderListView> {
 
   @override
   Widget build(BuildContext context) {
+    ScreenUtil.init(context);
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) {
         if (!didPop) {
-          context.go(RouteNames.homeScreen);
+          context.go(RouteNames.workorders);
         }
       },
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBars(
-          title: _buildLogoAndTitle(),
-          leading: _buildBackButton(),
-          action: [_buildActionButtons()],
-        ),
-        body: Consumer<WorkOrderProvider>(
-          builder: (context, provider, child) {
-            debugPrint(
-              'UI Rebuild - WorkOrders: ${provider.workOrders.length}, HasMoreData: ${provider.hasMoreData}, IsLoading: ${provider.isLoading}',
-            );
-            if (provider.error != null) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 48.sp,
-                      color: AppColors.error,
-                    ),
-                    SizedBox(height: 12.h),
-                    Text(
-                      'Error Loading Work Orders',
-                      style: AppTextStyles.title(16.sp),
-                    ),
-                    SizedBox(height: 6.h),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w),
-                      child: Text(
-                        provider.error ?? 'An unexpected error occurred',
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.secondary(12.sp),
-                      ),
-                    ),
-                    SizedBox(height: 12.h),
-                    RefreshButton(
-                      text: 'Retry',
-                      icon: Icons.refresh,
-                      onTap: () {
-                        provider.clearError();
-                        provider.loadAllWorkOrders(refresh: true);
-                      },
-                    ),
-                  ],
-                ),
+      child: Container(
+        decoration: BoxDecoration(gradient: AppTheme.backgroundGradient),
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBars(
+            title: _buildLogoAndTitle(),
+            leading: _buildBackButton(),
+          ),
+          floatingActionButton: GradientIconTextButton(
+            onPressed: () => context.goNamed(RouteNames.workordersadd),
+            label: 'Add Work Order',
+            icon: Icons.add,
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+          ),
+          body: Consumer<WorkOrderProvider>(
+            builder: (context, provider, child) {
+              debugPrint(
+                'UI Rebuild - WorkOrders: ${provider.workOrders.length}, HasMoreData: ${provider.hasMoreData}, IsLoading: ${provider.isLoading}',
               );
-            }
+              if (provider.error != null) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 48.sp,
+                        color: AppColors.error,
+                      ),
+                      SizedBox(height: 12.h),
+                      Text(
+                        'Error Loading Work Orders',
+                        style: AppTextStyles.title(16.sp),
+                      ),
+                      SizedBox(height: 6.h),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16.w),
+                        child: Text(
+                          provider.error ?? 'An unexpected error occurred',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.secondary(12.sp),
+                        ),
+                      ),
+                      SizedBox(height: 12.h),
+                      RefreshButton(
+                        text: 'Retry',
+                        icon: Icons.refresh,
+                        onTap: () {
+                          provider.clearError();
+                          provider.loadAllWorkOrders(refresh: true);
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              }
 
-            return RefreshIndicator(
-              onRefresh: () async {
-                debugPrint('Refreshing work orders list');
-                await provider.loadAllWorkOrders(refresh: true);
-              },
-              color: AppColors.primary,
-              backgroundColor: AppColors.cardBackground,
-              child: provider.isLoading && provider.workOrders.isEmpty
-                  ? ListView.builder(
-                      controller: _scrollController,
-                      padding: EdgeInsets.only(
-                        bottom: MediaQuery.of(context).padding.bottom + 16.h,
-                        left: 8.w,
-                        right: 8.w,
+              return RefreshIndicator(
+                onRefresh: () async {
+                  debugPrint('Refreshing work orders list');
+                  await provider.loadAllWorkOrders(refresh: true);
+                },
+                color: AppColors.primary,
+                backgroundColor: AppColors.cardBackground,
+                child: provider.isLoading && provider.workOrders.isEmpty
+                    ? ListView.builder(
+                        controller: _scrollController,
+                        padding: EdgeInsets.only(
+                          bottom: MediaQuery.of(context).padding.bottom + 16.h,
+                          left: 8.w,
+                          right: 8.w,
+                        ),
+                        itemCount: 5,
+                        itemBuilder: (context, index) => buildShimmerCard(),
+                      )
+                    : provider.workOrders.isEmpty
+                    ? _buildEmptyState()
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: EdgeInsets.only(
+                          bottom: MediaQuery.of(context).padding.bottom + 16.h,
+                          left: 8.w,
+                          right: 8.w,
+                        ),
+                        itemCount:
+                            provider.workOrders.length +
+                            (provider.hasMoreData ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == provider.workOrders.length &&
+                              provider.hasMoreData) {
+                            return _buildLoadingIndicator();
+                          }
+                          return _buildWorkOrderCard(
+                            provider.workOrders[index],
+                          );
+                        },
                       ),
-                      itemCount: 5,
-                      itemBuilder: (context, index) => _buildShimmerCard(),
-                    )
-                  : provider.workOrders.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.builder(
-                      controller: _scrollController,
-                      padding: EdgeInsets.only(
-                        bottom: MediaQuery.of(context).padding.bottom + 16.h,
-                        left: 8.w,
-                        right: 8.w,
-                      ),
-                      itemCount:
-                          provider.workOrders.length +
-                          (provider.hasMoreData ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index == provider.workOrders.length &&
-                            provider.hasMoreData) {
-                          return _buildLoadingIndicator();
-                        }
-                        return _buildWorkOrderCard(provider.workOrders[index]);
-                      },
-                    ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );

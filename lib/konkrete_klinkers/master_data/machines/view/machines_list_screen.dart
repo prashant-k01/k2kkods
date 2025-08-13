@@ -174,15 +174,7 @@ class _MachinesListScreenState extends State<MachinesListScreen> {
               // Top Header Section
               Container(
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.cardHeaderStart,
-                      AppColors.cardHeaderEnd,
-                      AppColors.cardBackground,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                gradient: AppTheme.cardGradient,
                   borderRadius: BorderRadius.vertical(
                     top: Radius.circular(12.r),
                   ),

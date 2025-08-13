@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:k2k/api_services/api_services.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/model/plants_model.dart';
-import 'package:k2k/shared_preference/shared_preference.dart';
+import 'package:k2k/api_services/shared_preference/shared_preference.dart';
 
 class PlantRepository {
   Future<Map<String, String>> get headers async {

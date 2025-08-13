@@ -4,13 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:k2k/konkrete_klinkers/work_order/model/client_model.dart'
     hide CreatedBy, Username;
+import 'package:k2k/konkrete_klinkers/work_order/model/work_order_detail_model.dart';
 import 'package:k2k/konkrete_klinkers/work_order/model/work_order_model.dart';
 import 'package:k2k/konkrete_klinkers/work_order/repo/work_order.dart';
 
 class WorkOrderProvider with ChangeNotifier {
   final WorkOrderRepository _repository = WorkOrderRepository();
 
-  List<Datum> _workOrders = [];
+  final List<Datum> _workOrders = [];
   List<TId> _projects = [];
   bool _isLoading = false;
   bool _isProjectsLoading = false;
@@ -22,6 +23,15 @@ class WorkOrderProvider with ChangeNotifier {
   bool _hasMoreData = true;
   int _skip = 0;
   final int _limit = 10;
+
+  WODData? _workOrderById;
+  bool _isWorkOrderByIdLoading = false;
+  String? _workOrderByIdError;
+
+  // Getters
+  WODData? get workOrderById => _workOrderById;
+  bool get isWorkOrderByIdLoading => _isWorkOrderByIdLoading;
+  String? get workOrderByIdError => _workOrderByIdError;
 
   List<Map<String, dynamic>> _products = [
     {
@@ -143,9 +153,6 @@ class WorkOrderProvider with ChangeNotifier {
     String? prefilledUom,
   }) {
     if (index < 0 || index >= products.length) {
-      if (kDebugMode) {
-        print('📝 [WorkOrderProvider] Invalid index: $index');
-      }
       return;
     }
     _uomListPerIndex[index] = product.uom.isNotEmpty ? product.uom : ['Nos'];
@@ -158,14 +165,7 @@ class WorkOrderProvider with ChangeNotifier {
           ? _uomListPerIndex[index]!.first
           : null;
     }
-    if (kDebugMode) {
-      print(
-        '📝 [WorkOrderProvider] Updated UOM list for index $index: ${_uomListPerIndex[index]}',
-      );
-      print(
-        '📝 [WorkOrderProvider] Set product uom: ${products[index]['uom']}',
-      );
-    }
+
     notifyListeners();
   }
 
@@ -585,20 +585,13 @@ class WorkOrderProvider with ChangeNotifier {
         throw Exception('Server returned false for update operation');
       }
 
-      if (kDebugMode) {
-        print('✅ [WorkOrderProvider] Successfully updated work order $id');
-      }
-
       await _refreshWorkOrdersList();
       _resetFormState();
 
       return true;
-    } catch (e, stackTrace) {
+    } catch (e) {
       _error = _getErrorMessage(e);
-      if (kDebugMode) {
-        print('❌ [WorkOrderProvider] Error updating work order: $_error');
-        print(stackTrace);
-      }
+
       return false;
     } finally {
       _isUpdateWorkOrderLoading = false;
@@ -619,30 +612,19 @@ class WorkOrderProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      if (kDebugMode) {
-        print('🗑️ [WorkOrderProvider] Attempting to delete work order $id');
-      }
       final success = await _repository.deleteWorkOrder(id);
 
       if (success) {
-        if (kDebugMode) {
-          print('✅ [WorkOrderProvider] Successfully deleted work order $id');
-        }
         await _refreshWorkOrdersList();
         return true;
       } else {
         _error = 'Failed to delete work order: Server returned false';
-        if (kDebugMode) {
-          print('❌ [WorkOrderProvider] Failed to delete work order $id');
-        }
+
         return false;
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       _error = _getErrorMessage(e);
-      if (kDebugMode) {
-        print('❌ [WorkOrderProvider] Error deleting work order $id: $_error');
-        print(stackTrace);
-      }
+
       return false;
     } finally {
       _isDeleteWorkOrderLoading = false;
@@ -659,11 +641,9 @@ class WorkOrderProvider with ChangeNotifier {
       final projects = await _repository.getProjectsByClient(clientId);
       _projects = projects;
       _error = null;
-      print('Loaded ${projects.length} Projects for Client ID: $clientId');
     } catch (e) {
       _error = _getErrorMessage(e);
       _projects = [];
-      print('Error loading Projects: $e');
     } finally {
       _isProjectsLoading = false;
       notifyListeners();
@@ -674,11 +654,6 @@ class WorkOrderProvider with ChangeNotifier {
     try {
       _error = null;
       final workOrder = await _repository.getWorkOrder(id);
-      if (kDebugMode) {
-        print(
-          '✅ [WorkOrderProvider] Fetched work order $id: ${workOrder?.toJson()}',
-        );
-      }
       if (workOrder != null) {
         // Load clients and projects to ensure names are available
         await loadAllClients();
@@ -689,9 +664,7 @@ class WorkOrderProvider with ChangeNotifier {
       return workOrder;
     } catch (e) {
       _error = _getErrorMessage(e);
-      if (kDebugMode) {
-        print('❌ [WorkOrderProvider] Error fetching work order $id: $_error');
-      }
+
       return null;
     }
   }
@@ -699,6 +672,44 @@ class WorkOrderProvider with ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  Future<WODData?> getWorkOrderById(String id) async {
+    _isWorkOrderByIdLoading = true;
+    _workOrderByIdError = null;
+    notifyListeners(); // notify loading state
+
+    try {
+      _error = null;
+      final workOrder = await _repository.getWorkOrderById(id);
+
+      if (workOrder != null) {
+        await loadAllClients();
+
+        if (workOrder.clientId.id.isNotEmpty) {
+          await loadProjectsByClient(workOrder.clientId.id);
+        }
+
+        // Set the fetched data to your provider's field
+        _workOrderById =
+            workOrder; // make sure this exists and holds the fetched work order
+
+        _isWorkOrderByIdLoading = false;
+        notifyListeners(); // notify UI after data is ready
+      } else {
+        // handle null workOrder case
+        _isWorkOrderByIdLoading = false;
+        _workOrderByIdError = 'Work order not found';
+        notifyListeners();
+      }
+
+      return workOrder;
+    } catch (e) {
+      _isWorkOrderByIdLoading = false;
+      _workOrderByIdError = _getErrorMessage(e);
+      notifyListeners();
+      return null;
+    }
   }
 
   double? calculateArea(String? description) {
@@ -716,9 +727,6 @@ class WorkOrderProvider with ChangeNotifier {
       }
       return null;
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [WorkOrderProvider] Error calculating area: $e');
-      }
       return null;
     }
   }
@@ -730,16 +738,10 @@ class WorkOrderProvider with ChangeNotifier {
     String? poQuantity, // Direct input from onChanged
   }) {
     if (index < 0 || index >= products.length) {
-      if (kDebugMode) {
-        print('📝 [WorkOrderProvider] Invalid index: $index');
-      }
       return;
     }
 
     if (formKey.currentState == null) {
-      if (kDebugMode) {
-        print('📝 [WorkOrderProvider] Form state is null for index $index');
-      }
       return;
     }
 
@@ -778,15 +780,6 @@ class WorkOrderProvider with ChangeNotifier {
       product.plant.plantCode,
     );
 
-    if (kDebugMode) {
-      print(
-        '📝 [WorkOrderProvider] updateQuantity called for index $index: '
-        'PO Quantity: $poQty, UOM: $uom, Area: $area, Calculated Qty: $calculatedQty, '
-        'Controller Text: ${products[index]['qtyController'].text}, '
-        'Form Value: ${formKey.currentState?.fields['qty_in_nos_$index']?.value}, '
-        'Plant Code: ${product.plant.plantCode}',
-      );
-    }
     notifyListeners();
   }
 
@@ -814,11 +807,6 @@ class WorkOrderProvider with ChangeNotifier {
     final String? uom =
         formKey.currentState?.fields['uom_$index']?.value as String?;
     if (uom == null) {
-      if (kDebugMode) {
-        print(
-          '❌ [WorkOrderProvider] No UOM selected for product at index $index',
-        );
-      }
       return 0.0;
     }
     return calculatedQuantities['${product.id}-$uom'] ?? 0.0;
@@ -830,9 +818,6 @@ class WorkOrderProvider with ChangeNotifier {
   }) {
     final Map<String, dynamic>? formData = formKey.currentState?.value;
     if (formData == null) {
-      if (kDebugMode) {
-        print('❌ [WorkOrderProvider] No form data for product at index $index');
-      }
       return 0;
     }
 

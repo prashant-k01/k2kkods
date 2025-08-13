@@ -9,7 +9,7 @@ class RouteNames {
   //plants
   static const String plants = '/plants';
   static const String inventory = '/inventory';
-  static const String inventorydetail= '/inventorydetail';
+  static const String inventorydetail = '/inventorydetail';
   static const String plantsadd = '/plantsadd';
   static const String plantsedit = '/plants/edit/:plantId';
   //projects
@@ -42,7 +42,7 @@ class RouteNames {
   static const String workordersadd = '/workordersadd';
   static const String workordersedit = '/workorders/edit/:workorderId';
   static const String workorders = '/workorders';
-  static const String workorderdetail = '/workorderdetail';
+  static const String workorderdetail = '/workorderdetail:id';
   //stock management
   static const String stockmanagement = "/stockmanagement";
   static const String stockmanagementAdd = "/stockmanagementAdd";
@@ -55,4 +55,8 @@ class RouteNames {
   static const String dispatch = "/dispatch";
   static const String dispatchAdd = "/dispatchAdd";
   static const String dispatchEdit = "/dispatchEdit";
+
+  //IRON SMITH//
+  static const String ismachine = "/ismachine";
+  static const String isMachineAdd = "/isMachineAdd";
 }

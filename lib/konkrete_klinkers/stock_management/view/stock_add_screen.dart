@@ -689,6 +689,64 @@ class _StockManagementFormScreenState extends State<StockManagementFormScreen>
         ),
       ),
     );
+    // }) {
+    //     return SizedBox(
+    //       width: double.infinity,
+    //       child: Container(
+    //         decoration: BoxDecoration(
+    //           gradient: isStockTransfer
+    //               ? AppTheme.primaryGradient
+    //               : LinearGradient(
+    //                   colors: [Colors.purple[700]!, Colors.purple[400]!],
+    //                   begin: Alignment.topRight,
+    //                   end: Alignment.bottomLeft,
+    //                 ),
+    //           borderRadius: BorderRadius.circular(12.r),
+    //         ),
+    //         child: ElevatedButton(
+    //           onPressed: () {
+    //             final currentFormKey = isStockTransfer
+    //                 ? _stockTransferFormKey
+    //                 : _bufferTransferFormKey;
+
+    //             if (currentFormKey.currentState?.saveAndValidate() ?? false) {
+    //               final formData = currentFormKey.currentState!.value;
+    //               ScaffoldMessenger.of(context).showSnackBar(
+    //                 SnackBar(
+    //                   content: Text(
+    //                     isStockTransfer
+    //                         ? 'Stock Transfer Submitted: $formData'
+    //                         : 'Buffer Stock Submitted: $formData',
+    //                   ),
+    //                   duration: const Duration(seconds: 2),
+    //                 ),
+    //               );
+    //               context.go(RouteNames.stockmanagement);
+    //             } else {
+    //               ScaffoldMessenger.of(context).showSnackBar(
+    //                 const SnackBar(
+    //                   content: Text('Please correct the errors in the form'),
+    //                   duration: Duration(seconds: 2),
+    //                 ),
+    //               );
+    //             }
+    //           },
+    //           style: ElevatedButton.styleFrom(
+    //             backgroundColor: Colors.transparent,
+    //             shadowColor: Colors.transparent,
+    //             foregroundColor: Colors.white,
+    //             padding: EdgeInsets.symmetric(vertical: 16.h),
+    //             shape: RoundedRectangleBorder(
+    //               borderRadius: BorderRadius.circular(12.r),
+    //             ),
+    //           ),
+    //           child: Text(
+    //             isStockTransfer ? 'Transfer Stock' : 'Transfer Buffer',
+    //             style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
+    //           ),
+    //         ),
+    //       ),
+    //     );
   }
 
   Widget _buildNote() {

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:k2k/Iron_smith/master_data/machines/view/machine_add.dart';
+import 'package:k2k/Iron_smith/master_data/machines/view/machine_list.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/dashboard/view/dashboard_screen.dart';
 import 'package:k2k/konkrete_klinkers/dispatch/view/dispatch_add_screen.dart';
@@ -44,7 +46,7 @@ import 'package:k2k/konkrete_klinkers/work_order/view/work_order_detail_page.dar
 import 'package:k2k/konkrete_klinkers/work_order/view/work_order_edit_screen.dart';
 import 'package:k2k/konkrete_klinkers/work_order/view/work_order_list_screen.dart';
 import 'package:k2k/login/view/login_screen.dart';
-import 'package:k2k/splashscreen/splash_screen.dart';
+import 'package:k2k/utils/splashscreen/splash_screen.dart';
 
 class AppRoutes {
   static final GoRouter router = GoRouter(
@@ -284,7 +286,12 @@ class AppRoutes {
         path: RouteNames.workorderdetail,
         name: RouteNames.workorderdetail,
         builder: (BuildContext context, GoRouterState state) {
-          return WorkOrderDetailsPage();
+          final id =
+              state.pathParameters['id']; 
+          if (id == null) {
+            return const Center(child: Text('Work Order ID is required'));
+          }
+          return WorkOrderDetailsPage(workOrderId: id);
         },
       ),
       GoRoute(
@@ -402,6 +409,22 @@ class AppRoutes {
         name: RouteNames.jobOrder,
         builder: (BuildContext context, GoRouterState state) {
           return const JobOrderListView();
+        },
+      ),
+
+      //IRON SMITH//
+      GoRoute(
+        path: RouteNames.isMachineAdd,
+        name: RouteNames.isMachineAdd,
+        builder: (BuildContext context, GoRouterState state) {
+          return const IsMachineAddScreen();
+        },
+      ),
+      GoRoute(
+        path: RouteNames.ismachine,
+        name: RouteNames.ismachine,
+        builder: (BuildContext context, GoRouterState state) {
+          return const IsMachinesListScreen();
         },
       ),
     ],

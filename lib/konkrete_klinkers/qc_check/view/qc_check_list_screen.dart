@@ -8,7 +8,6 @@ import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/konkrete_klinkers/qc_check/model/qc_check.dart';
 import 'package:k2k/konkrete_klinkers/qc_check/provider/qc_check_provider.dart';
 import 'package:k2k/konkrete_klinkers/qc_check/view/qc_check_delete.dart';
-import 'package:k2k/utils/sreen_util.dart';
 import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -476,7 +475,7 @@ class _QcCheckListViewState extends State<QcCheckListView> {
               },
               color: const Color(0xFF3B82F6),
               backgroundColor: Colors.white,
-              child: provider.isLoading && provider.qcChecks.isEmpty
+              child: provider.isLoading
                   ? ListView.builder(
                       itemCount: 5,
                       itemBuilder: (context, index) => buildShimmerCard(),

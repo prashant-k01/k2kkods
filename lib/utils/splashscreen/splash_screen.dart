@@ -19,7 +19,7 @@ class _SplashScreenState extends State<SplashScreen>
   bool _showLogos = false;
 
   final List<String> _logoPaths = [
-    "assets/images/login_image_1.png", // Main logo
+    "assets/images/login_image_1.png", 
     "assets/images/konkrete_klinkers.png",
     "assets/images/iron_smith.png",
     "assets/images/falcon.png",

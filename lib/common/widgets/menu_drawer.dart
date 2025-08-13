@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:k2k/api_services/shared_preference/shared_preference.dart';
 import 'package:k2k/app/routes_name.dart';
 
 class MenuItem {
@@ -247,7 +248,7 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
             SubMenuItem(
               title: 'Machines',
               icon: Icons.factory_outlined,
-              route: '/settings/plant',
+              route: RouteNames.ismachine,
               isExpanded: false,
             ),
             SubMenuItem(
@@ -457,7 +458,6 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
                 ),
               ),
 
-              // Logout Button
               Container(
                 padding: EdgeInsets.all(12.w),
                 decoration: BoxDecoration(
@@ -490,10 +490,8 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: () {
-                        Navigator.pop(context);
-                        // Add logout functionality
-                        // context.go('/login');
+                      onTap: () async {
+                        confirmLogout(context);
                       },
                       borderRadius: BorderRadius.circular(12.r),
                       child: Container(
@@ -743,3 +741,4 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
     );
   }
 }
+

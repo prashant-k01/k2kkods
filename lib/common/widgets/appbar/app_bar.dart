@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:k2k/utils/theme.dart';
 
 class AppBars extends StatelessWidget implements PreferredSizeWidget {
   final Widget title;
@@ -12,7 +13,7 @@ class AppBars extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.appBarcolor, // soft icy blue-white,,
         borderRadius: BorderRadius.vertical(
           bottom: Radius.circular(24.r), // Rounded bottom corners
         ),
@@ -44,6 +45,5 @@ class AppBars extends StatelessWidget implements PreferredSizeWidget {
   }
 
   @override
-Size get preferredSize => Size.fromHeight(kToolbarHeight + 70.h); // Increased height
+  Size get preferredSize => Size.fromHeight(kToolbarHeight + 70.h); // Increased height
 }
-

@@ -19,6 +19,7 @@ class CustomTextFormField extends StatelessWidget {
   final bool readOnly;
   final int? maxLines;
   final int? minLines;
+  final Color? prefixIconColor;
   final int? maxLength;
   final List<TextInputFormatter>? inputFormatters;
   final List<String? Function(String?)>? validators;
@@ -52,6 +53,7 @@ class CustomTextFormField extends StatelessWidget {
     this.initialValue,
     this.prefixIcon,
     this.suffixIcon,
+    this.prefixIconColor,
     this.keyboardType,
     this.textInputAction,
     this.obscureText = false,
@@ -89,7 +91,7 @@ class CustomTextFormField extends StatelessWidget {
     final theme = Theme.of(context);
     final primaryColor = theme.primaryColor;
     final errorColor = theme.colorScheme.error;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -98,7 +100,8 @@ class CustomTextFormField extends StatelessWidget {
             padding: EdgeInsets.only(bottom: 8.h),
             child: Text(
               labelText!,
-              style: labelStyle ??
+              style:
+                  labelStyle ??
                   TextStyle(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w500,
@@ -106,7 +109,7 @@ class CustomTextFormField extends StatelessWidget {
                   ),
             ),
           ),
-        
+
         Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(borderRadius ?? 12.r),
@@ -133,12 +136,16 @@ class CustomTextFormField extends StatelessWidget {
             maxLength: maxLength,
             inputFormatters: inputFormatters,
             textCapitalization: textCapitalization,
-            autovalidateMode: autovalidateMode ?? AutovalidateMode.onUserInteraction,
-            validator: customValidator ?? FormBuilderValidators.compose(validators ?? []),
+            autovalidateMode:
+                autovalidateMode ?? AutovalidateMode.onUserInteraction,
+            validator:
+                customValidator ??
+                FormBuilderValidators.compose(validators ?? []),
             onChanged: onChanged,
             onSaved: onSaved,
             onTap: onTap,
-            style: textStyle ??
+            style:
+                textStyle ??
                 TextStyle(
                   fontSize: 16.sp,
                   fontWeight: FontWeight.w400,
@@ -147,7 +154,8 @@ class CustomTextFormField extends StatelessWidget {
             decoration: InputDecoration(
               hintText: hintText,
               helperText: helperText,
-              hintStyle: hintStyle ??
+              hintStyle:
+                  hintStyle ??
                   TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w400,
@@ -159,14 +167,17 @@ class CustomTextFormField extends StatelessWidget {
                       child: Icon(
                         prefixIcon,
                         size: 20.r,
-                        color: primaryColor,
+                        color:
+                            prefixIconColor ?? primaryColor, // <-- now dynamic
                       ),
                     )
                   : null,
+
               suffixIcon: suffixIcon,
               filled: filled,
               fillColor: fillColor ?? theme.colorScheme.surface,
-              contentPadding: contentPadding ??
+              contentPadding:
+                  contentPadding ??
                   EdgeInsets.symmetric(
                     horizontal: prefixIcon != null ? 8.w : 16.w,
                     vertical: 16.h,
@@ -175,14 +186,16 @@ class CustomTextFormField extends StatelessWidget {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(borderRadius ?? 12.r),
                 borderSide: BorderSide(
-                  color: borderColor ?? theme.colorScheme.outline.withOpacity(0.3),
+                  color:
+                      borderColor ?? theme.colorScheme.outline.withOpacity(0.3),
                   width: borderWidth ?? 1.5,
                 ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(borderRadius ?? 12.r),
                 borderSide: BorderSide(
-                  color: borderColor ?? theme.colorScheme.outline.withOpacity(0.3),
+                  color:
+                      borderColor ?? theme.colorScheme.outline.withOpacity(0.3),
                   width: borderWidth ?? 1.5,
                 ),
               ),
@@ -224,5 +237,3 @@ class CustomTextFormField extends StatelessWidget {
     );
   }
 }
-
-

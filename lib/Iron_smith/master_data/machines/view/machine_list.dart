@@ -1,25 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart' hide ScreenUtil;
+import 'package:intl/intl.dart';
+import 'package:k2k/Iron_smith/master_data/machines/model/machines.dart';
+import 'package:k2k/Iron_smith/master_data/machines/provider/machine_provider.dart';
 import 'package:k2k/app/routes_name.dart';
+import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:k2k/common/list_helper/add_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
 import 'package:k2k/common/list_helper/shimmer.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
-import 'package:k2k/konkrete_klinkers/dispatch/model/dispatch.dart';
-import 'package:k2k/konkrete_klinkers/dispatch/provider/dispatch_provider.dart';
 import 'package:k2k/utils/sreen_util.dart';
 import 'package:k2k/utils/theme.dart';
-import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 
-class DispatchListView extends StatefulWidget {
-  const DispatchListView({super.key});
+class IsMachinesListScreen extends StatefulWidget {
+  const IsMachinesListScreen({super.key});
 
   @override
-  State<DispatchListView> createState() => _DispatchListViewState();
+  State<IsMachinesListScreen> createState() => _IsMachinesListScreenState();
 }
 
-class _DispatchListViewState extends State<DispatchListView> {
+class _IsMachinesListScreenState extends State<IsMachinesListScreen> {
   bool _isInitialized = false;
 
   @override
@@ -28,39 +29,105 @@ class _DispatchListViewState extends State<DispatchListView> {
     _initializeData();
   }
 
-  void _initializeData() async {
+  void _initializeData() {
     if (!_isInitialized) {
       _isInitialized = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          final provider = context.read<DispatchProvider>();
-          if (provider.dispatches.isEmpty && provider.error == null) {
-            provider.loadDispatches();
+          ScreenUtil.init(context);
+          final provider = context.read<IsMachinesProvider>();
+          if (provider.machines.isEmpty && provider.error == null) {
+            print('Loading machines on IsMachinesListScreen init');
+            provider.fetchMachines(refresh: true);
           }
         }
       });
     }
   }
 
-  void _editDispatch(String? dispatchId) {
-    if (dispatchId != null) {
+  void _editMachine(String? machineId) {
+    if (machineId != null) {
+      print('Navigating to edit machine: $machineId');
       context.goNamed(
-        '/dispatchEdit',
-        pathParameters: {'dispatchId': dispatchId},
+        RouteNames.machinesedit,
+        pathParameters: {'machineId': machineId},
       );
     }
   }
 
-  Widget _buildDispatchCard(DispatchModel dispatch) {
-    final dispatchId = dispatch.id;
-    final workOrderNumber = dispatch.workOrderNumber;
-    final clientName = dispatch.clientName;
-    final projectName = dispatch.projectName;
-    final productNames = dispatch.productNames
-        .map((p) => '${p.name} (${p.dispatchQuantity})')
-        .join(', ');
-    final createdBy = dispatch.createdBy;
-    final createdAt = dispatch.createdAt.toString().split('.')[0];
+  String _formatDateTime(DateTime dateTime) {
+    return DateFormat('dd-MM-yyyy, hh:mm a').format(dateTime);
+  }
+
+  String _getCreatedBy(CreatedBy? createdBy) {
+    return createdBy?.username ?? 'Unknown';
+  }
+
+  Widget _buildLogoAndTitle() {
+    return Row(
+      children: [
+        SizedBox(width: 8.w),
+        Expanded(
+          child: Text(
+            'Machines',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 18.sp,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF334155),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBackButton() {
+    return IconButton(
+      icon: Icon(
+        Icons.arrow_back_ios,
+        size: 24.sp,
+        color: const Color(0xFF334155),
+      ),
+      onPressed: () {
+        context.go(RouteNames.homeScreen);
+      },
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Padding(
+      padding: EdgeInsets.only(right: 16.w),
+      child: TextButton(
+        onPressed: () {
+          print('Navigating to add machine screen');
+          context.goNamed(RouteNames.isMachineAdd);
+        },
+        child: Row(
+          children: [
+            Icon(Icons.add, size: 20.sp, color: AppTheme.ironSmithPrimary),
+            SizedBox(width: 4.w),
+            Text(
+              'Add Machine',
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.ironSmithPrimary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMachineCard(Machines machine) {
+    final machineId = machine.id?.oid;
+    final name = machine.name;
+    final role = machine.role;
+    final createdBy = _getCreatedBy(machine.createdBy);
+    final createdAt = machine.createdAt?.date;
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
@@ -76,18 +143,9 @@ class _DispatchListViewState extends State<DispatchListView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top Header Section
               Container(
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.cardHeaderStart,
-                      AppColors.cardHeaderEnd,
-                      AppColors.cardBackground,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  gradient: AppTheme.ironSmithGradient,
                   borderRadius: BorderRadius.vertical(
                     top: Radius.circular(12.r),
                   ),
@@ -107,17 +165,17 @@ class _DispatchListViewState extends State<DispatchListView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SizedBox(height: 4.h),
                           Text(
-                            'Work Order: $workOrderNumber',
+                            name,
                             style: TextStyle(
                               fontSize: 14.sp,
-                              color: AppTheme.darkGray,
                               fontWeight: FontWeight.w600,
+                              color: const Color(0xFF334155),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
+                          SizedBox(height: 8.h),
                         ],
                       ),
                     ),
@@ -129,9 +187,14 @@ class _DispatchListViewState extends State<DispatchListView> {
                       ),
                       onSelected: (value) {
                         if (value == 'edit') {
-                          _editDispatch(dispatchId);
+                          _editMachine(machineId);
                         } else if (value == 'delete') {
-                          // Add delete logic here
+                          print('Initiating delete for machine: $machineId');
+                          // MachineDeleteScreen.deleteMachine(
+                          //   context,
+                          //   machineId,
+                          //   name,
+                          // );
                         }
                       },
                       itemBuilder: (BuildContext context) => [
@@ -142,7 +205,7 @@ class _DispatchListViewState extends State<DispatchListView> {
                               Icon(
                                 Icons.edit_outlined,
                                 size: 20.sp,
-                                color: const Color(0xFFF59E0B),
+                                color: AppTheme.ironSmithSecondary,
                               ),
                               SizedBox(width: 8.w),
                               Text(
@@ -186,69 +249,30 @@ class _DispatchListViewState extends State<DispatchListView> {
                   ],
                 ),
               ),
-              // Body Section
               Padding(
                 padding: EdgeInsets.all(12.w),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.person_outline,
-                          size: 16.sp,
-                          color: const Color(0xFF64748B),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12.w,
+                        vertical: 6.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Text(
+                        "Role: $role",
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.ironSmithSecondary,
                         ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          'Client: $clientName',
-                          style: TextStyle(
-                            fontSize: 13.sp,
-                            color: const Color(0xFF64748B),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                    SizedBox(height: 6.h),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.work_outline,
-                          size: 16.sp,
-                          color: const Color(0xFF64748B),
-                        ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          'Project: $projectName',
-                          style: TextStyle(
-                            fontSize: 13.sp,
-                            color: const Color(0xFF64748B),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 6.h),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.inventory_outlined,
-                          size: 16.sp,
-                          color: const Color(0xFF64748B),
-                        ),
-                        SizedBox(width: 8.w),
-                        Expanded(
-                          child: Text(
-                            'Products: $productNames',
-                            style: TextStyle(
-                              fontSize: 13.sp,
-                              color: const Color(0xFF64748B),
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 6.h),
+                    SizedBox(height: 4.h),
                     Row(
                       children: [
                         Icon(
@@ -267,82 +291,29 @@ class _DispatchListViewState extends State<DispatchListView> {
                       ],
                     ),
                     SizedBox(height: 6.h),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.access_time_outlined,
-                          size: 16.sp,
-                          color: const Color(0xFF64748B),
-                        ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          'Created: $createdAt',
-                          style: TextStyle(
-                            fontSize: 13.sp,
+                    if (createdAt != null)
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.access_time_outlined,
+                            size: 16.sp,
                             color: const Color(0xFF64748B),
                           ),
-                        ),
-                      ],
-                    ),
+                          SizedBox(width: 8.w),
+                          Text(
+                            'Created At: ${_formatDateTime(createdAt)}',
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              color: const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLogoAndTitle() {
-    return Row(
-      children: [
-        SizedBox(width: 8.w),
-        Text(
-          'Dispatches',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF334155),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBackButton() {
-    return IconButton(
-      icon: Icon(
-        Icons.arrow_back_ios,
-        size: 24.sp,
-        color: const Color(0xFF334155),
-      ),
-      onPressed: () {
-        context.go(RouteNames.homeScreen);
-      },
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Padding(
-      padding: EdgeInsets.only(right: 16.w),
-      child: TextButton(
-        onPressed: () {
-          context.goNamed(RouteNames.dispatchAdd);
-        },
-        child: Row(
-          children: [
-            Icon(Icons.add, size: 20.sp, color: const Color(0xFF3B82F6)),
-            SizedBox(width: 4.w),
-            Text(
-              'Add Dispatch',
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF3B82F6),
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -354,13 +325,13 @@ class _DispatchListViewState extends State<DispatchListView> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.local_shipping_outlined,
+            Icons.factory_outlined,
             size: 64.sp,
-            color: const Color(0xFF3B82F6),
+            color: AppTheme.ironSmithPrimary,
           ),
           SizedBox(height: 16.h),
           Text(
-            'No Dispatches Found',
+            'No Machines Found',
             style: TextStyle(
               fontSize: 18.sp,
               fontWeight: FontWeight.w600,
@@ -369,14 +340,14 @@ class _DispatchListViewState extends State<DispatchListView> {
           ),
           SizedBox(height: 8.h),
           Text(
-            'Tap the button below to add your first dispatch!',
+            'Tap the button below to add your first machine!',
             style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
           ),
           SizedBox(height: 16.h),
           AddButton(
-            text: 'Add Dispatch',
+            text: 'Add Machine',
             icon: Icons.add,
-            route: RouteNames.qcCheckAdd,
+            route: RouteNames.isMachineAdd,
           ),
         ],
       ),
@@ -385,8 +356,6 @@ class _DispatchListViewState extends State<DispatchListView> {
 
   @override
   Widget build(BuildContext context) {
-    ScreenUtil.init(context);
-
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) {
@@ -395,15 +364,16 @@ class _DispatchListViewState extends State<DispatchListView> {
         }
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
         appBar: AppBars(
           title: _buildLogoAndTitle(),
           leading: _buildBackButton(),
           action: [_buildActionButtons()],
         ),
-        body: Consumer<DispatchProvider>(
+        body: Consumer<IsMachinesProvider>(
           builder: (context, provider, child) {
-            if (provider.error != null && provider.dispatches.isEmpty) {
+            if (provider.error != null) {
+              print('Error in IsMachinesProvider: ${provider.error}');
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -415,7 +385,7 @@ class _DispatchListViewState extends State<DispatchListView> {
                     ),
                     SizedBox(height: 16.h),
                     Text(
-                      'Error Loading Dispatches',
+                      'Error Loading Machines',
                       style: TextStyle(
                         fontSize: 18.sp,
                         fontWeight: FontWeight.w600,
@@ -426,7 +396,7 @@ class _DispatchListViewState extends State<DispatchListView> {
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 24.w),
                       child: Text(
-                        provider.error!,
+                        provider.error.toString(),
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 14.sp,
@@ -439,8 +409,9 @@ class _DispatchListViewState extends State<DispatchListView> {
                       text: 'Retry',
                       icon: Icons.refresh,
                       onTap: () {
+                        print('Retrying to load machines');
                         provider.clearError();
-                        provider.loadDispatches(refresh: true);
+                        provider.fetchMachines(refresh: true);
                       },
                     ),
                   ],
@@ -450,24 +421,23 @@ class _DispatchListViewState extends State<DispatchListView> {
 
             return RefreshIndicator(
               onRefresh: () async {
-                await context.read<DispatchProvider>().loadDispatches(
-                  refresh: true,
-                );
+                print('Refreshing machines list');
+                await provider.fetchMachines(refresh: true);
               },
-              color: const Color(0xFF3B82F6),
+              color: AppTheme.ironSmithPrimary,
               backgroundColor: Colors.white,
-              child: provider.isLoading
+              child: provider.isLoading && provider.machines.isEmpty
                   ? ListView.builder(
-                      itemCount: 5, // shimmer count
+                      itemCount: 5,
                       itemBuilder: (context, index) => buildShimmerCard(),
                     )
-                  : provider.dispatches.isEmpty
+                  : provider.machines.isEmpty
                   ? _buildEmptyState()
                   : ListView.builder(
-                      padding: EdgeInsets.only(bottom: 80.h),
-                      itemCount: provider.dispatches.length,
+                      padding: EdgeInsets.only(bottom: 16.h),
+                      itemCount: provider.machines.length,
                       itemBuilder: (context, index) {
-                        return _buildDispatchCard(provider.dispatches[index]);
+                        return _buildMachineCard(provider.machines[index]);
                       },
                     ),
             );
