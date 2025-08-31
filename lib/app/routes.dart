@@ -1,7 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:k2k/Iron_smith/job_order/view/job_order_detail_screen.dart';
+import 'package:k2k/Iron_smith/job_order/view/job_order_list_screen.dart';
+import 'package:k2k/Iron_smith/job_order/view/joborder_add_screen.dart';
+import 'package:k2k/Iron_smith/master_data/clients/view/is_client_add_screen.dart';
+import 'package:k2k/Iron_smith/master_data/clients/view/is_client_edit_screen.dart';
+import 'package:k2k/Iron_smith/master_data/clients/view/is_client_list_screen.dart';
+import 'package:k2k/Iron_smith/master_data/machines/model/machines.dart';
 import 'package:k2k/Iron_smith/master_data/machines/view/machine_add.dart';
+import 'package:k2k/Iron_smith/master_data/machines/view/machine_edit.dart';
 import 'package:k2k/Iron_smith/master_data/machines/view/machine_list.dart';
+import 'package:k2k/Iron_smith/master_data/projects/view/is_project_add_screen.dart';
+import 'package:k2k/Iron_smith/master_data/projects/view/is_project_edit_screen.dart';
+import 'package:k2k/Iron_smith/master_data/projects/view/is_project_list_screen.dart';
+import 'package:k2k/Iron_smith/master_data/shapes/view/shape_add_screen.dart';
+import 'package:k2k/Iron_smith/master_data/shapes/view/shape_detail_screen.dart';
+import 'package:k2k/Iron_smith/master_data/shapes/view/shape_edit_screen.dart';
+import 'package:k2k/Iron_smith/master_data/shapes/view/shapes_list_screen.dart';
+import 'package:k2k/Iron_smith/workorder/view/iron_workorder_add_screen.dart';
+import 'package:k2k/Iron_smith/workorder/view/iron_workorder_edit_screen.dart';
+import 'package:k2k/Iron_smith/workorder/view/iron_workorder_list_screen.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/dashboard/view/dashboard_screen.dart';
 import 'package:k2k/konkrete_klinkers/dispatch/view/dispatch_add_screen.dart';
@@ -118,13 +136,6 @@ class AppRoutes {
         },
       ),
       GoRoute(
-        path: RouteNames.machines,
-        name: RouteNames.machines,
-        builder: (BuildContext context, GoRouterState state) {
-          return MachinesListScreen();
-        },
-      ),
-      GoRoute(
         path: RouteNames.plantsadd,
         name: RouteNames.plantsadd,
         builder: (BuildContext context, GoRouterState state) {
@@ -150,6 +161,39 @@ class AppRoutes {
         name: RouteNames.projectsadd,
         builder: (BuildContext context, GoRouterState state) {
           return AddProjectFormScreen();
+        },
+      ),
+      GoRoute(
+        path: RouteNames.stockmanagementAdd,
+        name: RouteNames.stockmanagementAdd,
+        builder: (BuildContext context, GoRouterState state) {
+          return const StockManagementFormScreen();
+        },
+      ),
+      GoRoute(
+        path: '${RouteNames.stockmanagementview}/:id',
+        name: RouteNames.stockmanagementview,
+        builder: (BuildContext context, GoRouterState state) {
+          final id =
+              state.pathParameters['id']; // Extract the id from path parameters
+          if (id == null) {
+            return const Center(child: Text('ID is required'));
+          }
+          return StockDetailsScreen(id: id);
+        },
+      ),
+      GoRoute(
+        path: RouteNames.stockmanagement,
+        name: RouteNames.stockmanagement,
+        builder: (BuildContext context, GoRouterState state) {
+          return const StockManagementListView();
+        },
+      ),
+      GoRoute(
+        path: RouteNames.joborderadd,
+        name: RouteNames.joborderadd,
+        builder: (BuildContext context, GoRouterState state) {
+          return JobOrdersFormScreen();
         },
       ),
       GoRoute(
@@ -260,8 +304,7 @@ class AppRoutes {
         path: RouteNames.workorderdetail,
         name: RouteNames.workorderdetail,
         builder: (BuildContext context, GoRouterState state) {
-          final id =
-              state.pathParameters['id']; 
+          final id = state.pathParameters['id'];
           if (id == null) {
             return const Center(child: Text('Work Order ID is required'));
           }
@@ -342,15 +385,33 @@ class AppRoutes {
         },
       ),
       GoRoute(
-        path: RouteNames.clientsedit,
+        path: RouteNames.clientsedit, // '/plants/edit/:plantId'
         name: RouteNames.clientsedit,
         builder: (context, state) {
           final clientId = state.pathParameters['clientId'];
           if (clientId == null) {
-            // Handle missing plantId gracefully
-            return const ClientsListView(); // Redirect to plants list
+            return const ClientsListView();
           }
           return EditClientFormScreen(clientId: clientId);
+        },
+      ),
+      GoRoute(
+        path: RouteNames.jobOrderedit, // '/plants/edit/:plantId'
+        name: RouteNames.jobOrderedit,
+        builder: (context, state) {
+          final mongoId = state.pathParameters['mongoId'];
+          if (mongoId == null) {
+            return const JobOrderListView();
+          }
+          return JobOrderEditFormScreen(mongoId: mongoId);
+        },
+      ),
+      GoRoute(
+        name: RouteNames.jobOrderView,
+        path: '/job-order/view/:mongoId',
+        builder: (context, state) {
+          final jobOrder = state.extra as JobOrderModel;
+          return JobOrderViewScreen(jobOrder: jobOrder);
         },
       ),
       GoRoute(
@@ -381,6 +442,174 @@ class AppRoutes {
         name: RouteNames.ismachine,
         builder: (BuildContext context, GoRouterState state) {
           return const IsMachinesListScreen();
+        },
+      ),
+      GoRoute(
+        path: '${RouteNames.isMachineEdit}/:machineId',
+        name: RouteNames.isMachineEdit,
+        builder: (BuildContext context, GoRouterState state) {
+          final machineId = state.pathParameters['machineId'];
+
+          if (machineId == null || machineId.isEmpty) {
+            context.go(RouteNames.ismachine);
+            return const IsMachinesListScreen();
+          }
+
+          return IsMachineEditScreen(machineId: machineId);
+        },
+      ),
+
+      //IsClients
+      GoRoute(
+        path: RouteNames.isclients,
+        name: RouteNames.isclients,
+        builder: (BuildContext context, GoRouterState state) {
+          return const IsClientsListScreen();
+        },
+      ),
+
+      GoRoute(
+        path: RouteNames.isClientAdd,
+        name: RouteNames.isClientAdd,
+        builder: (BuildContext context, GoRouterState state) {
+          return const IsClientAddScreen();
+        },
+      ),
+      GoRoute(
+        path: '${RouteNames.isClientEdit}/:clientId',
+        name: RouteNames.isClientEdit,
+        builder: (BuildContext context, GoRouterState state) {
+          final clientId = state.pathParameters['clientId'];
+
+          if (clientId == null || clientId.isEmpty) {
+            context.go(RouteNames.ismachine);
+            return const IsClientsListScreen();
+          }
+
+          return IsClientEditScreen(clientId: clientId);
+        },
+      ),
+
+      //IsProjects
+      GoRoute(
+        path: RouteNames.isProjects,
+        name: RouteNames.isProjects,
+        builder: (BuildContext context, GoRouterState state) {
+          return const IsProjectsListScreen();
+        },
+      ),
+      GoRoute(
+        path: RouteNames.isProjectAdd,
+        name: RouteNames.isProjectAdd,
+        builder: (BuildContext context, GoRouterState state) {
+          return const IsProjectAddScreen();
+        },
+      ),
+      GoRoute(
+        path: '${RouteNames.isProjectEdit}/:projectId',
+        name: RouteNames.isProjectEdit,
+        builder: (BuildContext context, GoRouterState state) {
+          final projectId = state.pathParameters['projectId'];
+
+          if (projectId == null || projectId.isEmpty) {
+            context.go(RouteNames.ismachine);
+            return const IsProjectsListScreen();
+          }
+
+          return IsProjectEditScreen(projectId: projectId);
+        },
+      ),
+      GoRoute(
+        path: RouteNames.allshapes,
+        name: RouteNames.allshapes,
+        builder: (BuildContext context, GoRouterState state) {
+          return const ShapesListScreen();
+        },
+      ),
+      GoRoute(
+        path: RouteNames.addshapes,
+        name: RouteNames.addshapes,
+        builder: (BuildContext context, GoRouterState state) {
+          return const ShapeAddScreen();
+        },
+      ),
+      GoRoute(
+        path: '${RouteNames.editshapes}/:shapeId',
+        name: RouteNames.editshapes,
+        builder: (BuildContext context, GoRouterState state) {
+          final shapeId = state
+              .pathParameters['shapeId']; // Extract shapeId from path parameters
+          if (shapeId == null || shapeId.isEmpty) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              context.go(RouteNames.allshapes);
+            });
+            return const SizedBox();
+          }
+          return ShapeEditScreen(shapeId: shapeId);
+        },
+      ),
+      GoRoute(
+        path: '${RouteNames.viewshapes}/:shapeId',
+        name: RouteNames.viewshapes,
+        builder: (BuildContext context, GoRouterState state) {
+          final shapeId = state.pathParameters['shapeId'];
+          if (shapeId == null || shapeId.isEmpty) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              context.go(RouteNames.allshapes);
+            });
+            return const SizedBox();
+          }
+          return ShapeDetailsScreen(shapeId: shapeId);
+        },
+      ),
+      GoRoute(
+        path: RouteNames.getAllIronWO,
+        name: RouteNames.getAllIronWO,
+        builder: (BuildContext context, GoRouterState state) {
+          return const IronWorkOrderListView();
+        },
+      ),
+      GoRoute(
+        path: RouteNames.addIronWO,
+        name: RouteNames.addIronWO,
+        builder: (BuildContext context, GoRouterState state) {
+          return const IronWorkorderAddScreen();
+        },
+      ),
+      GoRoute(
+        path: '${RouteNames.editIronWO}/:workorderId',
+        name: RouteNames.editIronWO,
+        builder: (context, state) {
+          final workOrderId = state.pathParameters['workorderId'];
+          if (workOrderId == null) {
+            return const IronWorkOrderListView();
+          }
+          return IronWorkorderEditScreen(workorderId: workOrderId);
+        },
+      ),
+      GoRoute(
+        path: RouteNames.ironJobOrder,
+        name: RouteNames.ironJobOrder,
+        builder: (BuildContext context, GoRouterState state) {
+          return const JobOrderListViewIS();
+        },
+      ),
+      GoRoute(
+        path: RouteNames.addIronJobOrder,
+        name: RouteNames.addIronJobOrder,
+        builder: (BuildContext context, GoRouterState state) {
+          return const IronJoborderAddScreen();
+        },
+      ),
+      GoRoute(
+        path: '${RouteNames.viewIronJobOrder}/:joborderId',
+        name: RouteNames.viewIronJobOrder,
+        builder: (BuildContext context, GoRouterState state) {
+          final joborderId = state.pathParameters['joborderId'];
+          if (joborderId == null) {
+            return const JobOrderListViewIS();
+          }
+          return IronJobOrderViewScreen(jobOrderId: joborderId);
         },
       ),
     ],

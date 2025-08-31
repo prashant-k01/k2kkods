@@ -5,9 +5,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/list_helper/custom_back_button.dart';
+import 'package:k2k/common/list_helper/title.dart';
 import 'package:k2k/common/widgets/animation_progress_bar.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/common/widgets/custom_card.dart';
+import 'package:k2k/common/widgets/loader.dart';
 import 'package:k2k/konkrete_klinkers/stock_management/view/stock_view_screen.dart';
 import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
@@ -44,22 +47,19 @@ class _WorkOrderDetailsPageState extends State<WorkOrderDetailsPage> {
       },
       child: Scaffold(
         appBar: AppBars(
-          title: _buildLogoAndTitle(),
-          leading: _buildBackButton(),
+          title: TitleText(title: 'Work Order Details'),
+          leading: CustomBackButton(
+            onPressed: () {
+              context.go(RouteNames.workorders);
+            },
+          ),
         ),
 
         body: SafeArea(
           child: Consumer<WorkOrderProvider>(
             builder: (context, provider, child) {
               if (provider.isWorkOrderByIdLoading) {
-                return Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      AppTheme.primaryBlue,
-                    ),
-                    strokeWidth: 4.0,
-                  ),
-                );
+                return Center(child: GridLoader());
               }
               if (provider.workOrderByIdError != null) {
                 return Center(
@@ -187,7 +187,10 @@ class _WorkOrderDetailsPageState extends State<WorkOrderDetailsPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SizedBox(height: 20.h),
-                    AnimatedProgressBar(progress: progress),
+                    Padding(
+                      padding: EdgeInsetsGeometry.symmetric(horizontal: 8.w),
+                      child: AnimatedProgressBar(progress: progress),
+                    ),
                     SizedBox(height: 16.h),
                     _buildDetailCard(
                       headerGradient: AppTheme.cardGradientYellow,
@@ -407,10 +410,6 @@ class _WorkOrderDetailsPageState extends State<WorkOrderDetailsPage> {
                               WorkOrderField(
                                 label: "PO Quantity",
                                 value: p.poQuantity,
-                              ),
-                              WorkOrderField(
-                                label: "Quantity in Nos",
-                                value: p.qtyInNos,
                               ),
                               WorkOrderField(
                                 label: "Achieved",
@@ -671,35 +670,6 @@ class _WorkOrderDetailsPageState extends State<WorkOrderDetailsPage> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildLogoAndTitle() {
-    return Row(
-      children: [
-        SizedBox(width: 8.w),
-        Text(
-          'Work Order Details',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF334155),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBackButton() {
-    return IconButton(
-      icon: Icon(
-        Icons.arrow_back_ios,
-        size: 24.sp,
-        color: const Color(0xFF334155),
-      ),
-      onPressed: () {
-        context.go(RouteNames.workorders);
-      },
     );
   }
 

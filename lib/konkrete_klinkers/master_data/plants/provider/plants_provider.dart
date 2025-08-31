@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/model/plants_model.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/repo/plants.repo.dart';
@@ -16,11 +15,12 @@ class PlantProvider with ChangeNotifier {
   int _skip = 0;
   final int _limit = 10;
   String _searchQuery = '';
-
-  // Loading states for specific operations
   bool _isAddPlantLoading = false;
   bool _isUpdatePlantLoading = false;
   bool _isDeletePlantLoading = false;
+  bool _isPlantLoading = false; // New: For single plant loading
+  PlantModel? _currentPlant; // New: For single plant data
+  String? _plantError; // New: For single plant error
 
   // Getters
   List<PlantModel> get plants => _plants;
@@ -28,11 +28,14 @@ class PlantProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isAllPlantsLoading => _isAllPlantsLoading;
   String? get error => _error;
+  bool get hasMore => _hasMore;
+  String get searchQuery => _searchQuery;
   bool get isAddPlantLoading => _isAddPlantLoading;
   bool get isUpdatePlantLoading => _isUpdatePlantLoading;
   bool get isDeletePlantLoading => _isDeletePlantLoading;
-  bool get hasMore => _hasMore;
-  String get searchQuery => _searchQuery;
+  bool get isPlantLoading => _isPlantLoading;
+  PlantModel? get currentPlant => _currentPlant;
+  String? get plantError => _plantError;
 
   Future<void> loadPlants({bool refresh = false}) async {
     if (_isLoading || (!_hasMore && !refresh)) return;
@@ -47,11 +50,9 @@ class PlantProvider with ChangeNotifier {
 
     _isLoading = true;
     _error = null;
-    print('Starting loadPlants, refresh=$refresh, skip=$_skip');
     notifyListeners();
 
     try {
-      print('Fetching plants: skip=$_skip, limit=$_limit, search=$_searchQuery');
       final newPlants = await _repository.getPlants(
         skip: _skip,
         limit: _limit,
@@ -66,10 +67,8 @@ class PlantProvider with ChangeNotifier {
 
       _hasMore = newPlants.length >= _limit;
       _error = null;
-      print('Loaded ${newPlants.length} plants, total: ${_plants.length}, hasMore: $_hasMore');
     } catch (e) {
       _error = _getErrorMessage(e);
-      print('Error in loadPlants: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -88,7 +87,6 @@ class PlantProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      print('Loading all plants for dropdown');
       final plants = await _repository.getPlants(
         skip: 0,
         limit: 100,
@@ -96,11 +94,9 @@ class PlantProvider with ChangeNotifier {
       );
 
       _allPlants = plants;
-      print('Loaded ${_allPlants.length} plants for dropdown');
     } catch (e) {
       _error = _getErrorMessage(e);
       _allPlants.clear();
-      print('Error loading all plants for dropdown: $e');
     } finally {
       _isAllPlantsLoading = false;
       notifyListeners();
@@ -113,21 +109,16 @@ class PlantProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      print('Creating plant: $plantCode, $plantName');
       final newPlant = await _repository.createPlant(plantCode, plantName);
-
       if (newPlant.id.isNotEmpty) {
         _skip = 0;
         await loadPlants(refresh: true);
         await loadAllPlantsForDropdown(refresh: true);
         return true;
-      } else {
-        print('Failed to create plant: Invalid response');
-        return false;
       }
+      return false;
     } catch (e) {
       _error = _getErrorMessage(e);
-      print('Error creating plant: $e');
       return false;
     } finally {
       _isAddPlantLoading = false;
@@ -145,7 +136,6 @@ class PlantProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      print('Updating plant: $plantId, $plantCode, $plantName');
       final success = await _repository.updatePlant(
         plantId,
         plantCode,
@@ -156,14 +146,11 @@ class PlantProvider with ChangeNotifier {
         await loadPlants(refresh: true);
         await loadAllPlantsForDropdown(refresh: true);
         return true;
-      } else {
-        _error = 'Failed to update plant';
-        print('Failed to update plant');
-        return false;
       }
+      _error = 'Failed to update plant';
+      return false;
     } catch (e) {
       _error = _getErrorMessage(e);
-      print('Error updating plant: $e');
       return false;
     } finally {
       _isUpdatePlantLoading = false;
@@ -177,21 +164,16 @@ class PlantProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      print('Deleting plant: $plantId');
       final success = await _repository.deletePlant(plantId);
-
       if (success) {
         await loadPlants(refresh: true);
         await loadAllPlantsForDropdown(refresh: true);
         return true;
-      } else {
-        _error = 'Failed to delete plant';
-        print('Failed to delete plant');
-        return false;
       }
+      _error = 'Failed to delete plant';
+      return false;
     } catch (e) {
       _error = _getErrorMessage(e);
-      print('Error deleting plant: $e');
       return false;
     } finally {
       _isDeletePlantLoading = false;
@@ -201,19 +183,23 @@ class PlantProvider with ChangeNotifier {
 
   Future<PlantModel?> getPlant(String plantId) async {
     try {
-      _error = null;
-      print('Fetching plant: $plantId');
+      _isPlantLoading = true;
+      _plantError = null;
+      _currentPlant = null;
+      notifyListeners();
+
       final plant = await _repository.getPlant(plantId);
-      if (plant != null) {
-        print('Loaded plant: ${plant.plantName}');
-      } else {
-        print('Plant $plantId not found');
+      _currentPlant = plant;
+      if (plant == null) {
+        _plantError = 'Plant not found';
       }
       return plant;
     } catch (e) {
-      _error = _getErrorMessage(e);
-      print('Error fetching plant: $e');
+      _plantError = _getErrorMessage(e);
       return null;
+    } finally {
+      _isPlantLoading = false;
+      notifyListeners();
     }
   }
 
@@ -221,21 +207,25 @@ class PlantProvider with ChangeNotifier {
     if (index >= 0 && index < _plants.length) {
       return _plants[index];
     }
-    print('Invalid index: $index');
     return null;
   }
 
   void clearError() {
     _error = null;
     notifyListeners();
-    print('Error cleared');
+  }
+
+  void clearPlantError() {
+    _plantError = null;
+    _currentPlant = null;
+    _isPlantLoading = false;
+    notifyListeners();
   }
 
   Future<void> searchPlants(String query) async {
     _searchQuery = query;
     _skip = 0;
     _hasMore = true;
-    print('Searching plants: $query');
     await loadPlants(refresh: true);
   }
 
@@ -243,7 +233,6 @@ class PlantProvider with ChangeNotifier {
     _searchQuery = '';
     _skip = 0;
     _hasMore = true;
-    print('Clearing search');
     await loadPlants(refresh: true);
   }
 
@@ -258,8 +247,7 @@ class PlantProvider with ChangeNotifier {
       return error.toString().replaceFirst('Exception: ', '');
     } else if (error is String) {
       return error;
-    } else {
-      return 'Unexpected error occurred.';
     }
+    return 'Unexpected error occurred.';
   }
 }

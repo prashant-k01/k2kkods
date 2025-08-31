@@ -3,7 +3,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart' hide ScreenUtil;
 import 'package:intl/intl.dart';
 import 'package:k2k/Iron_smith/master_data/machines/model/machines.dart';
 import 'package:k2k/Iron_smith/master_data/machines/provider/machine_provider.dart';
+import 'package:k2k/Iron_smith/master_data/machines/view/machine_delete.dart';
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/list_helper/custom_back_button.dart';
+import 'package:k2k/common/list_helper/title.dart';
+import 'package:k2k/common/widgets/gradient_icon_button.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/common/list_helper/add_button.dart';
@@ -49,7 +53,7 @@ class _IsMachinesListScreenState extends State<IsMachinesListScreen> {
     if (machineId != null) {
       print('Navigating to edit machine: $machineId');
       context.goNamed(
-        RouteNames.machinesedit,
+        RouteNames.isMachineEdit,
         pathParameters: {'machineId': machineId},
       );
     }
@@ -61,65 +65,6 @@ class _IsMachinesListScreenState extends State<IsMachinesListScreen> {
 
   String _getCreatedBy(CreatedBy? createdBy) {
     return createdBy?.username ?? 'Unknown';
-  }
-
-  Widget _buildLogoAndTitle() {
-    return Row(
-      children: [
-        SizedBox(width: 8.w),
-        Expanded(
-          child: Text(
-            'Machines',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 18.sp,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF334155),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBackButton() {
-    return IconButton(
-      icon: Icon(
-        Icons.arrow_back_ios,
-        size: 24.sp,
-        color: const Color(0xFF334155),
-      ),
-      onPressed: () {
-        context.go(RouteNames.homeScreen);
-      },
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Padding(
-      padding: EdgeInsets.only(right: 16.w),
-      child: TextButton(
-        onPressed: () {
-          print('Navigating to add machine screen');
-          context.goNamed(RouteNames.isMachineAdd);
-        },
-        child: Row(
-          children: [
-            Icon(Icons.add, size: 20.sp, color: AppTheme.ironSmithPrimary),
-            SizedBox(width: 4.w),
-            Text(
-              'Add Machine',
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.ironSmithPrimary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildMachineCard(Machines machine) {
@@ -190,11 +135,11 @@ class _IsMachinesListScreenState extends State<IsMachinesListScreen> {
                           _editMachine(machineId);
                         } else if (value == 'delete') {
                           print('Initiating delete for machine: $machineId');
-                          // MachineDeleteScreen.deleteMachine(
-                          //   context,
-                          //   machineId,
-                          //   name,
-                          // );
+                          MachineDeleteHandler.confirmDelete(
+                            context,
+                            machineId: machineId,
+                            machineName: name,
+                          );
                         }
                       },
                       itemBuilder: (BuildContext context) => [
@@ -366,9 +311,16 @@ class _IsMachinesListScreenState extends State<IsMachinesListScreen> {
       child: Scaffold(
         backgroundColor: const Color.fromARGB(255, 255, 255, 255),
         appBar: AppBars(
-          title: _buildLogoAndTitle(),
-          leading: _buildBackButton(),
-          action: [_buildActionButtons()],
+          title: TitleText(title: 'Machines'),
+          leading: CustomBackButton(
+            onPressed: () => context.go(RouteNames.homeScreen),
+          ),
+        ),
+        floatingActionButton: GradientIconTextButton(
+          gradientColors: [Color(0xFFBBDEFB), Color(0xFFB2EBF2)],
+          label: 'Create Machine',
+          icon: Icons.add,
+          onPressed: () => context.go(RouteNames.isMachineAdd),
         ),
         body: Consumer<IsMachinesProvider>(
           builder: (context, provider, child) {
@@ -419,27 +371,29 @@ class _IsMachinesListScreenState extends State<IsMachinesListScreen> {
               );
             }
 
-            return RefreshIndicator(
-              onRefresh: () async {
-                print('Refreshing machines list');
-                await provider.fetchMachines(refresh: true);
-              },
-              color: AppTheme.ironSmithPrimary,
-              backgroundColor: Colors.white,
-              child: provider.isLoading && provider.machines.isEmpty
-                  ? ListView.builder(
-                      itemCount: 5,
-                      itemBuilder: (context, index) => buildShimmerCard(),
-                    )
-                  : provider.machines.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.builder(
-                      padding: EdgeInsets.only(bottom: 16.h),
-                      itemCount: provider.machines.length,
-                      itemBuilder: (context, index) {
-                        return _buildMachineCard(provider.machines[index]);
-                      },
-                    ),
+            return SafeArea(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  print('Refreshing machines list');
+                  await provider.fetchMachines(refresh: true);
+                },
+                color: AppTheme.ironSmithPrimary,
+                backgroundColor: Colors.white,
+                child: provider.isLoading && provider.machines.isEmpty
+                    ? ListView.builder(
+                        itemCount: 5,
+                        itemBuilder: (context, index) => buildShimmerCard(),
+                      )
+                    : provider.machines.isEmpty
+                    ? _buildEmptyState()
+                    : ListView.builder(
+                        padding: EdgeInsets.only(bottom: 16.h),
+                        itemCount: provider.machines.length,
+                        itemBuilder: (context, index) {
+                          return _buildMachineCard(provider.machines[index]);
+                        },
+                      ),
+              ),
             );
           },
         ),

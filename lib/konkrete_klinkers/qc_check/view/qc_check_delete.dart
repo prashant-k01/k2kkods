@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/konkrete_klinkers/qc_check/provider/qc_check_provider.dart';
 import 'package:provider/provider.dart';
@@ -59,10 +60,10 @@ class QcCheckDeleteHandler {
                         try {
                           // Call delete method
                           await provider.deleteQcCheck(qcCheckId);
-                          
+
                           // Close the dialog first
                           Navigator.pop(dialogContext);
-                          
+
                           // Use the original context (not dialogContext) for snackbar
                           // Check if the deletion was successful
                           if (provider.error == null) {
@@ -73,15 +74,13 @@ class QcCheckDeleteHandler {
                             }
                           } else {
                             if (context.mounted) {
-                              context.showErrorSnackbar(
-                                provider.error!,
-                              );
+                              context.showErrorSnackbar(provider.error!);
                             }
                           }
                         } catch (e) {
                           // Close the dialog first
                           Navigator.pop(dialogContext);
-                          
+
                           // Show error message using original context
                           if (context.mounted) {
                             context.showErrorSnackbar(
@@ -95,16 +94,16 @@ class QcCheckDeleteHandler {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12.r),
                   ),
-                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 8.h,
+                  ),
                 ),
                 child: provider.isDeleteQcCheckLoading
                     ? SizedBox(
                         width: 16.w,
                         height: 16.h,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2.w,
-                        ),
+                        child: GradientLoader(),
                       )
                     : Text(
                         'Delete',

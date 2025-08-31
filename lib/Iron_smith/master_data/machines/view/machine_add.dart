@@ -5,6 +5,8 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/Iron_smith/master_data/machines/provider/machine_provider.dart';
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/list_helper/custom_back_button.dart';
+import 'package:k2k/common/list_helper/title.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
@@ -96,15 +98,18 @@ class _IsMachineAddScreenState extends State<IsMachineAddScreen> {
       child: Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
         appBar: AppBars(
-          title: _buildLogoAndTitle(),
-          leading: _buildBackButton(),
-          action: [],
+          title: TitleText(title: 'Create Machine'),
+          leading: CustomBackButton(
+            onPressed: () => context.go(RouteNames.ismachine),
+          ),
         ),
-        body: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [_buildFormCard(context)],
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [_buildFormCard(context)],
+            ),
           ),
         ),
       ),

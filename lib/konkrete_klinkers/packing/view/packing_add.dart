@@ -4,7 +4,10 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/list_helper/custom_back_button.dart';
+import 'package:k2k/common/list_helper/title.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
@@ -44,18 +47,24 @@ class _AddPackingFormScreenState extends State<AddPackingFormScreen> {
           context.go(RouteNames.packing);
         }
       },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
-        appBar: AppBars(
-          title: _buildLogoAndTitle(),
-          leading: _buildBackButton(),
-          action: [],
-        ),
-        body: SingleChildScrollView(
-          padding: EdgeInsets.all(24.w),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [_buildFormCard(context)],
+      child: Container(
+        decoration: BoxDecoration(gradient: AppTheme.backgroundGradient),
+        child: Scaffold(
+          backgroundColor: AppColors.transparent,
+          appBar: AppBars(
+            title: TitleText(title: 'Create Packing'),
+            leading: CustomBackButton(
+              onPressed: () => context.go(RouteNames.packing),
+            ),
+          ),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(24.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [_buildFormCard(context)],
+              ),
+            ),
           ),
         ),
       ),
@@ -246,8 +255,8 @@ class _AddPackingFormScreenState extends State<AddPackingFormScreen> {
                       hintText: provider.isLoading
                           ? 'Fetching bundle size...'
                           : provider.bundleSize != null
-                              ? provider.bundleSize.toString()
-                              : 'Select a product to see bundle size',
+                          ? provider.bundleSize.toString()
+                          : 'Select a product to see bundle size',
                       prefixIcon: Icons.widgets,
                       keyboardType: TextInputType.number,
                       enabled: false,
@@ -414,8 +423,9 @@ class _AddPackingFormScreenState extends State<AddPackingFormScreen> {
                                       );
 
                                       try {
-                                        await provider
-                                            .createPacking(packingData);
+                                        await provider.createPacking(
+                                          packingData,
+                                        );
                                         if (provider.error == null) {
                                           context.showSuccessSnackbar(
                                             'Packing added successfully!',
@@ -452,10 +462,7 @@ class _AddPackingFormScreenState extends State<AddPackingFormScreen> {
                               ? SizedBox(
                                   width: 20.w,
                                   height: 20.h,
-                                  child: const CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
+                                  child: const GradientLoader(),
                                 )
                               : Text(
                                   provider.showQrSection

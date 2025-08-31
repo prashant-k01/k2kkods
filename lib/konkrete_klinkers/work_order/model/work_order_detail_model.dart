@@ -9,7 +9,7 @@ String wodWorkOrderDetailsToJson(WODWorkOrderDetails data) =>
 class WODWorkOrderDetails {
   bool success;
   String message;
-  WODData? data; // Nullable to handle potential null data
+  WODData? data;
 
   WODWorkOrderDetails({
     required this.success,
@@ -34,19 +34,19 @@ class WODWorkOrderDetails {
 class WODData {
   String id;
   WODClientId clientId;
-  WODProjectId? projectId; // Nullable to handle null project_id
+  WODProjectId? projectId;
   String workOrderNumber;
-  DateTime? date; // Nullable to handle parsing issues
+  DateTime? date;
   bool bufferStock;
   List<WODDataProduct> products;
   List<WODFileElement> files;
   String status;
   WODTedBy createdBy;
-  WODUpdatedBy? updatedBy; // Nullable
+  WODUpdatedBy? updatedBy;
   List<dynamic> bufferTransferLogs;
   List<WODJobOrder> jobOrders;
-  DateTime? createdAt; // Nullable
-  DateTime? updatedAt; // Nullable
+  DateTime? createdAt;
+  DateTime? updatedAt;
   int v;
   List<WODPacking> packings;
   List<WODDispatch> dispatches;
@@ -116,7 +116,7 @@ class WODData {
         (json["packings"] as List<dynamic>?)
             ?.map((x) => WODPacking.fromJson(x))
             .toList() ??
-        [], // Fixed key to lowercase "packings"
+        [],
     dispatches:
         (json["dispatches"] as List<dynamic>?)
             ?.map((x) => WODDispatch.fromJson(x))
@@ -256,7 +256,7 @@ class WODDataProduct {
   int achievedQuantity;
   int packedQuantity;
   int dispatchedQuantity;
-  DateTime? deliveryDate; // Added to match API
+  DateTime? deliveryDate;
 
   WODDataProduct({
     required this.uom,
@@ -660,8 +660,7 @@ class WODPacking {
     product: json["product"] ?? '',
     date: json["date"] ?? '',
     totalQty: (json["total_qty"] as num?)?.toInt() ?? 0,
-    rejectedQuantity:
-        (json["rejected_quantity"] as num?)?.toInt() ?? 0, // Fixed key
+    rejectedQuantity: (json["rejected_quantity"] as num?)?.toInt() ?? 0,
     createdBy: json["created_by"] ?? '',
   );
 

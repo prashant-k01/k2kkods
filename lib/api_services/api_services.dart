@@ -1,6 +1,6 @@
 class AppUrl {
   // static const String baseUrl/api = 'http://3.6.6.231/api';
-  static const String baseUrl = 'https://k2k-backend-1.onrender.com';
+  static const String baseUrl = 'http://43.204.242.233';
 
   static const String loginUrl = '$baseUrl/api/users/login';
   //Plants Urls
@@ -18,7 +18,7 @@ class AppUrl {
   static const String createMachineUrl =
       '$baseUrl/api/konkreteKlinkers/helpers/machine';
   static const String fetchMachineDetailsUrl =
-      '$baseUrl/api/api/konkreteKlinkers/helpers/machines';
+      '$baseUrl/api/konkreteKlinkers/helpers/machines';
   static const String updateMachineDetailsUrl =
       '$baseUrl/api/konkreteKlinkers/helpers/machines';
   static const String deleteMachineDetailsUrl =
@@ -34,16 +34,6 @@ class AppUrl {
       '$baseUrl/api/konkreteKlinkers/helpers/clients';
   static const String deleteClientDetailsUrl =
       '$baseUrl/api/konkreteKlinkers/helpers/clients/delete';
-
-  //Machine's Urls
-  static const String createMachineUrl =
-      '$baseUrl/konkreteKlinkers/helpers/machine';
-  static const String fetchMachineDetailsUrl =
-      '$baseUrl/konkreteKlinkers/helpers/machines';
-  static const String updateMachineDetailsUrl =
-      '$baseUrl/konkreteKlinkers/helpers/machines';
-  static const String deleteMachineDetailsUrl =
-      '$baseUrl/konkreteKlinkers/helpers/machines/delete';
 
   //projects's Urls
   static const String createProjectUrl =
@@ -171,11 +161,57 @@ class AppUrl {
 
   ////////////////////////////IRON SMITH///////////////////////////////////////////////////////
   //machines
-  static const String baseUrlIronSmith = 'https://k2k.kods.work/api/ironSmith';
+  // static const String baseUrlIronSmith =
+  //     'https://k2k-backend-1.onrender.com/api/ironSmith';
   //
 
-  static const String getIsMachines = "$baseUrl/helpers/machines";
+  static const String baseUrlIronSmith = 'http://43.204.242.233/api/ironSmith';
 
-  // https://k2k.kods.work/api/ironSmith/helpers/machines
-  static const String addIsMachines = "$baseUrl/helpers/machines";
+  static const String getIsMachines = "$baseUrlIronSmith/helpers/machines";
+  static String getIsMachineById(String id) => "$getIsMachines/$id";
+  static const String deleteIsMachines =
+      "$baseUrlIronSmith/helpers/machines/delete";
+
+  //Clients
+  static const String getAllClients = "$baseUrlIronSmith/helpers/clients";
+  static String getClientById(String id) => "$getAllClients/$id";
+  static const String deleteIsClient =
+      "$baseUrlIronSmith/helpers/clients/delete";
+
+  //Projects
+  static const String getAllProjects = "$baseUrlIronSmith/helpers/projects";
+  static String getProjectById(String id) => "$getAllProjects/$id";
+  static const String deleteIsProject =
+      "$baseUrlIronSmith/helpers/projects/delete";
+
+  static String getProjectsByClientId(String clientId) =>
+      "$baseUrlIronSmith/workorders-getProject?clientId=$clientId";
+
+  static String getDiameterByProject(String projectId) =>
+      "$baseUrlIronSmith/raw-data/$projectId";
+
+  static String getDimensionByShape(String shapeId) =>
+      "$baseUrlIronSmith/dimension-by-shape/$shapeId";
+
+  //Shapes
+  static const String shapes = "$baseUrlIronSmith/helpers/shapes";
+  static const String dimension = "$baseUrlIronSmith/dropdown/dimensions";
+  static String shapeById(String id) => "$shapes/$id";
+  static const String deleteShapes = "$baseUrlIronSmith/helpers/shapes/delete";
+
+  //work Orders
+  static const String getAllWorkOrder = "$baseUrlIronSmith/workorder/get";
+  static const String createWorkOrder = "$baseUrlIronSmith/workorder/create";
+
+  static String getWorkOrderById(String id) =>
+      "$baseUrlIronSmith/workorder/$id";
+
+  //job Orders
+  static const String getAllJobOrder = "$baseUrlIronSmith/joborder/get";
+  static const String createISJobOrder = "$baseUrlIronSmith/joborder/create";
+  static const String deleteISJobOrder = "$baseUrlIronSmith/joborder/delete";
+  static String getWorkOrderByWorkOrderId(String id) =>
+      "$baseUrlIronSmith/joborder/workorderdata/$id";
+
+  static String getJobOrderById(String id) => "$baseUrlIronSmith/joborder/$id";
 }

@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:k2k/Iron_smith/job_order/provider/job_order_provider_is.dart';
+import 'package:k2k/Iron_smith/master_data/clients/provider/is_client_provider.dart';
 import 'package:k2k/Iron_smith/master_data/machines/provider/machine_provider.dart';
+import 'package:k2k/Iron_smith/master_data/projects/provider/is_project_provider.dart';
+import 'package:k2k/Iron_smith/master_data/shapes/provider/shape_provider.dart';
+import 'package:k2k/Iron_smith/workorder/provider/iron_workorder_provider.dart';
 import 'package:k2k/app/routes.dart';
 import 'package:k2k/konkrete_klinkers/dispatch/provider/dispatch_provider.dart';
 import 'package:k2k/konkrete_klinkers/inventory/provider/inventory_provider.dart';
@@ -49,6 +54,11 @@ class MyApp extends StatelessWidget {
             ChangeNotifierProvider(create: (_) => StockProvider()),
             ChangeNotifierProvider(create: (_) => ProductionProvider()),
             ChangeNotifierProvider(create: (_) => IsMachinesProvider()),
+            ChangeNotifierProvider(create: (_) => IsClientProvider()),
+            ChangeNotifierProvider(create: (_) => IsProjectProvider()),
+            ChangeNotifierProvider(create: (_) => IronWorkorderProvider()),
+            ChangeNotifierProvider(create: (_) => ShapesProvider()),
+            ChangeNotifierProvider(create: (_) => JobOrderProviderIS()),
           ],
           child: Consumer<LoginProvider>(
             builder: (context, value, child) {

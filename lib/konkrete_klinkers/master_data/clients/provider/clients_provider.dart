@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:k2k/konkrete_klinkers/master_data/clients/model/clients_model.dart';
 import 'package:k2k/konkrete_klinkers/master_data/clients/repo/cleints.dart';
@@ -16,10 +15,12 @@ class ClientsProvider with ChangeNotifier {
   int _skip = 0;
   final int _limit = 10;
   String _searchQuery = '';
-
   bool _isAddClientLoading = false;
   bool _isUpdateClientsLoading = false;
   bool _isDeleteClientsLoading = false;
+  bool _isClientLoading = false; // New: For single client loading
+  ClientsModel? _currentClient; // New: For single client data
+  String? _clientError; // New: For single client error
 
   // Getters
   List<ClientsModel> get clients => _clients;
@@ -27,11 +28,14 @@ class ClientsProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isAllClientsLoading => _isAllClientsLoading;
   String? get error => _error;
+  bool get hasMore => _hasMore;
+  String get searchQuery => _searchQuery;
   bool get isAddClientsLoading => _isAddClientLoading;
   bool get isUpdateClientsLoading => _isUpdateClientsLoading;
   bool get isDeleteClientsLoading => _isDeleteClientsLoading;
-  bool get hasMore => _hasMore;
-  String get searchQuery => _searchQuery;
+  bool get isClientLoading => _isClientLoading;
+  ClientsModel? get currentClient => _currentClient;
+  String? get clientError => _clientError;
 
   Future<void> loadClients({bool refresh = false}) async {
     if (_isLoading || (!_hasMore && !refresh)) return;
@@ -46,11 +50,9 @@ class ClientsProvider with ChangeNotifier {
 
     _isLoading = true;
     _error = null;
-    print('Starting loadClients, refresh=$refresh, skip=$_skip');
     notifyListeners();
 
     try {
-      print('Fetching clients: skip=$_skip, limit=$_limit, search=$_searchQuery');
       final newClients = await _repository.getAllClients(
         skip: _skip,
         limit: _limit,
@@ -65,10 +67,8 @@ class ClientsProvider with ChangeNotifier {
 
       _hasMore = newClients.length >= _limit;
       _error = null;
-      print('Loaded ${newClients.length} clients, total: ${_clients.length}, hasMore: $_hasMore');
     } catch (e) {
       _error = _getErrorMessage(e);
-      print('Error in loadClients: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -87,7 +87,6 @@ class ClientsProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      print('Loading all clients for dropdown');
       final clients = await _repository.getAllClients(
         skip: 0,
         limit: 100,
@@ -95,11 +94,9 @@ class ClientsProvider with ChangeNotifier {
       );
 
       _allClients = clients;
-      print('Loaded ${_allClients.length} clients for dropdown');
     } catch (e) {
       _error = _getErrorMessage(e);
       _allClients.clear();
-      print('Error loading all clients for dropdown: $e');
     } finally {
       _isAllClientsLoading = false;
       notifyListeners();
@@ -112,22 +109,17 @@ class ClientsProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      print('Creating client: $name, $address');
       final newClient = await _repository.createClient(name, address);
-
       if (newClient.id.isNotEmpty) {
         _skip = 0;
         await loadClients(refresh: true);
         await loadAllClientsForDropdown(refresh: true);
         return true;
-      } else {
-        _error = 'Failed to create client - no ID returned';
-        print('Failed to create client: Invalid response');
-        return false;
       }
+      _error = 'Failed to create client - no ID returned';
+      return false;
     } catch (e) {
       _error = _getErrorMessage(e);
-      print('Error creating client: $e');
       return false;
     } finally {
       _isAddClientLoading = false;
@@ -136,7 +128,7 @@ class ClientsProvider with ChangeNotifier {
   }
 
   Future<bool> updateClients(
-    String clientsId,
+    String clientId,
     String name,
     String address,
   ) async {
@@ -145,21 +137,16 @@ class ClientsProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      print('Updating client: $clientsId, $name, $address');
-      final success = await _repository.updateClient(clientsId, name, address);
-
+      final success = await _repository.updateClient(clientId, name, address);
       if (success) {
         await loadClients(refresh: true);
         await loadAllClientsForDropdown(refresh: true);
         return true;
-      } else {
-        _error = 'Failed to update client';
-        print('Failed to update client');
-        return false;
       }
+      _error = 'Failed to update client';
+      return false;
     } catch (e) {
       _error = _getErrorMessage(e);
-      print('Error updating client: $e');
       return false;
     } finally {
       _isUpdateClientsLoading = false;
@@ -167,27 +154,22 @@ class ClientsProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> deleteClients(String clientsId) async {
+  Future<bool> deleteClients(String clientId) async {
     _isDeleteClientsLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      print('Deleting client: $clientsId');
-      final success = await _repository.deleteClient(clientsId);
-
+      final success = await _repository.deleteClient(clientId);
       if (success) {
         await loadClients(refresh: true);
         await loadAllClientsForDropdown(refresh: true);
         return true;
-      } else {
-        _error = 'Failed to delete client';
-        print('Failed to delete client');
-        return false;
       }
+      _error = 'Failed to delete client';
+      return false;
     } catch (e) {
       _error = _getErrorMessage(e);
-      print('Error deleting client: $e');
       return false;
     } finally {
       _isDeleteClientsLoading = false;
@@ -195,21 +177,25 @@ class ClientsProvider with ChangeNotifier {
     }
   }
 
-  Future<ClientsModel?> getClients(String clientsId) async {
+  Future<ClientsModel?> getClients(String clientId) async {
     try {
-      _error = null;
-      print('Fetching client: $clientsId');
-      final client = await _repository.getClients(clientsId);
-      if (client != null) {
-        print('Loaded client: ${client.name}');
-      } else {
-        print('Client $clientsId not found');
+      _isClientLoading = true;
+      _clientError = null;
+      _currentClient = null;
+      notifyListeners();
+
+      final client = await _repository.getClients(clientId);
+      _currentClient = client;
+      if (client == null) {
+        _clientError = 'Client not found';
       }
       return client;
     } catch (e) {
-      _error = _getErrorMessage(e);
-      print('Error fetching client: $e');
+      _clientError = _getErrorMessage(e);
       return null;
+    } finally {
+      _isClientLoading = false;
+      notifyListeners();
     }
   }
 
@@ -217,21 +203,25 @@ class ClientsProvider with ChangeNotifier {
     if (index >= 0 && index < _clients.length) {
       return _clients[index];
     }
-    print('Invalid index: $index');
     return null;
-    }
+  }
 
   void clearError() {
     _error = null;
     notifyListeners();
-    print('Error cleared');
+  }
+
+  void clearClientError() {
+    _clientError = null;
+    _currentClient = null;
+    _isClientLoading = false;
+    notifyListeners();
   }
 
   Future<void> searchClients(String query) async {
     _searchQuery = query;
     _skip = 0;
     _hasMore = true;
-    print('Searching clients: $query');
     await loadClients(refresh: true);
   }
 
@@ -239,7 +229,6 @@ class ClientsProvider with ChangeNotifier {
     _searchQuery = '';
     _skip = 0;
     _hasMore = true;
-    print('Clearing search');
     await loadClients(refresh: true);
   }
 
@@ -254,8 +243,7 @@ class ClientsProvider with ChangeNotifier {
       return error.toString().replaceFirst('Exception: ', '');
     } else if (error is String) {
       return error;
-    } else {
-      return 'Unexpected error occurred.';
     }
+    return 'Unexpected error occurred.';
   }
 }

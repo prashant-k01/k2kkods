@@ -4,12 +4,16 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/list_helper/custom_back_button.dart';
+import 'package:k2k/common/list_helper/title.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/common/widgets/dropdown.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
 import 'package:k2k/konkrete_klinkers/master_data/products/provider/product_provider.dart';
+import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -32,7 +36,6 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
     'area_per_unit': FocusNode(),
     'qty_in_bundle': FocusNode(),
   };
-  bool _showAreaPerUnit = true;
   final Debouncer _scrollDebouncer = Debouncer();
 
   @override
@@ -48,12 +51,6 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
             productProvider.plants.every((plant) => plant['id']!.isEmpty)) {
           context.showErrorSnackbar(
             "No valid plants available. Please try again later.",
-          );
-        } else {
-          _formKey.currentState?.fields['plant']?.didChange(
-            productProvider.plants.firstWhere(
-              (plant) => plant['id']!.isNotEmpty,
-            )['display'],
           );
         }
       });
@@ -122,60 +119,45 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
   Widget build(BuildContext context) {
     final productProvider = Provider.of<ProductProvider>(context);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      resizeToAvoidBottomInset: true,
-      appBar: AppBars(
-        title: _buildLogoAndTitle(),
-        leading: _buildBackButton(),
-        action: [],
-      ),
-      body: GestureDetector(
-        onTap: () {
-          FocusScope.of(context).unfocus();
-        },
-        behavior: HitTestBehavior.opaque,
-        child: SingleChildScrollView(
-          controller: _scrollController,
-          padding: EdgeInsets.all(
-            24.w,
-          ).copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 24.h),
-          child: Column(children: [_buildFormCard(context, productProvider)]),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLogoAndTitle() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'Add Product',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF334155),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBackButton() {
-    return Builder(
-      builder: (BuildContext context) {
-        return IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios,
-            size: 24.sp,
-            color: const Color(0xFF334155),
-          ),
-          onPressed: () {
-            context.go(RouteNames.products);
-          },
-        );
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          context.go(RouteNames.products);
+        }
       },
+      child: Container(
+        decoration: BoxDecoration(gradient: AppTheme.backgroundGradient),
+        child: Scaffold(
+          backgroundColor: AppColors.transparent,
+          resizeToAvoidBottomInset: true,
+          appBar: AppBars(
+            title: TitleText(title: 'Create Product'),
+            leading: CustomBackButton(
+              onPressed: () {
+                context.go(RouteNames.products);
+              },
+            ),
+          ),
+          body: SafeArea(
+            child: GestureDetector(
+              onTap: () {
+                FocusScope.of(context).unfocus();
+              },
+              behavior: HitTestBehavior.opaque,
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                padding: EdgeInsets.all(24.w).copyWith(
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
+                ),
+                child: Column(
+                  children: [_buildFormCard(context, productProvider)],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -217,18 +199,16 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
               labelText: 'Plant',
               hintText: 'Select Plant',
               prefixIcon: Icons.factory,
-              initialValue: productProvider.plants.isNotEmpty
-                  ? productProvider.plants.firstWhere(
-                      (plant) => plant['id']!.isNotEmpty,
-                      orElse: () => {'display': 'No valid plants'},
-                    )['display']
-                  : null,
+              // Remove the auto-selection logic
+              initialValue: null, // Keep it empty by default
+
               options: productProvider.plants.isEmpty
                   ? ['No plants available']
                   : productProvider.plants
                         .where((plant) => plant['id']!.isNotEmpty)
                         .map((plant) => plant['display']!)
                         .toList(),
+
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
               focusedBorderColor: const Color(0xFF3B82F6),
@@ -277,7 +257,7 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
               focusedBorderColor: const Color(0xFF3B82F6),
               borderRadius: 12.r,
               onChanged: (value) {
-                if (value != null && _showAreaPerUnit) {
+                if (value != null && productProvider.showAreaPerUnit) {
                   final area = _calculateArea(value);
                   if (area != null) {
                     _formKey.currentState?.fields['area_per_unit']?.didChange(
@@ -335,9 +315,6 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
               focusedBorderColor: const Color(0xFF3B82F6),
               borderRadius: 12.r,
               onChanged: (value) {
-                setState(() {
-                  _showAreaPerUnit = value == "Square Meter/No";
-                });
                 productProvider.setShowAreaPerUnit(value == "Square Meter/No");
                 if (!productProvider.showAreaPerUnit) {
                   _formKey.currentState?.fields['area_per_unit']?.didChange('');
@@ -356,7 +333,9 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
               },
             ),
             SizedBox(height: 18.h),
-            if (_showAreaPerUnit)
+            if (context.select<ProductProvider, bool>(
+              (provider) => provider.showAreaPerUnit,
+            ))
               CustomTextFormField(
                 name: 'area_per_unit',
                 labelText: 'Area per unit (Sqmt)',
@@ -452,10 +431,7 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
                         const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
+                          child: GradientLoader(),
                         ),
                         SizedBox(width: 12.w),
                         Text(
@@ -592,7 +568,7 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircularProgressIndicator(color: Color(0xFF3B82F6)),
+                const GradientLoader(),
                 SizedBox(height: 16.h),
                 Text(
                   'Creating Product...',

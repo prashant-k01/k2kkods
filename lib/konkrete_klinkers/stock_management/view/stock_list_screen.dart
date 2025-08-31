@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart' hide ScreenUtil;
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/list_helper/add_button.dart';
+import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
 import 'package:k2k/common/list_helper/shimmer.dart';
+import 'package:k2k/common/list_helper/title.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/common/widgets/custom_card.dart';
+import 'package:k2k/common/widgets/gradient_icon_button.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/konkrete_klinkers/stock_management/model/stock.dart';
 import 'package:k2k/konkrete_klinkers/stock_management/provider/stock_provider.dart';
 import 'package:k2k/konkrete_klinkers/stock_management/view/stock_view_screen.dart';
@@ -109,17 +113,24 @@ class _StockManagementListViewState extends State<StockManagementListView> {
 
       leading: IconContainer(
         icon: Icons.swap_horiz_outlined,
-        gradientColors: [Colors.deepPurple.shade50, Colors.deepPurple.shade100],
+        gradientColors: [
+          const Color(0xFF74B0FF), // medium soft blue
+          const Color(0xFF907DFF), // medium bluish violet
+          const Color(0xFFC472FF), // medium purple-pink
+          // soft purple-pink
+        ],
         size: 48.sp,
         borderRadius: 12.r,
-        iconColor: AppTheme.primaryPurple,
+        iconColor: AppColors.background,
       ),
+
       onTap: () {
         context.goNamed(
           RouteNames.stockmanagementview,
           pathParameters: {'id': transferId},
         );
       },
+      titleColor: AppColors.background,
       headerGradient: AppTheme.cardGradientList,
       borderRadius: 12,
       backgroundColor: Colors.white,
@@ -214,15 +225,17 @@ class _StockManagementListViewState extends State<StockManagementListView> {
                   text: '$label: ',
                   style: TextStyle(
                     fontSize: 14.sp,
-                    color: Colors.black,
-                    fontWeight: FontWeight.w600, // label in black
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w500, // label in black
                   ),
                 ),
                 TextSpan(
                   text: value,
                   style: TextStyle(
                     fontSize: 13.sp,
-                    color: Colors.black54, // value in grey
+                    color: Colors.black54,
+                    fontWeight: FontWeight.w500, // label in black
+                    // value in grey
                   ),
                 ),
               ],
@@ -230,60 +243,6 @@ class _StockManagementListViewState extends State<StockManagementListView> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildLogoAndTitle() {
-    return Row(
-      children: [
-        SizedBox(width: 8.w),
-        Text(
-          'Stock Transfers',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF334155),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBackButton() {
-    return IconButton(
-      icon: Icon(
-        Icons.arrow_back_ios,
-        size: 24.sp,
-        color: const Color(0xFF334155),
-      ),
-      onPressed: () {
-        context.go(RouteNames.homeScreen);
-      },
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Padding(
-      padding: EdgeInsets.only(right: 16.w),
-      child: TextButton(
-        onPressed: () {
-          context.goNamed(RouteNames.stockmanagementAdd);
-        },
-        child: Row(
-          children: [
-            Icon(Icons.add, size: 20.sp, color: const Color(0xFF3B82F6)),
-            SizedBox(width: 4.w),
-            Text(
-              'Add Transfer',
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF3B82F6),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -336,9 +295,18 @@ class _StockManagementListViewState extends State<StockManagementListView> {
       child: Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
         appBar: AppBars(
-          title: _buildLogoAndTitle(),
-          leading: _buildBackButton(),
-          action: [_buildActionButtons()],
+          title: TitleText(title: 'Stock Management'),
+          leading: CustomBackButton(
+            onPressed: () {
+              context.go(RouteNames.homeScreen);
+            },
+          ),
+        ),
+        floatingActionButton: GradientIconTextButton(
+          onPressed: () => context.goNamed(RouteNames.stockmanagementAdd),
+          label: 'Add Transfer',
+          icon: Icons.add,
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
         ),
         body: Consumer<StockProvider>(
           builder: (context, provider, child) {
@@ -413,11 +381,7 @@ class _StockManagementListViewState extends State<StockManagementListView> {
                           return const Center(
                             child: Padding(
                               padding: EdgeInsets.all(16.0),
-                              child: CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Color(0xFF3B82F6),
-                                ),
-                              ),
+                              child: GradientLoader(),
                             ),
                           );
                         }

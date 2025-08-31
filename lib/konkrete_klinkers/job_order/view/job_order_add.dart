@@ -5,7 +5,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/date_picker.dart';
+import 'package:k2k/common/list_helper/custom_back_button.dart';
+import 'package:k2k/common/list_helper/title.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/ranger_date_pciker.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/dropdown.dart';
@@ -52,46 +55,56 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
               context.go(RouteNames.jobOrder);
             }
           },
-          child: Scaffold(
-            backgroundColor: const Color(0xFFF8FAFC),
-            resizeToAvoidBottomInset: true,
-            appBar: AppBars(
-              title: _buildLogoAndTitle(),
-              leading: _buildBackButton(),
-              action: [],
-            ),
-            body: GestureDetector(
-              onTap: () => FocusScope.of(context).unfocus(),
-              behavior: HitTestBehavior.opaque,
-              child: provider.isFormLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : provider.formError != null
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            provider.formError!,
-                            style: TextStyle(
-                              color: Colors.red,
-                              fontSize: 14.sp,
-                            ),
+          child: Container(
+            decoration: BoxDecoration(gradient: AppTheme.backgroundGradient),
+            child: Scaffold(
+              backgroundColor: AppColors.transparent,
+              resizeToAvoidBottomInset: true,
+              appBar: AppBars(
+                title: TitleText(title: 'Create Job Order'),
+                leading: CustomBackButton(
+                  onPressed: () {
+                    context.go(RouteNames.jobOrder);
+                  },
+                ),
+              ),
+              body: SafeArea(
+                child: GestureDetector(
+                  onTap: () => FocusScope.of(context).unfocus(),
+                  behavior: HitTestBehavior.opaque,
+                  child: provider.isFormLoading
+                      ? const Center(child: GradientLoader())
+                      : provider.formError != null
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                provider.formError!,
+                                style: TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 14.sp,
+                                ),
+                              ),
+                              SizedBox(height: 8.h),
+                              ElevatedButton(
+                                onPressed: () =>
+                                    provider.initializeFormForCreate(),
+                                child: const Text('Retry'),
+                              ),
+                            ],
                           ),
-                          SizedBox(height: 8.h),
-                          ElevatedButton(
-                            onPressed: () => provider.initializeFormForCreate(),
-                            child: const Text('Retry'),
+                        )
+                      : ListView(
+                          controller: _scrollController,
+                          padding: EdgeInsets.all(24.w).copyWith(
+                            bottom:
+                                MediaQuery.of(context).viewInsets.bottom + 24.h,
                           ),
-                        ],
-                      ),
-                    )
-                  : ListView(
-                      controller: _scrollController,
-                      padding: EdgeInsets.all(24.w).copyWith(
-                        bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
-                      ),
-                      children: [_buildFormCard(context, provider)],
-                    ),
+                          children: [_buildFormCard(context, provider)],
+                        ),
+                ),
+              ),
             ),
           ),
         );
@@ -99,36 +112,9 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
     );
   }
 
-  Widget _buildLogoAndTitle() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'Add Job Order',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF334155),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBackButton() {
-    return IconButton(
-      icon: Icon(
-        Icons.arrow_back_ios,
-        size: 24.sp,
-        color: const Color(0xFF334155),
-      ),
-      onPressed: () => context.go(RouteNames.jobOrder),
-    );
-  }
-
   Widget _buildFormCard(BuildContext context, JobOrderProvider provider) {
     return Container(
-      padding: EdgeInsets.all(24.w),
+      padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20.r),
@@ -240,7 +226,7 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
     if (provider.isLoadingWorkOrderNumbers) {
       return Padding(
         padding: EdgeInsets.symmetric(vertical: 12.h),
-        child: const Center(child: CircularProgressIndicator()),
+        child: const Center(child: GradientLoader()),
       );
     }
     if (provider.formError != null) {
@@ -653,10 +639,7 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
         child: Center(
           child: Column(
             children: [
-              const CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF3B82F6)),
-              ),
+              const GradientLoader(),
               SizedBox(height: 12.h),
               Text(
                 'Loading products...',
@@ -804,10 +787,7 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
         child: Center(
           child: Column(
             children: [
-              const CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF3B82F6)),
-              ),
+              const GradientLoader(),
               SizedBox(height: 12.h),
               Text(
                 'Loading machines...',
@@ -995,10 +975,7 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (provider.isAddJobOrderLoading)
-                    const CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    )
+                    const GradientLoader()
                   else
                     Icon(Icons.check_circle, color: Colors.white, size: 20.sp),
                   SizedBox(width: 8.w),

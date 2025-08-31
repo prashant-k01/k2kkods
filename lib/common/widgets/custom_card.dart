@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:k2k/utils/theme.dart';
 
 class CustomCard extends StatelessWidget {
   final String title;
+  final Color? titleColor;
+  final TextStyle? titleStyle;
+
   final String? subtitle;
+  final Color? subtitleColor;
+
   final Widget leading;
-  final Color? iconColor;
   final List<PopupMenuEntry<String>>? menuItems;
   final VoidCallback? onTap;
   final List<Widget> bodyItems;
@@ -16,15 +21,24 @@ class CustomCard extends StatelessWidget {
   final double borderWidth;
   final double elevation;
   final ValueChanged<String>? onMenuSelected;
-
+  final List<Tab>? tabs;
+  final TabController? tabController;
   final EdgeInsetsGeometry margin;
+
+  final EdgeInsets? headerPadding;
+  final EdgeInsets? bodyPadding;
+  final Color? shadowColor;
+  final double? shadowSpread;
 
   const CustomCard({
     super.key,
     required this.title,
+    this.titleStyle,
+
     required this.leading,
     required this.bodyItems,
-    this.iconColor,
+    this.titleColor = Colors.black,
+    this.subtitleColor = Colors.grey,
     this.subtitle,
     this.menuItems,
     this.onTap,
@@ -35,7 +49,14 @@ class CustomCard extends StatelessWidget {
     this.borderWidth = 1,
     this.elevation = 0,
     this.onMenuSelected,
-    this.margin = const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+    this.margin = const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+    this.tabs,
+    this.tabController,
+
+    this.headerPadding,
+    this.bodyPadding,
+    this.shadowColor,
+    this.shadowSpread,
   });
 
   @override
@@ -61,17 +82,7 @@ class CustomCard extends StatelessWidget {
                 // Header
                 Container(
                   decoration: BoxDecoration(
-                    gradient:
-                        headerGradient ??
-                        LinearGradient(
-                          colors: [
-                            const Color(0xFFEBEDFC), // soft lavender
-                            const Color(0xFFE6F0FF), // light blue
-                            backgroundColor ?? Colors.white,
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                    gradient: headerGradient ?? AppTheme.cardGradientBlue,
                     borderRadius: BorderRadius.vertical(
                       top: Radius.circular(borderRadius.r),
                     ),
@@ -98,7 +109,7 @@ class CustomCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 14.sp,
                             fontWeight: FontWeight.w600,
-                            color: Colors.black87,
+                            color: titleColor,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -109,7 +120,7 @@ class CustomCard extends StatelessWidget {
                           icon: Icon(
                             Icons.more_vert,
                             size: 18.sp,
-                            color: Colors.grey[600],
+                            color: AppColors.background,
                           ),
                           itemBuilder: (context) => menuItems!,
                           offset: Offset(0, 32.h),
@@ -123,6 +134,24 @@ class CustomCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                // Tab Bar Section (if tabs are provided)
+                if (tabs != null && tabs!.isNotEmpty && tabController != null)
+                  Container(
+                    color: backgroundColor,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: TabBar(
+                        controller: tabController,
+                        isScrollable: true,
+                        tabs: tabs!,
+                        indicatorColor: titleColor,
+                        labelColor: titleColor,
+                        unselectedLabelColor: Colors.grey,
+                        indicatorSize: TabBarIndicatorSize.label,
+                        padding: EdgeInsets.symmetric(horizontal: 12.w),
+                      ),
+                    ),
+                  ),
 
                 // Body
                 Padding(
@@ -136,7 +165,7 @@ class CustomCard extends StatelessWidget {
             ),
           ),
         ),
-  ),
-);
-}
+      ),
+    );
+  }
 }

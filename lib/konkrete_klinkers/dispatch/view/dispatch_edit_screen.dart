@@ -5,7 +5,10 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/date_picker.dart';
+import 'package:k2k/common/list_helper/custom_back_button.dart';
+import 'package:k2k/common/list_helper/title.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
@@ -44,7 +47,9 @@ class _EditDispatchFormScreenState extends State<EditDispatchFormScreen> {
         provider.fetchDispatchById(widget.dispatchId),
       ]);
       if (provider.selectedDispatch == null) {
-        throw Exception('Failed to load dispatch details for ID: ${widget.dispatchId}');
+        throw Exception(
+          'Failed to load dispatch details for ID: ${widget.dispatchId}',
+        );
       }
     } catch (e) {
       print('❌ Error initializing data: $e');
@@ -65,94 +70,73 @@ class _EditDispatchFormScreenState extends State<EditDispatchFormScreen> {
           context.go(RouteNames.dispatch);
         }
       },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
-        appBar: AppBars(
-          title: _buildLogoAndTitle(),
-          leading: _buildBackButton(),
-          action: [],
-        ),
-        body: Consumer<DispatchProvider>(
-          builder: (context, provider, child) {
-            if (_isInitializing || provider.isLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
+      child: Container(
+        decoration: BoxDecoration(gradient: AppTheme.backgroundGradient),
+        child: Scaffold(
+          backgroundColor: AppColors.transparent,
+          appBar: AppBars(
+            title: TitleText(title: 'Edit Dispatch'),
+            leading: CustomBackButton(
+              onPressed: () {
+                context.go(RouteNames.dispatch);
+              },
+            ),
+          ),
+          body: SafeArea(
+            child: Consumer<DispatchProvider>(
+              builder: (context, provider, child) {
+                if (_isInitializing || provider.isLoading) {
+                  return const Center(child: GradientLoader());
+                }
 
-            if (provider.error != null || provider.selectedDispatch == null) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      provider.error ?? 'Error loading dispatch details',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        color: AppTheme.errorColor,
-                      ),
-                    ),
-                    SizedBox(height: 16.h),
-                    ElevatedButton(
-                      onPressed: () => _initializeData(provider),
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            return SingleChildScrollView(
-              padding: EdgeInsets.all(24.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (provider.workOrderError != null)
-                    Padding(
-                      padding: EdgeInsets.only(bottom: 16.h),
-                      child: Text(
-                        provider.workOrderError!,
-                        style: TextStyle(
-                          color: AppTheme.errorColor,
-                          fontSize: 14.sp,
+                if (provider.error != null ||
+                    provider.selectedDispatch == null) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          provider.error ?? 'Error loading dispatch details',
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            color: AppTheme.errorColor,
+                          ),
                         ),
-                      ),
+                        SizedBox(height: 16.h),
+                        ElevatedButton(
+                          onPressed: () => _initializeData(provider),
+                          child: const Text('Retry'),
+                        ),
+                      ],
                     ),
-                  _buildFormCard(context, provider.workOrders, provider),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
+                  );
+                }
 
-  Widget _buildLogoAndTitle() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'Edit Dispatch',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF334155),
+                return SingleChildScrollView(
+                  padding: EdgeInsets.all(24.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (provider.workOrderError != null)
+                        Padding(
+                          padding: EdgeInsets.only(bottom: 16.h),
+                          child: Text(
+                            provider.workOrderError!,
+                            style: TextStyle(
+                              color: AppTheme.errorColor,
+                              fontSize: 14.sp,
+                            ),
+                          ),
+                        ),
+                      _buildFormCard(context, provider.workOrders, provider),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildBackButton() {
-    return IconButton(
-      icon: Icon(
-        Icons.arrow_back_ios,
-        size: 24.sp,
-        color: const Color(0xFF334155),
       ),
-      onPressed: () {
-        context.go(RouteNames.dispatch);
-      },
-      tooltip: 'Back',
     );
   }
 
@@ -275,7 +259,8 @@ class _EditDispatchFormScreenState extends State<EditDispatchFormScreen> {
                   name: 'qr_code',
                   labelText: 'QR Code',
                   prefixIcon: Icons.qr_code,
-                  initialValue: provider.qrScanData?['qr_code']?.toString() ?? 'N/A',
+                  initialValue:
+                      provider.qrScanData?['qr_code']?.toString() ?? 'N/A',
                   enabled: false,
                   fillColor: Colors.grey.shade100,
                   borderColor: Colors.grey.shade300,
@@ -520,7 +505,9 @@ class _EditDispatchFormScreenState extends State<EditDispatchFormScreen> {
                           final dateValue = formData['dispatch_date'];
                           if (dateValue != null) {
                             if (dateValue is DateTime) {
-                              dispatchDate = dateValue.toIso8601String().split('T')[0];
+                              dispatchDate = dateValue.toIso8601String().split(
+                                'T',
+                              )[0];
                             } else {
                               dispatchDate = dateValue.toString();
                             }
@@ -528,8 +515,12 @@ class _EditDispatchFormScreenState extends State<EditDispatchFormScreen> {
 
                           print('🚀 UPDATE PAYLOAD TO BE SENT:');
                           print('  dispatchId: "${widget.dispatchId}"');
-                          print('  invoice_or_sto: "${formData['invoice_sto'] ?? ''}"');
-                          print('  vehicle_number: "${formData['vehicle_number'] ?? ''}"');
+                          print(
+                            '  invoice_or_sto: "${formData['invoice_sto'] ?? ''}"',
+                          );
+                          print(
+                            '  vehicle_number: "${formData['vehicle_number'] ?? ''}"',
+                          );
                           print('  date: "$dispatchDate"');
 
                           try {
@@ -568,10 +559,7 @@ class _EditDispatchFormScreenState extends State<EditDispatchFormScreen> {
                           ? SizedBox(
                               width: 20.w,
                               height: 20.h,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2.w,
-                              ),
+                              child: GradientLoader(),
                             )
                           : Text(
                               'Update Dispatch',

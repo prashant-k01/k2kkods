@@ -1,4 +1,3 @@
-
 class ClientsModel {
   final String id;
   final String name;
@@ -34,14 +33,17 @@ class ClientsModel {
       } else {
         createdBy = CreatedBy(id: '', email: '', username: 'Unknown');
       }
-      final isDeleted = json['is_deleted']?.toString() == 'true' ||
+      final isDeleted =
+          json['is_deleted']?.toString() == 'true' ||
           json['isDeleted'] == true ||
           false;
 
       DateTime? createdAt;
       try {
         final createdAtStr = json['created_at'] ?? json['createdAt'];
-        createdAt = createdAtStr != null ? DateTime.tryParse(createdAtStr.toString()) : null;
+        createdAt = createdAtStr != null
+            ? DateTime.tryParse(createdAtStr.toString())
+            : null;
       } catch (e) {
         print('Error parsing createdAt: $e');
         createdAt = null;
@@ -50,7 +52,9 @@ class ClientsModel {
       DateTime? updatedAt;
       try {
         final updatedAtStr = json['updatedAt'] ?? json['updated_at'];
-        updatedAt = updatedAtStr != null ? DateTime.tryParse(updatedAtStr.toString()) : null;
+        updatedAt = updatedAtStr != null
+            ? DateTime.tryParse(updatedAtStr.toString())
+            : null;
       } catch (e) {
         print('Error parsing updatedAt: $e');
         updatedAt = null;

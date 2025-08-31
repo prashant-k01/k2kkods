@@ -13,6 +13,7 @@ class CustomSearchableDropdownFormField<T> extends StatelessWidget {
   final List<T>? options;
   final String Function(T)? optionLabel;
   final IconData? prefixIcon;
+  final Color? prefixIconColor;
   final Widget? suffixIcon;
   final List<String? Function(T?)>? validators;
   final void Function(T?)? onChanged;
@@ -51,6 +52,7 @@ class CustomSearchableDropdownFormField<T> extends StatelessWidget {
     this.options,
     this.optionLabel,
     this.prefixIcon,
+    this.prefixIconColor,
     this.suffixIcon,
     this.validators,
     this.onChanged,

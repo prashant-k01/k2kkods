@@ -3,7 +3,10 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
+import 'package:k2k/common/list_helper/custom_back_button.dart';
+import 'package:k2k/common/list_helper/title.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
@@ -58,101 +61,111 @@ class _StockManagementFormScreenState extends State<StockManagementFormScreen>
       child: Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
         appBar: AppBars(
-          title: _buildTitle(),
-          leading: _buildBackButton(),
-          action: [],
+          title: TitleText(title: 'Create Stock Transfer'),
+          leading: CustomBackButton(
+            onPressed: () {
+              context.go(RouteNames.stockmanagement);
+            },
+          ),
         ),
-        body: Consumer<StockProvider>(
-          builder: (context, stockProvider, child) {
-            if (stockProvider.isLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (stockProvider.error != null) {
-              return Center(child: Text('Error: ${stockProvider.error}'));
-            }
 
-            return Column(
-              children: [
-                _buildTabBar(),
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildStockTransferForm(context, stockProvider),
-                      _buildBufferStockForm(context, stockProvider),
-                    ],
+        body: SafeArea(
+          child: Consumer<StockProvider>(
+            builder: (context, stockProvider, child) {
+              if (stockProvider.isLoading) {
+                return const Center(child: GradientLoader());
+              }
+              if (stockProvider.error != null) {
+                return Center(child: Text('Error: ${stockProvider.error}'));
+              }
+
+              return Column(
+                children: [
+                  _buildTabBar(),
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildStockTransferForm(context, stockProvider),
+                        _buildBufferStockForm(context, stockProvider),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildTitle() => Row(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: [
-      Text(
-        'Stock Management',
-        style: TextStyle(
-          fontSize: 18.sp,
-          fontWeight: FontWeight.w600,
-          color: const Color(0xFF334155),
-        ),
-      ),
-    ],
-  );
-
-  Widget _buildBackButton() => IconButton(
-    icon: Icon(
-      Icons.arrow_back_ios,
-      size: 24.sp,
-      color: const Color(0xFF334155),
-    ),
-    onPressed: () => context.go(RouteNames.stockmanagement),
-    tooltip: 'Back',
-  );
-
   Widget _buildTabBar() {
     return Container(
-      color: const Color(0xFFF4F7FA),
-      padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 6.h),
-
-      child: TabBar(
-        controller: _tabController,
-        indicatorColor: Colors.transparent,
-        indicator: BoxDecoration(
-          gradient: AppTheme.primaryGradient,
-          borderRadius: BorderRadius.circular(8.r),
-          border: Border.all(color: Colors.black),
-        ),
-        labelColor: AppTheme.primaryBlue,
-        unselectedLabelColor: Colors.grey,
-        labelPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-        labelStyle: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
-        unselectedLabelStyle: TextStyle(fontSize: 14.sp),
-        tabs: [
-          _buildTab(icon: Icons.trending_up, label: 'Stock Transfer'),
-          _buildTab(icon: Icons.autorenew, label: 'Buffer Transfer'),
+      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+      padding: EdgeInsets.symmetric(vertical: 6.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
         ],
+      ),
+      child: AnimatedBuilder(
+        // ✅ Listen to the animation so it updates immediately on tap/drag
+        animation: _tabController.animation!,
+        builder: (context, _) {
+          final selected =
+              (_tabController.animation?.value ?? _tabController.index).round();
+
+          return TabBar(
+            controller: _tabController,
+            indicator: BoxDecoration(
+              // ✅ Primary when "Stock Transfer" (index 0), Secondary when "Buffer Transfer" (index 1)
+              gradient: selected == 0
+                  ? AppTheme.primaryGradient
+                  : AppTheme.secondaryGradient,
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            indicatorSize: TabBarIndicatorSize.tab,
+            indicatorPadding: EdgeInsets.symmetric(
+              horizontal: 4.w,
+              vertical: 1.w,
+            ),
+            dividerColor: Colors.transparent,
+            labelColor: Colors.white, // selected text & icon
+            unselectedLabelColor: Colors.grey, // unselected text & icon
+            labelStyle: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600),
+            unselectedLabelStyle: TextStyle(
+              fontSize: 14.sp,
+              fontWeight: FontWeight.w500,
+            ),
+            tabs: [
+              _buildTab(icon: Icons.trending_up, label: 'Stock Transfer'),
+              _buildTab(icon: Icons.autorenew, label: 'Buffer Transfer'),
+            ],
+          );
+        },
       ),
     );
   }
 
   Tab _buildTab({required IconData icon, required String label}) {
     return Tab(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 20.sp, color: Colors.white),
-          SizedBox(width: 6.w),
-          Text(
-            label,
-            style: TextStyle(fontSize: 14.sp, color: Colors.white),
-          ),
-        ],
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 8.h), // taller tabs
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18.sp),
+            SizedBox(width: 6.w),
+            Text(label),
+          ],
+        ),
       ),
     );
   }
@@ -460,7 +473,7 @@ class _StockManagementFormScreenState extends State<StockManagementFormScreen>
             if (stockProvider.isWOLoading)
               Padding(
                 padding: EdgeInsets.symmetric(vertical: 16.h),
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(child: GradientLoader()),
               ),
             if (stockProvider.errorMessage != null)
               Padding(
@@ -475,7 +488,7 @@ class _StockManagementFormScreenState extends State<StockManagementFormScreen>
             if (stockProvider.isQuantityLoading)
               Padding(
                 padding: EdgeInsets.symmetric(vertical: 16.h),
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(child: GradientLoader()),
               ),
             if (stockProvider.quantityError != null)
               Padding(
@@ -571,11 +584,7 @@ class _StockManagementFormScreenState extends State<StockManagementFormScreen>
         decoration: BoxDecoration(
           gradient: isStockTransfer
               ? AppTheme.primaryGradient
-              : LinearGradient(
-                  colors: [Colors.purple[700]!, Colors.purple[400]!],
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                ),
+              : AppTheme.secondaryGradient,
           borderRadius: BorderRadius.circular(12.r),
         ),
         child: ElevatedButton(
@@ -678,7 +687,7 @@ class _StockManagementFormScreenState extends State<StockManagementFormScreen>
             ),
           ),
           child: stockProvider.isTransferLoading
-              ? const CircularProgressIndicator(color: Colors.white)
+              ? const GradientLoader()
               : Text(
                   isStockTransfer ? 'Transfer Stock' : 'Transfer Buffer',
                   style: TextStyle(

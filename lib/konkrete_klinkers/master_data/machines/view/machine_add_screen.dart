@@ -3,12 +3,16 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/list_helper/custom_back_button.dart';
+import 'package:k2k/common/list_helper/title.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
 import 'package:k2k/konkrete_klinkers/master_data/machines/model/machines_model.dart';
 import 'package:k2k/konkrete_klinkers/master_data/machines/provider/machine_provider.dart';
+import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -76,24 +80,31 @@ class _MachineAddScreenState extends State<MachineAddScreen> {
     );
 
     return PopScope(
-       canPop: false,
+      canPop: false,
       onPopInvoked: (didPop) {
         if (!didPop) {
           context.go(RouteNames.machines);
         }
       },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
-        appBar: AppBars(
-          title: _buildLogoAndTitle(),
-          leading: _buildBackButton(),
-          action: [],
-        ),
-        body: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [_buildFormCard(context, machineProvider)],
+      child: Container(
+        decoration: BoxDecoration(gradient: AppTheme.backgroundGradient),
+
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBars(
+            title: TitleText(title: 'Create Machine'),
+            leading: CustomBackButton(
+              onPressed: () {
+                context.go(RouteNames.machines);
+              },
+            ),
+          ),
+          body: SingleChildScrollView(
+            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [_buildFormCard(context, machineProvider)],
+            ),
           ),
         ),
       ),
@@ -142,7 +153,7 @@ class _MachineAddScreenState extends State<MachineAddScreen> {
                   'Building Plant Dropdown: plants=${provider.plant.length}, isLoading=${provider.isAllPlantsLoading}, error=${provider.error}',
                 );
                 if (provider.isAllPlantsLoading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(child: GradientLoader());
                 }
                 if (provider.error != null) {
                   return Column(
@@ -244,10 +255,7 @@ class _MachineAddScreenState extends State<MachineAddScreen> {
                 ? Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
+                      const GradientLoader(),
                       SizedBox(width: 12.w),
                       Text(
                         'Creating Machine...',
@@ -318,7 +326,7 @@ class _MachineAddScreenState extends State<MachineAddScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircularProgressIndicator(color: Color(0xFF3B82F6)),
+                const GradientLoader(),
                 SizedBox(height: 16.h),
                 Text(
                   'Creating Machine...',
@@ -341,15 +349,11 @@ class _MachineAddScreenState extends State<MachineAddScreen> {
       }
 
       if (success && context.mounted) {
-        print(
-          'Machine created successfully: machine_name=$machineName, plant_id=${plant.id}',
-        );
         context.showSuccessSnackbar('Machine created successfully!');
         await provider.loadAllMachines(refresh: true);
 
         context.go(RouteNames.machines);
       } else {
-        print('Failed to create machine: ${provider.error}');
         context.showErrorSnackbar(
           provider.error ?? 'Failed to create machine. Please try again.',
         );

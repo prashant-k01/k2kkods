@@ -37,8 +37,6 @@ class ProductProvider with ChangeNotifier {
   bool get showAreaPerUnit => _showAreaPerUnit;
   List<Map<String, String>> get plants => _plants;
 
-  // Fixed initializeEditForm method in ProductProvider
-
   Future<void> initializeEditForm(String productId) async {
     _isInitialized = false;
     _errorMessage = null;
@@ -51,7 +49,6 @@ class ProductProvider with ChangeNotifier {
       _plants = await _repository.getPlantsForDropdown();
 
       if (productId.isEmpty) {
-        // For add form (empty productId), just load plants
         _isInitialized = true;
         notifyListeners();
         return;
@@ -83,12 +80,10 @@ class ProductProvider with ChangeNotifier {
           ? selectedPlant['display']!
           : 'Unknown Plant';
 
-      // FIXED: Normalize UOM values to match the consistent format
       String uomValue = _product!.uom.isNotEmpty
           ? _product!.uom.first
           : 'Square Meter/No';
 
-      // Normalize UOM variations to consistent values
       if (uomValue.contains('Square M')) {
         uomValue = 'Square Meter/No';
       } else if (uomValue.contains('Meter') && !uomValue.contains('Square')) {
@@ -106,9 +101,7 @@ class ProductProvider with ChangeNotifier {
         'qty_in_bundle': _product!.qtyInBundle.toString(),
       };
 
-      _showAreaPerUnit = uomValue.contains(
-        "Square Meter/No",
-      ); // FIXED: Consistent check
+      _showAreaPerUnit = uomValue.contains("Square Meter/No");
       _isInitialized = true;
       notifyListeners();
     } catch (e) {

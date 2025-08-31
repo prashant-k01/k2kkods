@@ -17,7 +17,7 @@ class GradientIconTextButton extends StatelessWidget {
     required this.label,
     required this.icon,
     this.gradientColors = const [Color(0xFF3A8DFF), Color(0xFF9B4DFF)],
-    this.borderRadius = 24,
+    this.borderRadius = 12,
     this.iconSize = 18,
     this.fontSize = 16,
     this.padding = const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -63,6 +63,7 @@ class GradientIconTextButton extends StatelessWidget {
             ],
           ),
         ),
-  ),
-);}
+      ),
+    );
+  }
 }

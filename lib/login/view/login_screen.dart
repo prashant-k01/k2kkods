@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/login/provider/login_provider.dart';
 import 'package:k2k/utils/theme.dart';
@@ -22,7 +23,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   late AnimationController _masterController;
   late AnimationController _particleController;
-  
+
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _logoAnimation;
@@ -61,15 +62,13 @@ class _LoginScreenState extends State<LoginScreen>
       ),
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.5),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _masterController,
-        curve: const Interval(0.3, 0.8, curve: Curves.easeOutQuart),
-      ),
-    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _masterController,
+            curve: const Interval(0.3, 0.8, curve: Curves.easeOutQuart),
+          ),
+        );
 
     _formAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
@@ -79,10 +78,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
 
     _particleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _particleController,
-        curve: Curves.easeInOut,
-      ),
+      CurvedAnimation(parent: _particleController, curve: Curves.easeInOut),
     );
   }
 
@@ -90,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Start master animation immediately
       _masterController.forward();
-      
+
       // Start particle animation with slight delay
       Future.delayed(const Duration(milliseconds: 300), () {
         _particleController.repeat(reverse: true);
@@ -110,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   Widget build(BuildContext context) {
     final loginProvider = Provider.of<LoginProvider>(context);
-    
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -127,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen>
         child: Stack(
           children: [
             _buildAnimatedBackground(),
-            
+
             SafeArea(
               child: Form(
                 key: _formKey,
@@ -412,20 +408,17 @@ class _LoginScreenState extends State<LoginScreen>
             suffixIcon: suffixIcon,
             filled: true,
             fillColor: Colors.white,
-            contentPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 18.h),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: 20.w,
+              vertical: 18.h,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16.r),
-              borderSide: BorderSide(
-                color: Colors.grey.shade200,
-                width: 1.5,
-              ),
+              borderSide: BorderSide(color: Colors.grey.shade200, width: 1.5),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16.r),
-              borderSide: BorderSide(
-                color: Colors.grey.shade200,
-                width: 1.5,
-              ),
+              borderSide: BorderSide(color: Colors.grey.shade200, width: 1.5),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16.r),
@@ -496,10 +489,7 @@ class _LoginScreenState extends State<LoginScreen>
                     ? SizedBox(
                         width: 24.r,
                         height: 24.r,
-                        child: const CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
+                        child: const GradientLoader(),
                       )
                     : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -538,12 +528,12 @@ class _LoginScreenState extends State<LoginScreen>
             _passwordcontroller.text.trim(),
           )
           .then((value) {
-        if (value == 200) {
-          context.go(RouteNames.homeScreen);
-        } else {
-          context.showErrorSnackbar("Invalid credentials");
-        }
-      });
+            if (value == 200) {
+              context.go(RouteNames.homeScreen);
+            } else {
+              context.showErrorSnackbar("Invalid credentials");
+            }
+          });
     }
   }
 }
@@ -551,7 +541,7 @@ class _LoginScreenState extends State<LoginScreen>
 // Optimized particle painter for better performance
 class OptimizedParticlesPainter extends CustomPainter {
   final double animationValue;
-  
+
   OptimizedParticlesPainter(this.animationValue);
 
   @override
@@ -564,13 +554,13 @@ class OptimizedParticlesPainter extends CustomPainter {
     for (int i = 0; i < 15; i++) {
       final progress = (animationValue + i * 0.1) % 1.0;
       final opacity = (1.0 - progress) * 0.3;
-      
+
       paint.color = Colors.blue.withOpacity(opacity);
-      
+
       final x = (i * 47.3) % size.width;
       final y = size.height * progress;
       final radius = 2.0 + (progress * 3.0);
-      
+
       canvas.drawCircle(Offset(x, y), radius, paint);
     }
   }

@@ -201,11 +201,7 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
                 SubMenuItem(
                   title: 'Machines',
                   icon: Icons.visibility,
-<<<<<<< HEAD
-                  route: '/machines',
-=======
                   route: RouteNames.machines,
->>>>>>> 9ab28403e64048bb612375b1b7801023a8ba2d76
                   isExpanded: false,
                 ),
               ],
@@ -237,8 +233,16 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
       heading: "IRON SMITH",
       imagePath: "assets/images/iron_smith.png",
       items: [
-        MenuItem(title: 'Work Order', icon: Icons.work_outline),
-        MenuItem(title: 'Job Order/planning', icon: Icons.assignment_outlined),
+        MenuItem(
+          title: 'Work Order',
+          icon: Icons.work_outline,
+          route: RouteNames.getAllIronWO,
+        ),
+        MenuItem(
+          title: 'Job Order',
+          icon: Icons.assignment_outlined,
+          route: RouteNames.ironJobOrder,
+        ),
         MenuItem(title: 'Production', icon: Icons.assignment_outlined),
         MenuItem(title: 'QC Check', icon: Icons.assignment_outlined),
         MenuItem(title: 'Packing', icon: Icons.assignment_outlined),
@@ -258,19 +262,19 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
             SubMenuItem(
               title: 'Clients',
               icon: Icons.add_business,
-              route: '/settings/plant/add-client',
+              route: RouteNames.isclients,
               isExpanded: false,
             ),
             SubMenuItem(
               title: 'Projects',
               icon: Icons.visibility,
-              route: '/settings/plant/view-clients',
+              route: RouteNames.isProjects,
               isExpanded: false,
             ),
             SubMenuItem(
               title: 'Shapes',
               icon: Icons.visibility,
-              route: '/settings/plant/view-clients',
+              route: RouteNames.allshapes,
               isExpanded: false,
             ),
           ],
@@ -745,4 +749,3 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
     );
   }
 }
-

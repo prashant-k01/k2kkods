@@ -10,6 +10,8 @@ class AppColors {
   static const Color cardHeaderStart = Color(0xFFEDE9FE);
   static const Color cardHeaderEnd = Color(0xFFF5F3FF);
   static const Color shadow = Color(0xFF6B7280);
+  static const Color transparent = Color(0x00000000);
+  static const Color border = Color(0xFFD1D5DB);
 }
 
 // Centralized typography
@@ -49,7 +51,7 @@ class AppTheme {
   static const Color lightGray = Color(0xFFF8FAFC);
   static const Color ironSmithPrimary = Color(0xFF70E1F5);
   static const Color ironSmithSecondary = Color(0xFFFFD194);
-  static const Color ironSmithBacground =  Color(0xFFEAF7FA);
+  static const Color ironSmithBacground = Color(0xFFEAF7FA);
 
   static const Color mediumGray = Color(0xFF64748B);
   static const Color darkGray = Color(0xFF334155);
@@ -57,20 +59,45 @@ class AppTheme {
   static const Color warningColor = Color(0xFFF59E0B);
   static const Color errorColor = Color(0xFFEF4444);
 
+  // static const Color ironSmithPrimary = Color(0xFF70E1F5);
+  // static const Color ironSmithSecondary = Color(0xFFFFD194);
+  // static const Color ironSmithBacground = Color(0xFFEAF7FA);
+
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [primaryBlue, primaryPurple],
   );
-  static const LinearGradient cardGradientList = LinearGradient(
+  static const LinearGradient secondaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0xFFEBEDFC), // soft lavender
-      Color(0xFFE3D6FF), // very light blue
-      Color(0xFFF0F8FF), // icy blue-white
+      Color(0xFF6A1B9A), // equivalent to Colors.purple[700]
+      Color(0xFFAB47BC), // equivalent to Colors.purple[400]
     ],
   );
+
+  // static const LinearGradient cardGradientList = LinearGradient(
+  //   begin: Alignment.topLeft,
+  //   end: Alignment.bottomRight,
+  //   colors: [
+  //     Color(0xFF4D8FFB), // bright blue (start)
+  //     Color(0xFF7D5CFF), // bluish violet (mid transition)
+  //     Color(0xFFCA33FF), // vibrant purple-pink (end)
+  //   ],
+  //   stops: [0.0, 0.5, 1.0], // smooth 3-stage transition
+  // );
+  static const LinearGradient cardGradientList = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    stops: [0.0, 1.0],
+    colors: [
+      Color(0xFF4A9FE9), // blue
+      // Colors.white, // white
+      Color(0xFFB19CD9), // purple
+    ],
+  );
+
   static const LinearGradient cardGradientYellow = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -85,12 +112,12 @@ class AppTheme {
     begin: Alignment.topRight,
     end: Alignment.bottomLeft,
     colors: [
-      Color(0xFFEBEDFC), // soft lavender
-      Color(0xFFE6F0FF), // very light blue
-      Color(0xFFE6F7FF), // pastel aqua-blue
-      Color(0xFFF0F8FF), // almost white
+      Color(0xFFEEEFFD), // soft lavender
+      Color(0xFFEAF3FF), // light blue tint
+      Color(0xFFE9F8FF), // pastel aqua blue
+      Color(0xFFF7FAFF), // near white
     ],
-    stops: [0.0, 0.4, 0.7, 1.0],
+    stops: [0.0, 0.4, 0.75, 1.0],
   );
 
   static const LinearGradient cardGradientBlue = LinearGradient(
@@ -136,15 +163,15 @@ class AppTheme {
   //   colors: [ironSmithPrimary, ironSmithSecondary],
   // );
   static const LinearGradient ironSmithBackgroundGradientMild = LinearGradient(
-  begin: Alignment.topLeft,
-  end: Alignment.bottomRight,
-  colors: [
-    Color(0xFFF7FAFC), // almost white with a hint of blue-gray
-    Color(0xFFEAF0F6), // soft pale blue-gray
-    Color(0xFFDCE6ED), // light steel blue with a warm tint
-  ],
-  stops: [0.0, 0.6, 1.0],
-);
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFF7FAFC), // almost white with a hint of blue-gray
+      Color(0xFFEAF0F6), // soft pale blue-gray
+      Color(0xFFDCE6ED), // light steel blue with a warm tint
+    ],
+    stops: [0.0, 0.6, 1.0],
+  );
 
   static const LinearGradient cardGradient = LinearGradient(
     begin: Alignment.topLeft,
@@ -161,6 +188,17 @@ class AppTheme {
     ],
     stops: [0.0, 0.6, 1.0],
   );
+
+  // static const LinearGradient ironSmithGradient = LinearGradient(
+  //   begin: Alignment.topLeft,
+  //   end: Alignment.bottomRight,
+  //   colors: [
+  //     Color(0xFFE0F7FA), // very pale aqua (lighter)
+  //     Color(0xFFBBDEFB), // soft sky blue (middle)
+  //     Color(0xFFB2EBF2), // light minty teal (lighter)
+  //   ],
+  //   stops: [0.0, 0.6, 1.0],
+  // );
   // Light Theme
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,

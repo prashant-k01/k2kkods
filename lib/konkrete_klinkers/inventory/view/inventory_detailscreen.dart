@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/list_helper/custom_back_button.dart';
+import 'package:k2k/common/list_helper/title.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/konkrete_klinkers/inventory/provider/inventory_provider.dart';
 import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
@@ -18,37 +21,15 @@ class InventoryDetailScreen extends StatefulWidget {
 
 class _InventoryDetailScreenState extends State<InventoryDetailScreen>
     with TickerProviderStateMixin {
-  TabController? _tabController;
-  bool _isDataLoaded = false;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fetchProductDetails();
+      context.read<InventoryProvider>().fetchProductDetails(
+        widget.productId,
+        this,
+      );
     });
-  }
-
-  void _fetchProductDetails() async {
-    final provider = context.read<InventoryProvider>();
-    await provider.fetchProductDetails(widget.productId);
-
-    if (mounted && provider.productDetails.isNotEmpty) {
-      setState(() {
-        _tabController?.dispose(); // Dispose old controller if exists
-        _tabController = TabController(
-          length: provider.productDetails.length,
-          vsync: this,
-        );
-        _isDataLoaded = true;
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _tabController?.dispose();
-    super.dispose();
   }
 
   Widget _buildStatusChip(String status) {
@@ -499,7 +480,6 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen>
 
   @override
   Widget build(BuildContext context) {
-
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) {
@@ -510,18 +490,22 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen>
       child: Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
         appBar: AppBars(
-          title: _buildLogoAndTitle(),
-          leading: _buildBackButton(),
+          title: TitleText(title: 'Product Details'),
+          leading: CustomBackButton(
+            onPressed: () {
+              context.go(RouteNames.inventory);
+            },
+          ),
           action: [],
         ),
         body: Consumer<InventoryProvider>(
           builder: (context, provider, _) {
-            if (provider.isLoading) {
+            if (provider.isDetailLoading) {
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const CircularProgressIndicator(color: Color(0xFF3B82F6)),
+                    const GradientLoader(),
                     SizedBox(height: 16.h),
                     Text(
                       'Loading product details...',
@@ -535,7 +519,7 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen>
               );
             }
 
-            if (provider.error != null) {
+            if (provider.detailError != null) {
               return Center(
                 child: Container(
                   margin: EdgeInsets.all(24.w),
@@ -564,7 +548,7 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen>
                       ),
                       SizedBox(height: 8.h),
                       Text(
-                        provider.error!,
+                        provider.detailError!,
                         style: TextStyle(
                           fontSize: 14.sp,
                           color: Colors.red.shade600,
@@ -609,13 +593,12 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen>
               );
             }
 
-            // Only show TabBar and TabBarView when data is loaded and TabController is ready
-            if (!_isDataLoaded || _tabController == null) {
+            if (!provider.isDataLoaded || provider.tabController == null) {
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const CircularProgressIndicator(color: Color(0xFF3B82F6)),
+                    const GradientLoader(),
                     SizedBox(height: 16.h),
                     Text(
                       'Setting up tabs...',
@@ -638,12 +621,20 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen>
                     vertical: 8.h,
                   ),
                   child: TabBar(
-                    controller: _tabController!,
+                    controller: provider.tabController,
                     isScrollable: true,
-                    labelColor: const Color(0xFF3B82F6),
-                    unselectedLabelColor: const Color(0xFF64748B),
-                    indicatorColor: const Color(0xFF3B82F6),
-                    indicatorWeight: 3,
+                    indicator: BoxDecoration(
+                      gradient:
+                          AppTheme.primaryGradient, // ✅ always primary gradient
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    indicatorPadding: EdgeInsets.all(4.w),
+                    dividerColor: Colors.transparent,
+                    labelColor: Colors.white, // ✅ selected text
+                    unselectedLabelColor: const Color(
+                      0xFF64748B,
+                    ), // ✅ unselected text
                     labelStyle: TextStyle(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w600,
@@ -660,7 +651,7 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen>
                 ),
                 Expanded(
                   child: TabBarView(
-                    controller: _tabController!,
+                    controller: provider.tabController,
                     children: provider.productDetails
                         .map((detail) => _buildProductDetailCard(detail))
                         .toList(),

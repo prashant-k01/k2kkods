@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart'hide ScreenUtil;
+import 'package:flutter_screenutil/flutter_screenutil.dart' hide ScreenUtil;
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/shimmer.dart';
+import 'package:k2k/common/list_helper/title.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/konkrete_klinkers/packing/provider/packing_provider.dart';
 import 'package:k2k/utils/sreen_util.dart';
@@ -57,37 +59,6 @@ class _PackingDetailsViewState extends State<PackingDetailsView>
       _tabController?.dispose();
       _tabController = TabController(length: length, vsync: this);
     }
-  }
-
-  void _handleBackNavigation() {
-    if (context.canPop()) {
-      context.pop();
-    } else {
-      context.go(RouteNames.packing);
-    }
-  }
-
-  Widget _buildLogoAndTitle() {
-    return Row(
-      children: [
-        SizedBox(width: 8.w),
-        Text(
-          'Packing Details',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: AppTheme.darkGray,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBackButton() {
-    return IconButton(
-      icon: Icon(Icons.arrow_back_ios, size: 24.sp, color: AppTheme.darkGray),
-      onPressed: _handleBackNavigation,
-    );
   }
 
   Widget _buildTabBar(List<Map<String, dynamic>> packingDetails) {
@@ -150,7 +121,7 @@ class _PackingDetailsViewState extends State<PackingDetailsView>
         ),
         child: Container(
           decoration: BoxDecoration(
-            gradient: AppTheme.primaryGradient,
+            gradient: AppTheme.cardGradientList,
             borderRadius: BorderRadius.circular(16.r),
             boxShadow: [
               BoxShadow(
@@ -217,141 +188,6 @@ class _PackingDetailsViewState extends State<PackingDetailsView>
     );
   }
 
-  // Work Order Information Card
-  Widget _buildWorkOrderCard(Map<String, dynamic> detail) {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16.r),
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16.r),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          padding: EdgeInsets.all(20.w),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(8.w),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryBlue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                    child: Icon(
-                      Icons.work_outline,
-                      size: 20.sp,
-                      color: AppTheme.primaryBlue,
-                    ),
-                  ),
-                  SizedBox(width: 12.w),
-                  Text(
-                    'Work Order Information',
-                    style: TextStyle(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.darkGray,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 16.h),
-              _buildInfoRow('Work Order', detail['work_order_number'] ?? 'N/A'),
-              _buildInfoRow('Job Order', detail['job_order_name'] ?? 'N/A'),
-              _buildInfoRow('Client', detail['client_name'] ?? 'N/A'),
-              _buildInfoRow('Project', detail['project_name'] ?? 'N/A'),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Product Information Card
-  Widget _buildProductCard(Map<String, dynamic> detail) {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16.r),
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16.r),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          padding: EdgeInsets.all(20.w),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(8.w),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryPurple.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                    child: Icon(
-                      Icons.inventory,
-                      size: 20.sp,
-                      color: AppTheme.primaryPurple,
-                    ),
-                  ),
-                  SizedBox(width: 12.w),
-                  Text(
-                    'Product Information',
-                    style: TextStyle(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.darkGray,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 16.h),
-              _buildInfoRow('Product Name', detail['product_name'] ?? 'N/A'),
-              _buildInfoRow(
-                'Product Quantity',
-                detail['product_quantity']?.toString() ?? 'N/A',
-              ),
-              _buildInfoRow(
-                'Bundle Size',
-                detail['bundle_size']?.toString() ?? 'N/A',
-              ),
-              _buildInfoRow('UOM', detail['uom'] ?? 'N/A'),
-              _buildInfoRow(
-                'Rejected Quantity',
-                detail['rejected_quantity']?.toString() ?? '0',
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // QR Code Information Card - Updated with QR Image
   Widget _buildQrCard(Map<String, dynamic> detail) {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
@@ -543,6 +379,142 @@ class _PackingDetailsViewState extends State<PackingDetailsView>
     );
   }
 
+  // Work Order Information Card
+  Widget _buildWorkOrderCard(Map<String, dynamic> detail) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.r),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16.r),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          padding: EdgeInsets.all(20.w),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(8.w),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryBlue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                    child: Icon(
+                      Icons.work_outline,
+                      size: 20.sp,
+                      color: AppTheme.primaryBlue,
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  Text(
+                    'Work Order Information',
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.darkGray,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 16.h),
+              _buildInfoRow('Work Order', detail['work_order_number'] ?? 'N/A'),
+              _buildInfoRow('Job Order', detail['job_order_name'] ?? 'N/A'),
+              _buildInfoRow('Client', detail['client_name'] ?? 'N/A'),
+              _buildInfoRow('Project', detail['project_name'] ?? 'N/A'),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Product Information Card
+  Widget _buildProductCard(Map<String, dynamic> detail) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.r),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16.r),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          padding: EdgeInsets.all(20.w),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(8.w),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryPurple.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                    child: Icon(
+                      Icons.inventory,
+                      size: 20.sp,
+                      color: AppTheme.primaryPurple,
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  Text(
+                    'Product Information',
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.darkGray,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 16.h),
+              _buildInfoRow('Product Name', detail['product_name'] ?? 'N/A'),
+              _buildInfoRow(
+                'Product Quantity',
+                detail['product_quantity']?.toString() ?? 'N/A',
+              ),
+              _buildInfoRow(
+                'Bundle Size',
+                detail['bundle_size']?.toString() ?? 'N/A',
+              ),
+              _buildInfoRow('UOM', detail['uom'] ?? 'N/A'),
+              _buildInfoRow(
+                'Rejected Quantity',
+                detail['rejected_quantity']?.toString() ?? '0',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // QR Code Information Card - Updated with QR Image
+
   // Timeline Information Card
   Widget _buildTimelineCard(Map<String, dynamic> detail) {
     return Container(
@@ -652,9 +624,10 @@ class _PackingDetailsViewState extends State<PackingDetailsView>
       child: Column(
         children: [
           _buildHeaderCard(detail),
+          _buildQrCard(detail),
+
           _buildWorkOrderCard(detail),
           _buildProductCard(detail),
-          _buildQrCard(detail),
           _buildTimelineCard(detail),
           SizedBox(height: 80.h), // Bottom padding
         ],
@@ -803,149 +776,138 @@ class _PackingDetailsViewState extends State<PackingDetailsView>
           context.go(RouteNames.packing);
         }
       },
-      child: Scaffold(
-        backgroundColor: AppTheme.lightGray,
-        appBar: AppBars(
-          title: _buildLogoAndTitle(),
-          leading: _buildBackButton(),
-          action: [],
-        ),
-        body: Consumer<PackingProvider>(
-          builder: (context, provider, child) {
-            print(
-              'Building PackingDetailsView: '
-              'packingDetails=${provider.packingDetails.length}, '
-              'isLoading=${provider.isLoading}, '
-              'error=${provider.error}',
-            );
-            print('Packing details content: ${provider.packingDetails}');
+      child: Container(
+        decoration: BoxDecoration(gradient: AppTheme.backgroundGradient),
+        child: Scaffold(
+          backgroundColor: AppColors.transparent,
+          appBar: AppBars(
+            title: TitleText(title: 'Packing Details'),
+            leading: CustomBackButton(
+              onPressed: () => context.go(RouteNames.packing),
+            ),
+          ),
+          body: Consumer<PackingProvider>(
+            builder: (context, provider, child) {
+              if (provider.error != null && provider.packingDetails.isEmpty) {
+                return Center(
+                  child: Container(
+                    margin: EdgeInsets.all(24.w),
+                    padding: EdgeInsets.all(24.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16.r),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 64.sp,
+                          color: AppTheme.errorColor,
+                        ),
+                        SizedBox(height: 16.h),
+                        Text(
+                          'Error Loading Packing Details',
+                          style: TextStyle(
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.darkGray,
+                          ),
+                        ),
+                        SizedBox(height: 8.h),
+                        Text(
+                          provider.error!,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: AppTheme.mediumGray,
+                          ),
+                        ),
+                        SizedBox(height: 20.h),
+                        ElevatedButton(
+                          onPressed: () {
+                            provider.clearError();
+                            provider.loadPackingDetails(
+                              widget.workOrderId,
+                              widget.productId,
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryBlue,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.refresh, size: 18.sp),
+                              SizedBox(width: 8.w),
+                              Text('Retry'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
 
-            if (provider.error != null && provider.packingDetails.isEmpty) {
-              print('Showing error state: ${provider.error}');
-              return Center(
-                child: Container(
-                  margin: EdgeInsets.all(24.w),
-                  padding: EdgeInsets.all(24.w),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16.r),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
+              if (provider.isLoading && provider.packingDetails.isEmpty) {
+                return Column(
+                  children: [
+                    // Shimmer for tab bar
+                    Container(
+                      margin: EdgeInsets.all(16.w),
+                      height: 60.h,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(16.r),
                       ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 64.sp,
-                        color: AppTheme.errorColor,
+                    ),
+                    // Shimmer for content
+                    Expanded(
+                      child: ListView.builder(
+                        padding: EdgeInsets.symmetric(vertical: 16.h),
+                        itemCount: 3,
+                        itemBuilder: (context, index) => buildShimmerCard(),
                       ),
-                      SizedBox(height: 16.h),
-                      Text(
-                        'Error Loading Packing Details',
-                        style: TextStyle(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.darkGray,
-                        ),
-                      ),
-                      SizedBox(height: 8.h),
-                      Text(
-                        provider.error!,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          color: AppTheme.mediumGray,
-                        ),
-                      ),
-                      SizedBox(height: 20.h),
-                      ElevatedButton(
-                        onPressed: () {
-                          provider.clearError();
-                          provider.loadPackingDetails(
-                            widget.workOrderId,
-                            widget.productId,
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryBlue,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.refresh, size: 18.sp),
-                            SizedBox(width: 8.w),
-                            Text('Retry'),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
+                );
+              }
+
+              if (provider.packingDetails.isEmpty && !provider.isLoading) {
+                return _buildEmptyState();
+              }
+
+              // Update tab controller with current data length
+              _updateTabController(provider.packingDetails.length);
+
+              return RefreshIndicator(
+                onRefresh: () async {
+                  await provider.loadPackingDetails(
+                    widget.workOrderId,
+                    widget.productId,
+                  );
+                },
+                color: AppTheme.primaryBlue,
+                backgroundColor: Colors.white,
+                child: Column(
+                  children: [
+                    _buildCountIndicator(provider.packingDetails.length),
+                    _buildTabBar(provider.packingDetails),
+                    Expanded(child: _buildTabBarView(provider.packingDetails)),
+                  ],
                 ),
               );
-            }
-
-            if (provider.isLoading && provider.packingDetails.isEmpty) {
-              print('Showing loading state');
-              return Column(
-                children: [
-                  // Shimmer for tab bar
-                  Container(
-                    margin: EdgeInsets.all(16.w),
-                    height: 60.h,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(16.r),
-                    ),
-                  ),
-                  // Shimmer for content
-                  Expanded(
-                    child: ListView.builder(
-                      padding: EdgeInsets.symmetric(vertical: 16.h),
-                      itemCount: 3,
-                      itemBuilder: (context, index) => buildShimmerCard(),
-                    ),
-                  ),
-                ],
-              );
-            }
-
-            if (provider.packingDetails.isEmpty && !provider.isLoading) {
-              print('Showing empty state');
-              return _buildEmptyState();
-            }
-
-            print(
-              'Rendering TabView with ${provider.packingDetails.length} items',
-            );
-
-            // Update tab controller with current data length
-            _updateTabController(provider.packingDetails.length);
-
-            return RefreshIndicator(
-              onRefresh: () async {
-                await provider.loadPackingDetails(
-                  widget.workOrderId,
-                  widget.productId,
-                );
-              },
-              color: AppTheme.primaryBlue,
-              backgroundColor: Colors.white,
-              child: Column(
-                children: [
-                  _buildCountIndicator(provider.packingDetails.length),
-                  _buildTabBar(provider.packingDetails),
-                  Expanded(child: _buildTabBarView(provider.packingDetails)),
-                ],
-              ),
-            );
-          },
+            },
+          ),
         ),
       ),
     );

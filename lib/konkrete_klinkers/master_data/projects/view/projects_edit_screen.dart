@@ -3,13 +3,16 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/list_helper/custom_back_button.dart';
+import 'package:k2k/common/list_helper/title.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
 import 'package:k2k/konkrete_klinkers/master_data/clients/provider/clients_provider.dart';
-import 'package:k2k/konkrete_klinkers/master_data/projects/model/projects.dart';
 import 'package:k2k/konkrete_klinkers/master_data/projects/provider/projects_provider.dart';
+import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -24,130 +27,101 @@ class EditProjectFormScreen extends StatefulWidget {
 
 class _EditProjectFormScreenState extends State<EditProjectFormScreen> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
-  bool _isLoading = true;
-  ProjectModel? _project;
-  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _loadProjectData();
-    // Defer loading clients until after the build phase
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final clientsProvider = Provider.of<ClientsProvider>(context, listen: false);
+      // Load project data AFTER first frame
+      final projectProvider = context.read<ProjectProvider>();
+      projectProvider.loadEditProject(widget.projectId);
+
+      // Load clients
+      final clientsProvider = context.read<ClientsProvider>();
       clientsProvider.loadAllClientsForDropdown(refresh: true);
     });
   }
 
-  Future<void> _loadProjectData() async {
-    final provider = Provider.of<ProjectProvider>(context, listen: false);
-    try {
-      final project = await provider.getProject(widget.projectId);
-      if (project == null) {
-        setState(() {
-          _error = 'Project not found';
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _project = project;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _error = 'Failed to load Project data: $e';
-        _isLoading = false;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final projectProvider = Provider.of<ProjectProvider>(context, listen: false);
-    final clientsProvider = Provider.of<ClientsProvider>(context);
+    final projectProvider = context.watch<ProjectProvider>();
+    final clientsProvider = context.watch<ClientsProvider>();
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBars(
-        title: _buildLogoAndTitle(),
-        leading: _buildBackButton(),
-        action: [],
-      ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF3B82F6)),
-            )
-          : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 64.sp,
-                        color: const Color(0xFFF43F5E),
-                      ),
-                      SizedBox(height: 16.h),
-                      Text(
-                        _error!,
-                        style: TextStyle(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF334155),
-                        ),
-                      ),
-                      SizedBox(height: 16.h),
-                      ElevatedButton(
-                        onPressed: () => context.go(RouteNames.projects),
-                        child: const Text('Back to Projects'),
-                      ),
-                    ],
-                  ),
-                )
-              : SingleChildScrollView(
-                  padding: EdgeInsets.all(24.w),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildFormCard(context, projectProvider, clientsProvider),
-                    ],
-                  ),
-                ),
-    );
-  }
-
-  Widget _buildLogoAndTitle() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'Edit Project',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF334155),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBackButton() {
-    return Builder(
-      builder: (BuildContext context) {
-        return IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios,
-            size: 24.sp,
-            color: const Color(0xFF334155),
-          ),
-          onPressed: () {
-            context.go(RouteNames.projects);
-          },
-          tooltip: 'Back',
-        );
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          context.go(RouteNames.projects);
+        }
       },
+      child: Container(
+        decoration: BoxDecoration(gradient: AppTheme.backgroundGradient),
+        child: Scaffold(
+          backgroundColor: AppColors.transparent,
+          appBar: AppBars(
+            title: TitleText(title: 'Edit Project'),
+            leading: CustomBackButton(
+              onPressed: () => context.go(RouteNames.projects),
+            ),
+          ),
+          body: _buildBody(projectProvider, clientsProvider),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody(
+    ProjectProvider projectProvider,
+    ClientsProvider clientsProvider,
+  ) {
+    if (projectProvider.isLoadingEditForm) {
+      return const Center(child: GradientLoader());
+    }
+
+    if (projectProvider.editProjectError != null) {
+      return _buildErrorState(projectProvider.editProjectError!);
+    }
+
+    if (projectProvider.editProject == null) {
+      return const Center(child: Text("No project data available"));
+    }
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(24.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [_buildFormCard(context, projectProvider, clientsProvider)],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(String error) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 64.sp,
+            color: const Color(0xFFF43F5E),
+          ),
+          SizedBox(height: 16.h),
+          Text(
+            error,
+            style: TextStyle(
+              fontSize: 18.sp,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF334155),
+            ),
+          ),
+          SizedBox(height: 16.h),
+          ElevatedButton(
+            onPressed: () => context.go(RouteNames.projects),
+            child: const Text('Back to Projects'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -156,6 +130,9 @@ class _EditProjectFormScreenState extends State<EditProjectFormScreen> {
     ProjectProvider projectProvider,
     ClientsProvider clientsProvider,
   ) {
+    final project =
+        projectProvider.editProject!; // Safe now because null handled earlier
+
     return Container(
       padding: EdgeInsets.all(24.w),
       decoration: BoxDecoration(
@@ -172,9 +149,9 @@ class _EditProjectFormScreenState extends State<EditProjectFormScreen> {
       child: FormBuilder(
         key: _formKey,
         initialValue: {
-          'name': _project!.name,
-          'address': _project!.address,
-          'client': _project!.client.name,
+          'name': project.name,
+          'address': project.address,
+          'client': project.client.name,
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,67 +170,11 @@ class _EditProjectFormScreenState extends State<EditProjectFormScreen> {
               style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
             ),
             SizedBox(height: 24.h),
-            Consumer<ClientsProvider>(
-              builder: (context, clientsProvider, _) {
-                final clients = clientsProvider.allClients;
-                final clientNames = clients.map((client) => client.name).toList();
-
-                return CustomSearchableDropdownFormField(
-                  name: 'client',
-                  labelText: 'Client Name',
-                  hintText: 'Select Client Name',
-                  prefixIcon: Icons.person,
-                  options: clientsProvider.isAllClientsLoading
-                      ? ['Loading...']
-                      : clientNames.isEmpty
-                          ? ['No clients available']
-                          : clientNames,
-                  fillColor: const Color(0xFFF8FAFC),
-                  borderColor: Colors.grey.shade300,
-                  focusedBorderColor: const Color(0xFF3B82F6),
-                  borderRadius: 12.r,
-                  validators: [
-                    FormBuilderValidators.required(
-                      errorText: 'Please select a client',
-                    ),
-                  ],
-                  enabled:
-                      !clientsProvider.isAllClientsLoading &&
-                      clientNames.isNotEmpty,
-                );
-              },
-            ),
+            _buildClientDropdown(clientsProvider),
             SizedBox(height: 24.h),
-            CustomTextFormField(
-              name: 'name',
-              labelText: 'Project Name',
-              hintText: 'Enter Project Name',
-              prefixIcon: Icons.code,
-              validators: [
-                FormBuilderValidators.required(),
-                FormBuilderValidators.minLength(3),
-                FormBuilderValidators.maxLength(20),
-              ],
-              fillColor: const Color(0xFFF8FAFC),
-              borderColor: Colors.grey.shade300,
-              focusedBorderColor: const Color(0xFF3B82F6),
-              borderRadius: 12.r,
-            ),
+            _buildProjectNameField(),
             SizedBox(height: 24.h),
-            CustomTextFormField(
-              name: 'address',
-              labelText: 'Address',
-              hintText: 'Enter Address',
-              prefixIcon: Icons.business,
-              validators: [
-                FormBuilderValidators.required(),
-                FormBuilderValidators.minLength(2),
-              ],
-              fillColor: const Color(0xFFF8FAFC),
-              borderColor: Colors.grey.shade300,
-              focusedBorderColor: const Color(0xFF3B82F6),
-              borderRadius: 12.r,
-            ),
+            _buildAddressField(),
             SizedBox(height: 40.h),
             Consumer<ProjectProvider>(
               builder: (context, provider, _) => SizedBox(
@@ -265,6 +186,66 @@ class _EditProjectFormScreenState extends State<EditProjectFormScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildClientDropdown(ClientsProvider clientsProvider) {
+    final clients = clientsProvider.allClients;
+    final clientNames = clients.map((c) => c.name).toList();
+
+    return CustomSearchableDropdownFormField(
+      name: 'client',
+      labelText: 'Client Name',
+      hintText: 'Select Client Name',
+      prefixIcon: Icons.person,
+      options: clientsProvider.isAllClientsLoading
+          ? ['Loading...']
+          : clientNames.isEmpty
+          ? ['No clients available']
+          : clientNames,
+      fillColor: const Color(0xFFF8FAFC),
+      borderColor: Colors.grey.shade300,
+      focusedBorderColor: const Color(0xFF3B82F6),
+      borderRadius: 12.r,
+      validators: [
+        FormBuilderValidators.required(errorText: 'Please select a client'),
+      ],
+      enabled: !clientsProvider.isAllClientsLoading && clientNames.isNotEmpty,
+    );
+  }
+
+  Widget _buildProjectNameField() {
+    return CustomTextFormField(
+      name: 'name',
+      labelText: 'Project Name',
+      hintText: 'Enter Project Name',
+      prefixIcon: Icons.code,
+      validators: [
+        FormBuilderValidators.required(),
+        FormBuilderValidators.minLength(3),
+        FormBuilderValidators.maxLength(20),
+      ],
+      fillColor: const Color(0xFFF8FAFC),
+      borderColor: Colors.grey.shade300,
+      focusedBorderColor: const Color(0xFF3B82F6),
+      borderRadius: 12.r,
+    );
+  }
+
+  Widget _buildAddressField() {
+    return CustomTextFormField(
+      name: 'address',
+      labelText: 'Address',
+      hintText: 'Enter Address',
+      prefixIcon: Icons.business,
+      validators: [
+        FormBuilderValidators.required(),
+        FormBuilderValidators.minLength(2),
+      ],
+      fillColor: const Color(0xFFF8FAFC),
+      borderColor: Colors.grey.shade300,
+      focusedBorderColor: const Color(0xFF3B82F6),
+      borderRadius: 12.r,
     );
   }
 
@@ -297,10 +278,7 @@ class _EditProjectFormScreenState extends State<EditProjectFormScreen> {
                 ? Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
+                      const GradientLoader(),
                       SizedBox(width: 12.w),
                       Text(
                         'Updating Project...',
@@ -339,7 +317,7 @@ class _EditProjectFormScreenState extends State<EditProjectFormScreen> {
   ) async {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       final formData = _formKey.currentState!.value;
-      final clientsProvider = Provider.of<ClientsProvider>(context, listen: false);
+      final clientsProvider = context.read<ClientsProvider>();
 
       final selectedClientName = formData['client'] as String?;
       if (selectedClientName == null) {
@@ -349,6 +327,7 @@ class _EditProjectFormScreenState extends State<EditProjectFormScreen> {
 
       final selectedClient = clientsProvider.allClients.firstWhere(
         (client) => client.name == selectedClientName,
+        orElse: () => throw Exception("Selected client not found"),
       );
 
       if (selectedClient.id.isEmpty) {
@@ -358,41 +337,7 @@ class _EditProjectFormScreenState extends State<EditProjectFormScreen> {
         return;
       }
 
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => Center(
-          child: Container(
-            padding: EdgeInsets.all(24.w),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16.r),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-                ],
-              ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const CircularProgressIndicator(color: Color(0xFF3B82F6)),
-                SizedBox(height: 16.h),
-                Text(
-                  'Updating Project...',
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF334155),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
+      _showLoadingDialog();
 
       final success = await provider.updateProject(
         widget.projectId,
@@ -416,5 +361,43 @@ class _EditProjectFormScreenState extends State<EditProjectFormScreen> {
         "Please fill in all required fields correctly.",
       );
     }
+  }
+
+  void _showLoadingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(
+        child: Container(
+          padding: EdgeInsets.all(24.w),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16.r),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const GradientLoader(),
+              SizedBox(height: 16.h),
+              Text(
+                'Updating Project...',
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF334155),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

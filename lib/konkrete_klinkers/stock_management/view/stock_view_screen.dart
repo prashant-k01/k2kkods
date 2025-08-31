@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/list_helper/custom_back_button.dart';
+import 'package:k2k/common/list_helper/title.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/common/widgets/custom_card.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:provider/provider.dart';
 import 'package:k2k/konkrete_klinkers/stock_management/provider/stock_provider.dart';
 import 'package:intl/intl.dart';
@@ -33,19 +36,19 @@ class _StockDetailsScreenState extends State<StockDetailsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBars(title: _buildLogoAndTitle(), leading: _buildBackButton()),
+      appBar: AppBars(
+        title: TitleText(title: 'Stock Transfer Details'),
+        leading: CustomBackButton(
+          onPressed: () {
+            context.go(RouteNames.stockmanagement);
+          },
+        ),
+      ),
       body: SafeArea(
         child: Consumer<StockProvider>(
           builder: (context, provider, child) {
             if (provider.isStockByIdLoading) {
-              return Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    AppTheme.primaryBlue,
-                  ),
-                  strokeWidth: 4.0,
-                ),
-              );
+              return Center(child: GradientLoader());
             }
             if (provider.stockByIdError != null) {
               return Center(

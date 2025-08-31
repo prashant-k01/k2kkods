@@ -4,7 +4,10 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/list_helper/custom_back_button.dart';
+import 'package:k2k/common/list_helper/title.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
@@ -49,37 +52,43 @@ class _QcCheckEditScreenState extends State<QcCheckEditScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-       canPop: false,
+      canPop: false,
       onPopInvoked: (didPop) {
         if (!didPop) {
           context.go(RouteNames.qcCheck);
         }
       },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
-        resizeToAvoidBottomInset: true,
-        appBar: AppBars(
-          title: _buildLogoAndTitle(),
-          leading: _buildBackButton(),
-          action: [],
-        ),
-        body: GestureDetector(
-          onTap: () => FocusScope.of(context).unfocus(),
-          behavior: HitTestBehavior.opaque,
-          child: Consumer<QcCheckProvider>(
-            builder: (context, provider, child) {
-              final qcCheck = provider.qcChecks.firstWhere(
-                (qc) => qc.id == widget.qcCheckId,
-                orElse: () => throw Exception('QC check not found'),
-              );
-              return ListView(
-                controller: _scrollController,
-                padding: EdgeInsets.all(24.w).copyWith(
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
-                ),
-                children: [_buildFormCard(context, provider, qcCheck)],
-              );
-            },
+      child: Container(
+        decoration: BoxDecoration(gradient: AppTheme.backgroundGradient),
+        child: Scaffold(
+          backgroundColor: AppColors.transparent,
+          resizeToAvoidBottomInset: true,
+          appBar: AppBars(
+            title: TitleText(title: 'Edit QC Check'),
+            leading: CustomBackButton(
+              onPressed: () => context.go(RouteNames.qcCheck),
+            ),
+          ),
+          body: SafeArea(
+            child: GestureDetector(
+              onTap: () => FocusScope.of(context).unfocus(),
+              behavior: HitTestBehavior.opaque,
+              child: Consumer<QcCheckProvider>(
+                builder: (context, provider, child) {
+                  final qcCheck = provider.qcChecks.firstWhere(
+                    (qc) => qc.id == widget.qcCheckId,
+                    orElse: () => throw Exception('QC check not found'),
+                  );
+                  return ListView(
+                    controller: _scrollController,
+                    padding: EdgeInsets.all(16.w).copyWith(
+                      bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
+                    ),
+                    children: [_buildFormCard(context, provider, qcCheck)],
+                  );
+                },
+              ),
+            ),
           ),
         ),
       ),
@@ -114,7 +123,10 @@ class _QcCheckEditScreenState extends State<QcCheckEditScreen> {
   }
 
   Widget _buildFormCard(
-      BuildContext context, QcCheckProvider provider, QcCheckModel qcCheck) {
+    BuildContext context,
+    QcCheckProvider provider,
+    QcCheckModel qcCheck,
+  ) {
     return Container(
       padding: EdgeInsets.all(24.w),
       decoration: BoxDecoration(
@@ -197,13 +209,14 @@ class _QcCheckEditScreenState extends State<QcCheckEditScreen> {
               hintText: provider.isWorkOrderAndProductsLoading
                   ? 'Loading Work Order...'
                   : provider.workOrder == null
-                      ? 'Select Job Order First'
-                      : 'Select Work Order',
+                  ? 'Select Job Order First'
+                  : 'Select Work Order',
               prefixIcon: Icons.work,
               options: provider.workOrder != null
                   ? [provider.workOrder!['work_order_number']!]
                   : [],
-              enabled: !provider.isWorkOrderAndProductsLoading &&
+              enabled:
+                  !provider.isWorkOrderAndProductsLoading &&
                   provider.workOrder != null,
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
@@ -325,27 +338,32 @@ class _QcCheckEditScreenState extends State<QcCheckEditScreen> {
                           (job) => job['job_order_id'] == formData['job_order'],
                           orElse: () => {
                             '_id': qcCheck.jobOrder ?? '',
-                            'job_order_id': formData['job_order'] ?? 'N/A'
+                            'job_order_id': formData['job_order'] ?? 'N/A',
                           },
                         );
 
                         final qcCheckData = {
                           'job_order': selectedJob['_id'],
-                          'work_order': provider.workOrder?['_id'] ??
+                          'work_order':
+                              provider.workOrder?['_id'] ??
                               qcCheck.workOrder ??
                               '',
                           'product_id': qcCheck.productId ?? '',
-                          'rejected_quantity':
-                              int.parse(formData['rejected_quantity']),
-                          'recycled_quantity':
-                              int.parse(formData['recycled_quantity']),
+                          'rejected_quantity': int.parse(
+                            formData['rejected_quantity'],
+                          ),
+                          'recycled_quantity': int.parse(
+                            formData['recycled_quantity'],
+                          ),
                           'remarks': formData['rejected_reasons'],
                           'updated_by': qcCheck.updatedBy ?? '',
                         };
 
                         try {
                           await provider.updateQcCheck(
-                              widget.qcCheckId, qcCheckData);
+                            widget.qcCheckId,
+                            qcCheckData,
+                          );
                           if (provider.error == null) {
                             context.showSuccessSnackbar(
                               'QC Check updated successfully',
@@ -371,10 +389,7 @@ class _QcCheckEditScreenState extends State<QcCheckEditScreen> {
                       SizedBox(
                         width: 20.sp,
                         height: 20.sp,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2.w,
-                        ),
+                        child: GradientLoader(),
                       )
                     else
                       Icon(

@@ -3,11 +3,14 @@ import 'package:flutter_screenutil/flutter_screenutil.dart' hide ScreenUtil;
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/list_helper/add_button.dart';
+import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
 import 'package:k2k/common/list_helper/shimmer.dart';
+import 'package:k2k/common/list_helper/title.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/common/widgets/custom_card.dart';
 import 'package:k2k/common/widgets/gradient_icon_button.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/konkrete_klinkers/work_order/model/work_order_model.dart';
 import 'package:k2k/konkrete_klinkers/work_order/provider/work_order_provider.dart';
@@ -66,22 +69,7 @@ class _WorkOrderListViewState extends State<WorkOrderListView> {
         RouteNames.workordersedit,
         pathParameters: {'workorderId': workOrderId},
       );
-    } else {
-      _showSnackBar('Invalid Work Order ID');
     }
-  }
-
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message, style: AppTextStyles.body(14.sp)),
-        backgroundColor: AppColors.error,
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
-        margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
-      ),
-    );
   }
 
   String _formatDateTime(DateTime? dateTime) {
@@ -120,8 +108,14 @@ class _WorkOrderListViewState extends State<WorkOrderListView> {
     final createdAt = _formatDateTime(workOrder.createdAt);
 
     return CustomCard(
+      margin: EdgeInsetsGeometry.symmetric(vertical: 12.h, horizontal: 12.w),
       title: workOrderNumber,
-      leading: Icon(Icons.description_outlined, size: 20.sp),
+      titleColor: AppColors.background,
+      leading: Icon(
+        Icons.description_outlined,
+        size: 20.sp,
+        color: AppColors.background,
+      ),
       onTap: () {
         if (workOrderId.isEmpty) {
           context.showErrorSnackbar('Invalid Work Order No');
@@ -168,9 +162,8 @@ class _WorkOrderListViewState extends State<WorkOrderListView> {
       ],
       headerGradient: AppTheme.cardGradientList,
       backgroundColor: AppColors.cardBackground,
-      borderColor: const Color(0xFFE5E7EB),
+      borderColor: AppColors.border,
       borderRadius: 12.r,
-      margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
     );
   }
 
@@ -215,32 +208,6 @@ class _WorkOrderListViewState extends State<WorkOrderListView> {
     );
   }
 
-  Widget _buildLogoAndTitle() {
-    return Row(
-      children: [
-        SizedBox(width: 6.w),
-        Expanded(
-          child: Text(
-            'Work Orders',
-            style: AppTextStyles.title(16.sp),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBackButton() {
-    return IconButton(
-      icon: Icon(
-        Icons.arrow_back_ios,
-        size: 18.sp,
-        color: AppColors.textPrimary,
-      ),
-      onPressed: () => context.go(RouteNames.homeScreen),
-    );
-  }
-
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -276,9 +243,7 @@ class _WorkOrderListViewState extends State<WorkOrderListView> {
   Widget _buildLoadingIndicator() {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 16.h),
-      child: const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      ),
+      child: const Center(child: GradientLoader()),
     );
   }
 
@@ -289,7 +254,7 @@ class _WorkOrderListViewState extends State<WorkOrderListView> {
       canPop: false,
       onPopInvoked: (didPop) {
         if (!didPop) {
-          context.go(RouteNames.workorders);
+          context.go(RouteNames.homeScreen);
         }
       },
       child: Container(
@@ -297,8 +262,12 @@ class _WorkOrderListViewState extends State<WorkOrderListView> {
         child: Scaffold(
           backgroundColor: Colors.transparent,
           appBar: AppBars(
-            title: _buildLogoAndTitle(),
-            leading: _buildBackButton(),
+            title: TitleText(title: 'Work Orders'),
+            leading: CustomBackButton(
+              onPressed: () {
+                context.go(RouteNames.homeScreen);
+              },
+            ),
           ),
           floatingActionButton: GradientIconTextButton(
             onPressed: () => context.goNamed(RouteNames.workordersadd),
@@ -308,9 +277,6 @@ class _WorkOrderListViewState extends State<WorkOrderListView> {
           ),
           body: Consumer<WorkOrderProvider>(
             builder: (context, provider, child) {
-              debugPrint(
-                'UI Rebuild - WorkOrders: ${provider.workOrders.length}, HasMoreData: ${provider.hasMoreData}, IsLoading: ${provider.isLoading}',
-              );
               if (provider.error != null) {
                 return Center(
                   child: Column(
@@ -340,7 +306,6 @@ class _WorkOrderListViewState extends State<WorkOrderListView> {
                         text: 'Retry',
                         icon: Icons.refresh,
                         onTap: () {
-                          provider.clearError();
                           provider.loadAllWorkOrders(refresh: true);
                         },
                       ),
@@ -351,7 +316,6 @@ class _WorkOrderListViewState extends State<WorkOrderListView> {
 
               return RefreshIndicator(
                 onRefresh: () async {
-                  debugPrint('Refreshing work orders list');
                   await provider.loadAllWorkOrders(refresh: true);
                 },
                 color: AppColors.primary,

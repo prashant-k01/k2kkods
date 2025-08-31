@@ -25,14 +25,16 @@ class MachinesRepository {
         headers: headers,
       );
 
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
+      print('fetchMachines - Response status: ${response.statusCode}');
+      print('fetchMachines - Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> decoded = jsonDecode(response.body);
         final List<dynamic> dataList = decoded['data'] ?? [];
 
-        print('Number of machines in response: ${dataList.length}');
+        print(
+          'fetchMachines - Number of machines in response: ${dataList.length}',
+        );
 
         List<Machines> machines = [];
         for (int i = 0; i < dataList.length; i++) {
@@ -40,8 +42,8 @@ class MachinesRepository {
             final machine = Machines.fromJson(dataList[i]);
             machines.add(machine);
           } catch (e) {
-            print('Error parsing machine at index $i: $e');
-            print('Problematic data: ${dataList[i]}');
+            print('fetchMachines - Error parsing machine at index $i: $e');
+            print('fetchMachines - Problematic data: ${dataList[i]}');
             continue;
           }
         }
@@ -53,25 +55,122 @@ class MachinesRepository {
         );
       }
     } catch (e) {
-      print('Error fetching machines: $e');
+      print('fetchMachines - Error: $e');
       throw Exception('Error fetching machines: $e');
+    }
+  }
+
+  Future<Machines> getMachineById(String id) async {
+    try {
+      final headers = await this.headers;
+      final response = await http.get(
+        Uri.parse(AppUrl.getIsMachineById(id)),
+        headers: headers,
+      );
+
+      print('getMachineById - Response status: ${response.statusCode}');
+      print('getMachineById - Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> decoded = jsonDecode(response.body);
+        final machineData = decoded['data'] ?? decoded;
+        return Machines.fromJson(machineData);
+      } else {
+        throw Exception(
+          'Failed to load machine by ID: ${response.statusCode} - ${response.body}',
+        );
+      }
+    } catch (e) {
+      print('getMachineById - Error: $e');
+      throw Exception('Error fetching machine by ID: $e');
+    }
+  }
+
+  Future<void> updateMachine(
+    String machineId,
+    String machineName,
+    String machineRole,
+  ) async {
+    try {
+      final headers = await this.headers;
+      final payload = {'name': machineName, 'role': machineRole};
+      print('updateMachine - Sending payload: $payload');
+
+      final response = await http.put(
+        Uri.parse(AppUrl.getIsMachineById(machineId)),
+        headers: headers,
+        body: jsonEncode(payload),
+      );
+
+      print('updateMachine - Response status: ${response.statusCode}');
+      print('updateMachine - Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> decoded = jsonDecode(response.body);
+        if (decoded['success'] != true) {
+          throw Exception(
+            'Failed to update machine: ${decoded['message']} ${decoded['errors'] ?? ''}',
+          );
+        }
+      } else {
+        final Map<String, dynamic> decoded = jsonDecode(response.body);
+        throw Exception(
+          'Failed to update machine: ${response.statusCode} - ${decoded['message']} ${decoded['errors'] ?? ''}',
+        );
+      }
+    } catch (e) {
+      print('updateMachine - Error: $e');
+      throw Exception('Error updating machine: $e');
+    }
+  }
+
+  Future<void> deleteMachine(String id) async {
+    try {
+      final headers = await this.headers;
+      final payload = {
+        'ids': [id],
+      };
+      print('deleteMachine - Sending payload: $payload');
+
+      final response = await http.delete(
+        Uri.parse(AppUrl.deleteIsMachines),
+        headers: headers,
+        body: jsonEncode(payload),
+      );
+
+      print('deleteMachine - Response status: ${response.statusCode}');
+      print('deleteMachine - Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> decoded = jsonDecode(response.body);
+        if (decoded['success'] != true) {
+          throw Exception('Failed to delete machine: ${decoded['message']}');
+        }
+      } else {
+        throw Exception(
+          'Failed to delete machine: ${response.statusCode} - ${response.body}',
+        );
+      }
+    } catch (e) {
+      print('deleteMachine - Error: $e');
+      throw Exception('Error deleting machine: $e');
     }
   }
 
   Future<void> addMachine(Machines machine) async {
     try {
       final headers = await this.headers;
+      final payload = {'name': machine.name, 'role': machine.role};
+      print('addMachine - Sending payload: $payload');
+
       final response = await http.post(
-        Uri.parse(AppUrl.addIsMachines),
+        Uri.parse(AppUrl.getIsMachines),
         headers: headers,
-        body: jsonEncode({
-          'name': machine.name,
-          'role': machine.role,
-        }),
+        body: jsonEncode(payload),
       );
 
-      print('Add machine response status: ${response.statusCode}');
-      print('Add machine response body: ${response.body}');
+      print('addMachine - Response status: ${response.statusCode}');
+      print('addMachine - Response body: ${response.body}');
 
       if (response.statusCode == 201) {
         final Map<String, dynamic> decoded = jsonDecode(response.body);
@@ -84,7 +183,7 @@ class MachinesRepository {
         );
       }
     } catch (e) {
-      print('Error adding machine: $e');
+      print('addMachine - Error: $e');
       throw Exception('Error adding machine: $e');
     }
   }

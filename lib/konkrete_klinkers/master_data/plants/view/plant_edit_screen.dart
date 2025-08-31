@@ -3,10 +3,15 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/list_helper/custom_back_button.dart';
+import 'package:k2k/common/list_helper/title.dart';
+import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/provider/plants_provider.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/model/plants_model.dart';
+import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -21,43 +26,17 @@ class EditPlantFormScreen extends StatefulWidget {
 
 class _EditPlantFormScreenState extends State<EditPlantFormScreen> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
-  bool _isLoading = true;
-  PlantModel? _plant;
-  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _loadPlantData();
-  }
-
-  Future<void> _loadPlantData() async {
-    final provider = Provider.of<PlantProvider>(context, listen: false);
-    try {
-      final plant = await provider.getPlant(widget.plantId);
-      if (plant == null) {
-        setState(() {
-          _error = 'Plant not found';
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _plant = plant;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _error = 'Failed to load plant data: $e';
-        _isLoading = false;
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<PlantProvider>().getPlant(widget.plantId);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final plantProvider = Provider.of<PlantProvider>(context, listen: false);
-
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) {
@@ -65,61 +44,87 @@ class _EditPlantFormScreenState extends State<EditPlantFormScreen> {
           context.go(RouteNames.plants);
         }
       },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
-        appBar: AppBar(
-          title: const Text('Edit Plant'),
-          backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFF334155),
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios),
-            onPressed: () => context.go(RouteNames.plants),
+      child: Container(
+        decoration: BoxDecoration(gradient: AppTheme.backgroundGradient),
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBars(
+            title: TitleText(title: 'Edit Plant'),
+            leading: CustomBackButton(
+              onPressed: () {
+                context.go(RouteNames.plants);
+              },
+            ),
           ),
-        ),
-        body: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: Color(0xFF3B82F6)),
+          body:
+              context.select<PlantProvider, bool>(
+                (provider) => provider.isPlantLoading,
               )
-            : _error != null
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 64.sp,
+              ? const Center(child: GradientLoader())
+              : context.select<PlantProvider, String?>(
+                      (provider) => provider.plantError,
+                    ) !=
+                    null
+              ? Center(
+                  child: Consumer<PlantProvider>(
+                    builder: (context, provider, _) => Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 64.sp,
+                          color: const Color(0xFFF43F5E),
+                        ),
+                        SizedBox(height: 16.h),
+                        Text(
+                          provider.plantError!,
+                          style: TextStyle(
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF334155),
+                          ),
+                        ),
+                        SizedBox(height: 16.h),
+                        ElevatedButton(
+                          onPressed: () {
+                            provider.clearPlantError();
+                            provider.getPlant(widget.plantId);
+                          },
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : context.select<PlantProvider, PlantModel?>(
+                      (provider) => provider.currentPlant,
+                    ) ==
+                    null
+              ? Center(
+                  child: Text(
+                    'Plant not found',
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w600,
                       color: const Color(0xFFF43F5E),
                     ),
-                    SizedBox(height: 16.h),
-                    Text(
-                      _error!,
-                      style: TextStyle(
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF334155),
-                      ),
-                    ),
-                    SizedBox(height: 16.h),
-                    ElevatedButton(
-                      onPressed: () => context.go(RouteNames.plants),
-                      child: const Text('Back to Plants'),
-                    ),
-                  ],
+                  ),
+                )
+              : SingleChildScrollView(
+                  padding: EdgeInsets.all(24.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildFormCard(context, context.read<PlantProvider>()),
+                    ],
+                  ),
                 ),
-              )
-            : SingleChildScrollView(
-                padding: EdgeInsets.all(24.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [_buildFormCard(context, plantProvider)],
-                ),
-              ),
+        ),
       ),
     );
   }
 
-  Widget _buildFormCard(BuildContext context, PlantProvider plantProvider) {
+  Widget _buildFormCard(BuildContext context, PlantProvider provider) {
     return Container(
       padding: EdgeInsets.all(24.w),
       decoration: BoxDecoration(
@@ -136,8 +141,8 @@ class _EditPlantFormScreenState extends State<EditPlantFormScreen> {
       child: FormBuilder(
         key: _formKey,
         initialValue: {
-          'plant_code': _plant!.plantCode,
-          'plant_name': _plant!.plantName,
+          'plant_code': provider.currentPlant!.plantCode,
+          'plant_name': provider.currentPlant!.plantName,
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -156,7 +161,6 @@ class _EditPlantFormScreenState extends State<EditPlantFormScreen> {
               style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
             ),
             SizedBox(height: 24.h),
-
             // Plant Code
             CustomTextFormField(
               name: 'plant_code',
@@ -174,7 +178,6 @@ class _EditPlantFormScreenState extends State<EditPlantFormScreen> {
               borderRadius: 12.r,
             ),
             SizedBox(height: 24.h),
-
             // Plant Name
             CustomTextFormField(
               name: 'plant_name',
@@ -192,7 +195,6 @@ class _EditPlantFormScreenState extends State<EditPlantFormScreen> {
               borderRadius: 12.r,
             ),
             SizedBox(height: 40.h),
-
             // Submit
             Consumer<PlantProvider>(
               builder: (context, provider, _) => SizedBox(
@@ -216,7 +218,13 @@ class _EditPlantFormScreenState extends State<EditPlantFormScreen> {
           colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
         ),
         borderRadius: BorderRadius.circular(12.r),
-        boxShadow: [],
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF3B82F6).withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -230,10 +238,7 @@ class _EditPlantFormScreenState extends State<EditPlantFormScreen> {
                 ? Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
+                      const GradientLoader(),
                       SizedBox(width: 12.w),
                       Text(
                         'Updating Plant...',
@@ -290,7 +295,7 @@ class _EditPlantFormScreenState extends State<EditPlantFormScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircularProgressIndicator(color: Color(0xFF3B82F6)),
+                const GradientLoader(),
                 SizedBox(height: 16.h),
                 Text(
                   'Updating Plant...',
@@ -312,19 +317,20 @@ class _EditPlantFormScreenState extends State<EditPlantFormScreen> {
         formData['plant_name'],
       );
 
-      Navigator.of(context).pop();
+      if (!context.mounted) return;
 
-      if (success && context.mounted) {
-        context.showSuccessSnackbar("Plant updated successfully!");
+      Navigator.of(context).pop();
+      if (success) {
+        context.showSuccessSnackbar('Plant updated successfully!');
         context.go(RouteNames.plants);
       } else {
         context.showErrorSnackbar(
-          provider.error ?? "Failed to update plant. Please try again.",
+          provider.error ?? 'Failed to update plant. Please try again.',
         );
       }
     } else {
       context.showWarningSnackbar(
-        "Please fill in all required fields correctly.",
+        'Please fill in all required fields correctly.',
       );
     }
   }

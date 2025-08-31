@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/services.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 
 class CustomButton extends StatelessWidget {
   final String text;
@@ -69,14 +70,7 @@ class CustomButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (isLoading)
-              SizedBox(
-                width: 20.r,
-                height: 20.r,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(effectiveTextColor),
-                ),
-              ),
+              SizedBox(width: 20.r, height: 20.r, child: GradientLoader()),
             if (!isLoading && icon != null) ...[
               Icon(
                 icon,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -19,7 +20,7 @@ class _SplashScreenState extends State<SplashScreen>
   bool _showLogos = false;
 
   final List<String> _logoPaths = [
-    "assets/images/login_image_1.png", 
+    "assets/images/login_image_1.png",
     "assets/images/konkrete_klinkers.png",
     "assets/images/iron_smith.png",
     "assets/images/falcon.png",
@@ -186,12 +187,7 @@ class _SplashScreenState extends State<SplashScreen>
                     child: SizedBox(
                       width: 24,
                       height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Colors.grey[400]!,
-                        ),
-                      ),
+                      child: GradientLoader(),
                     ),
                   ),
                 ],

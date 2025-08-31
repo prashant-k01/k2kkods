@@ -3,12 +3,16 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/list_helper/custom_back_button.dart';
+import 'package:k2k/common/list_helper/title.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/common/widgets/dropdown.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
 import 'package:k2k/konkrete_klinkers/master_data/products/provider/product_provider.dart';
+import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -44,7 +48,7 @@ class _EditProductFormContent extends StatelessWidget {
     if (!productProvider.isInitialized) {
       return const Scaffold(
         backgroundColor: Color(0xFFF8FAFC),
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(child: GradientLoader()),
       );
     }
 
@@ -56,7 +60,7 @@ class _EditProductFormContent extends StatelessWidget {
     final initialValues = Map<String, dynamic>.from(
       productProvider.initialValues,
     );
-    
+
     // FIXED: Use consistent UOM values (same as add form)
     const validUomValues = ["Square Meter/No", "Meter/No"];
     if (initialValues['uom'] != null &&
@@ -67,29 +71,47 @@ class _EditProductFormContent extends StatelessWidget {
       } else if (initialValues['uom'].toString().contains('Meter')) {
         initialValues['uom'] = "Meter/No";
       } else {
-        initialValues['uom'] = validUomValues[0]; // Default to first valid value
+        initialValues['uom'] =
+            validUomValues[0]; // Default to first valid value
       }
     }
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      resizeToAvoidBottomInset: true,
-      appBar: AppBars(
-        title: _buildLogoAndTitle(),
-        leading: _buildBackButton(context),
-        action: [],
-      ),
-      body: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(),
-        behavior: HitTestBehavior.opaque,
-        child: ListView.builder(
-          controller: _scrollController,
-          padding: EdgeInsets.all(
-            24.w,
-          ).copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 24.h),
-          itemCount: 1,
-          itemBuilder: (context, index) =>
-              _buildFormCard(context, productProvider, initialValues),
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          context.go(RouteNames.products);
+        }
+      },
+      child: Container(
+        decoration: BoxDecoration(gradient: AppTheme.backgroundGradient),
+        child: Scaffold(
+          backgroundColor: AppColors.transparent,
+          resizeToAvoidBottomInset: true,
+          appBar: AppBars(
+            title: TitleText(title: 'Edit Product'),
+            leading: CustomBackButton(
+              onPressed: () {
+                context.go(RouteNames.products);
+              },
+            ),
+            action: [],
+          ),
+          body: SafeArea(
+            child: GestureDetector(
+              onTap: () => FocusScope.of(context).unfocus(),
+              behavior: HitTestBehavior.opaque,
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: EdgeInsets.all(24.w).copyWith(
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
+                ),
+                itemCount: 1,
+                itemBuilder: (context, index) =>
+                    _buildFormCard(context, productProvider, initialValues),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -230,7 +252,9 @@ class _EditProductFormContent extends StatelessWidget {
               options: productProvider.plants.isEmpty
                   ? ['No plants available']
                   : productProvider.plants
-                        .where((plant) => plant['id']!.isNotEmpty) // FIXED: Filter out plants without IDs
+                        .where(
+                          (plant) => plant['id']!.isNotEmpty,
+                        ) // FIXED: Filter out plants without IDs
                         .map((plant) => plant['display']!)
                         .toList(),
               fillColor: const Color(0xFFF8FAFC),
@@ -242,7 +266,9 @@ class _EditProductFormContent extends StatelessWidget {
                   errorText: 'Please select a plant',
                 ),
               ],
-              enabled: productProvider.plants.any((plant) => plant['id']!.isNotEmpty), // FIXED: Enable only if valid plants exist
+              enabled: productProvider.plants.any(
+                (plant) => plant['id']!.isNotEmpty,
+              ), // FIXED: Enable only if valid plants exist
             ),
             SizedBox(height: 18.h),
             CustomTextFormField(
@@ -307,14 +333,18 @@ class _EditProductFormContent extends StatelessWidget {
               name: 'uom',
               labelText: 'UOM',
               initialValue: initialValues['uom'] ?? "Square Meter/No",
-              items: ["Square Meter/No", "Meter/No"] // FIXED: Consistent with add form
-                  .map(
-                    (item) => DropdownMenuItem<String>(
-                      value: item,
-                      child: Text(item),
-                    ),
-                  )
-                  .toList(),
+              items:
+                  [
+                        "Square Meter/No",
+                        "Meter/No",
+                      ] // FIXED: Consistent with add form
+                      .map(
+                        (item) => DropdownMenuItem<String>(
+                          value: item,
+                          child: Text(item),
+                        ),
+                      )
+                      .toList(),
               hintText: 'Select UOM',
               prefixIcon: Icons.workspaces,
               validators: [FormBuilderValidators.required()],
@@ -323,7 +353,9 @@ class _EditProductFormContent extends StatelessWidget {
               focusedBorderColor: const Color(0xFF3B82F6),
               borderRadius: 12.r,
               onChanged: (value) {
-                productProvider.setShowAreaPerUnit(value == "Square Meter/No"); // FIXED: Consistent check
+                productProvider.setShowAreaPerUnit(
+                  value == "Square Meter/No",
+                ); // FIXED: Consistent check
                 if (!productProvider.showAreaPerUnit) {
                   _formKey.currentState?.fields['area_per_unit']?.didChange('');
                 } else {
@@ -427,10 +459,7 @@ class _EditProductFormContent extends StatelessWidget {
                         const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
+                          child: GradientLoader(),
                         ),
                         SizedBox(width: 12.w),
                         Text(
@@ -563,8 +592,7 @@ class _EditProductFormContent extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircularProgressIndicator(color: Color(0xFF3B82F6)),
-                SizedBox(height: 16.h),
+                const GradientLoader(),
                 Text(
                   'Updating Product...',
                   style: TextStyle(

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/konkrete_klinkers/production/model/common_model.dart';
 import 'package:k2k/konkrete_klinkers/production/provider/production_provider.dart';
@@ -85,12 +86,7 @@ class _DowntimeScreenState extends State<DowntimeScreen> {
                   // _buildDatePickerSection(provider),
                   Expanded(
                     child: provider.isLoading
-                        ? Center(
-                            child: CircularProgressIndicator(
-                              color: Colors.blue[700],
-                              strokeWidth: 2.w,
-                            ),
-                          )
+                        ? Center(child: GradientLoader())
                         : _buildDowntimeList(
                             provider.downTimeLogs ?? [],
                             emptyMessage:

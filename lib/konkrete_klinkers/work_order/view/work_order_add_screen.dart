@@ -7,12 +7,14 @@ import 'package:intl/intl.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/common/widgets/dropdown.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
 import 'package:k2k/konkrete_klinkers/work_order/model/client_model.dart';
 import 'package:k2k/konkrete_klinkers/work_order/model/work_order_model.dart';
 import 'package:k2k/konkrete_klinkers/work_order/provider/work_order_provider.dart';
+import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -55,35 +57,47 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<WorkOrderProvider>(
-      builder: (context, workOrderProvider, child) {
-        return Scaffold(
-          
-          resizeToAvoidBottomInset: true,
-          backgroundColor: const Color(0xFFF8FAFC),
-          appBar: AppBars(
-            title: _buildLogoAndTitle(),
-            leading: _buildBackButton(),
-            action: _buildAppBarActions(),
-          ),
-          body: SafeArea(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12.w),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(height: 12.h),
-                    _buildMainFormCard(context, workOrderProvider),
-                  ],
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          context.go(RouteNames.homeScreen);
+        }
+      },
+      child: Consumer<WorkOrderProvider>(
+        builder: (context, workOrderProvider, child) {
+          return Container(
+            decoration: BoxDecoration(gradient: AppTheme.backgroundGradient),
+
+            child: Scaffold(
+              resizeToAvoidBottomInset: true,
+              backgroundColor: AppColors.transparent,
+              appBar: AppBars(
+                title: _buildLogoAndTitle(),
+                leading: _buildBackButton(),
+                action: _buildAppBarActions(),
+              ),
+              body: SafeArea(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20.w),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 12.h),
+                        _buildMainFormCard(context, workOrderProvider),
+                        SizedBox(height: 12.h),
+                      ],
+                    ),
+                  ),
                 ),
               ),
+
+              bottomNavigationBar: _buildFixedSubmitButton(context),
             ),
-          ),
-          // : const Center(child: CircularProgressIndicator()),
-          bottomNavigationBar: _buildFixedSubmitButton(context),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -158,15 +172,15 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
     String? clientId = selectedClient?.id;
 
     return Container(
-      padding: EdgeInsets.all(12.w),
+      padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
+        borderRadius: BorderRadius.circular(20.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 10.r,
-            offset: Offset(0, 2.h),
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -188,6 +202,7 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
               name: 'work_order_number',
               labelText: 'Work Order No',
               hintText: 'Enter Work Order No.',
+              fillColor: AppColors.background,
               prefixIcon: Icons.format_list_numbered,
               textStyle: TextStyle(fontSize: 14.sp),
               labelStyle: TextStyle(fontSize: 14.sp),
@@ -205,7 +220,7 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
             if (!workOrderProvider.isBufferStockEnabled) ...[
               SizedBox(height: 12.h),
               if (workOrderProvider.isClientsLoading)
-                const Center(child: CircularProgressIndicator())
+                const Center(child: GradientLoader())
               else if (workOrderProvider.clients.isEmpty &&
                   workOrderProvider.error != null)
                 Padding(
@@ -293,6 +308,7 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
                   iconSize: 18.sp,
                   textStyle: TextStyle(fontSize: 14.sp),
                   labelStyle: TextStyle(fontSize: 14.sp),
+                  fillColor: AppColors.background,
                   hintStyle: TextStyle(
                     fontSize: 14.sp,
                     color: Colors.grey[400],
@@ -317,7 +333,7 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
                 ),
               SizedBox(height: 12.h),
               if (workOrderProvider.isProjectsLoading)
-                const Center(child: CircularProgressIndicator())
+                const Center(child: GradientLoader())
               else if (workOrderProvider.projects.isEmpty && clientId != null)
                 Padding(
                   padding: EdgeInsets.symmetric(vertical: 8.h),
@@ -334,6 +350,8 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
                   iconSize: 18.sp,
                   textStyle: TextStyle(fontSize: 14.sp),
                   labelStyle: TextStyle(fontSize: 14.sp),
+                  fillColor: AppColors.background,
+
                   hintStyle: TextStyle(
                     fontSize: 14.sp,
                     color: Colors.grey[400],
@@ -362,6 +380,8 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
                 prefixIcon: Icons.calendar_today_outlined,
                 iconSize: 18.sp,
                 textStyle: TextStyle(fontSize: 14.sp),
+                fillColor: AppColors.background,
+
                 labelStyle: TextStyle(fontSize: 14.sp),
                 hintStyle: TextStyle(fontSize: 14.sp, color: Colors.grey[400]),
                 contentPadding: EdgeInsets.symmetric(
@@ -413,26 +433,12 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
               product['qtyController'] as TextEditingController;
 
           return Container(
-            margin: EdgeInsets.only(bottom: 12.h),
-            padding: EdgeInsets.all(12.w),
+            margin: EdgeInsets.only(bottom: 24.h),
+            padding: EdgeInsets.all(16.w),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0xFFEDE9FE),
-                  const Color(0xFFF5F3FF),
-                  const Color(0xFFFFFFFF),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: Colors.grey.shade50,
               borderRadius: BorderRadius.circular(12.r),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.deepPurple.withOpacity(0.05),
-                  blurRadius: 6.r,
-                  offset: Offset(0, 2.h),
-                ),
-              ],
+              border: Border.all(color: Colors.grey.shade200),
             ),
             child: Stack(
               children: [
@@ -451,7 +457,7 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
                       ),
                       SizedBox(height: 12.h),
                       if (workOrderProvider.isProductLoading)
-                        const Center(child: CircularProgressIndicator())
+                        const Center(child: GradientLoader())
                       else if (workOrderProvider.allProducts.isEmpty &&
                           workOrderProvider.error != null)
                         Padding(
@@ -543,6 +549,8 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
                               iconSize: 18.sp,
                               textStyle: TextStyle(fontSize: 14.sp),
                               labelStyle: TextStyle(fontSize: 14.sp),
+                              fillColor: AppColors.background,
+
                               hintStyle: TextStyle(
                                 fontSize: 14.sp,
                                 color: Colors.grey[400],
@@ -603,15 +611,19 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
                               labelText: 'UOM',
                               initialValue: uomItems.length == 1
                                   ? uomItems.first
-                                  : null,
-                              items: uomItems
-                                  .map(
-                                    (item) => DropdownMenuItem<String>(
-                                      value: item,
-                                      child: Text(item),
-                                    ),
-                                  )
-                                  .toList(),
+                                  : 'Nos',
+                              items: [
+                                const DropdownMenuItem<String>(
+                                  value: "Nos",
+                                  child: Text("Nos"),
+                                ),
+                                ...uomItems.map(
+                                  (item) => DropdownMenuItem<String>(
+                                    value: item,
+                                    child: Text(item),
+                                  ),
+                                ),
+                              ],
                               hintText: 'Select UOM',
                               prefixIcon: Icons.workspaces,
                               validators: [FormBuilderValidators.required()],
@@ -648,6 +660,8 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
                               prefixIcon: Icons.numbers,
                               textStyle: TextStyle(fontSize: 14.sp),
                               labelStyle: TextStyle(fontSize: 14.sp),
+                              fillColor: AppColors.background,
+
                               hintStyle: TextStyle(
                                 fontSize: 14.sp,
                                 color: Colors.grey[400],
@@ -749,6 +763,8 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
                                   prefixIcon: Icons.format_list_numbered,
                                   textStyle: TextStyle(fontSize: 14.sp),
                                   labelStyle: TextStyle(fontSize: 14.sp),
+                                  fillColor: AppColors.background,
+
                                   hintStyle: TextStyle(
                                     fontSize: 14.sp,
                                     color: Colors.grey[400],
@@ -769,6 +785,8 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
                               labelText: 'Plant Code',
                               hintText: 'Auto-fetched',
                               prefixIcon: Icons.factory,
+                              fillColor: AppColors.background,
+
                               textStyle: TextStyle(fontSize: 14.sp),
                               labelStyle: TextStyle(fontSize: 14.sp),
                               hintStyle: TextStyle(
@@ -791,6 +809,8 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
                               iconSize: 18.sp,
                               textStyle: TextStyle(fontSize: 14.sp),
                               labelStyle: TextStyle(fontSize: 14.sp),
+                              fillColor: AppColors.background,
+
                               hintStyle: TextStyle(
                                 fontSize: 14.sp,
                                 color: Colors.grey[400],
@@ -954,7 +974,7 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
                   } catch (e) {
                     if (context.mounted) {
                       context.showErrorSnackbar(
-                        'Failed to pick files. Please try again. Error: $e',
+                        'Failed to pick files. Please try again.',
                       );
                     }
                   }
@@ -1021,6 +1041,13 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
                 }).toList(),
               ),
             ],
+            if (provider.uploadError != null) ...[
+              SizedBox(height: 6.h),
+              Text(
+                provider.uploadError!,
+                style: TextStyle(color: Colors.red, fontSize: 12.sp),
+              ),
+            ],
           ],
         ),
       ),
@@ -1063,10 +1090,7 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
                         ? Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2.w,
-                              ),
+                              GradientLoader(),
                               SizedBox(width: 8.w),
                               Text(
                                 'Creating Work Order...',
@@ -1173,7 +1197,9 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
       );
       return;
     }
-
+    if (!provider.validateUploads()) {
+      return; // prevent submission
+    }
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       final formData = _formKey.currentState!.value;
       final selectedClient = formData['client_id'] != null
@@ -1208,10 +1234,7 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(
-                  color: const Color(0xFF3B82F6),
-                  strokeWidth: 2.w,
-                ),
+                GradientLoader(),
                 SizedBox(height: 12.h),
                 Text(
                   'Creating Work Order...',

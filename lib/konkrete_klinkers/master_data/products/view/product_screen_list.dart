@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart' hide ScreenUtil;
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
 import 'package:k2k/common/list_helper/shimmer.dart';
+import 'package:k2k/common/list_helper/title.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/custom_card.dart';
+import 'package:k2k/common/widgets/gradient_icon_button.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/konkrete_klinkers/master_data/products/model/product.dart';
 import 'package:k2k/konkrete_klinkers/master_data/products/provider/product_provider.dart';
 import 'package:k2k/konkrete_klinkers/master_data/products/view/product_delete_screen.dart';
@@ -99,284 +104,121 @@ class _ProductsListViewState extends State<ProductsListView> {
         : 'Unknown';
     final createdAt = product.createdAt;
 
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-      child: Card(
-        elevation: 0,
-        color: AppColors.cardBackground,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.r),
-          side: BorderSide(color: const Color(0xFFE5E7EB), width: 1.w),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12.r),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return CustomCard(
+      title: materialCode,
+      titleColor: AppColors.background,
+      leading: Icon(
+        Icons.production_quantity_limits,
+        size: 20.sp,
+        color: AppColors.background,
+      ),
+
+      menuItems: [
+        PopupMenuItem<String>(
+          value: 'edit',
+          child: Row(
             children: [
-              // Top Header Section
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.cardHeaderStart,
-                      AppColors.cardHeaderEnd,
-                      AppColors.cardBackground,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(12.r),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.shadow.withOpacity(0.03),
-                      blurRadius: 4.r,
-                      offset: Offset(0, 1.h),
-                    ),
-                  ],
-                ),
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          RichText(
-                            text: TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: "MaterialCode :$materialCode",
-                                  style: TextStyle(
-                                    fontSize: 18.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.darkGray,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                          SizedBox(height: 8.h),
-                        ],
-                      ),
-                    ),
-                    PopupMenuButton<String>(
-                      icon: Icon(
-                        Icons.more_vert,
-                        size: 18.sp,
-                        color: AppColors.textSecondary,
-                      ),
-                      onSelected: (value) {
-                        if (value == 'edit') {
-                          _editProduct(productId);
-                        } else if (value == 'delete') {
-                          ProductDeleteHandler.deleteProduct(
-                            context,
-                            productId,
-                            plantName,
-                          );
-                        }
-                      },
-                      itemBuilder: (BuildContext context) => [
-                        PopupMenuItem<String>(
-                          value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.edit_outlined,
-                                size: 20.sp,
-                                color: const Color(0xFFF59E0B),
-                              ),
-                              SizedBox(width: 8.w),
-                              Text(
-                                'Edit',
-                                style: TextStyle(
-                                  fontSize: 16.sp,
-                                  color: const Color(0xFF334155),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        PopupMenuItem<String>(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.delete_outline,
-                                size: 20.sp,
-                                color: const Color(0xFFF43F5E),
-                              ),
-                              SizedBox(width: 8.w),
-                              Text(
-                                'Delete',
-                                style: TextStyle(
-                                  fontSize: 16.sp,
-                                  color: const Color(0xFF334155),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                      offset: Offset(0, 32.h),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8.r),
-                      ),
-                      color: AppColors.cardBackground,
-                      elevation: 2,
-                    ),
-                  ],
-                ),
-              ),
-              // Body Section
-              Padding(
-                padding: EdgeInsets.all(12.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12.w,
-                        vertical: 6.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                      child: RichText(
-                        text: TextSpan(
-                          children: [
-                            TextSpan(
-                              text: 'Plant Name: ',
-                              style: TextStyle(
-                                fontSize: 16.sp,
-                                color: const Color(0xFF334155),
-                              ),
-                            ),
-                            TextSpan(
-                              text: plantName,
-                              style: TextStyle(
-                                fontSize: 16.sp,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF3B82F6),
-                              ),
-                            ),
-                          ],
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                      ),
-                    ),
-                    SizedBox(height: 6.h),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.person_outline,
-                          size: 16.sp,
-                          color: const Color(0xFF64748B),
-                        ),
-                        SizedBox(width: 8.w),
-                        Expanded(
-                          child: Text(
-                            'Created by: $createdBy',
-                            style: TextStyle(
-                              fontSize: 14.sp,
-                              color: const Color(0xFF64748B),
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 6.h),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.access_time_outlined,
-                          size: 16.sp,
-                          color: const Color(0xFF64748B),
-                        ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          'Created: ${_formatDateTime(createdAt)}',
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            color: const Color(0xFF64748B),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+              Icon(Icons.edit_outlined, size: 20.sp, color: Color(0xFFF59E0B)),
+              SizedBox(width: 8.w),
+              Text(
+                'Edit',
+                style: TextStyle(fontSize: 16.sp, color: Color(0xFF334155)),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildLogoAndTitle() {
-    return Row(
-      children: [
-        SizedBox(width: 8.w),
-        Text(
-          'Products',
-          style: TextStyle(
-            fontSize: 20.sp, // Increased from 18.sp
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF334155),
+        PopupMenuItem<String>(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(Icons.delete_outline, size: 20.sp, color: Color(0xFFF43F5E)),
+              SizedBox(width: 8.w),
+              Text(
+                'Delete',
+                style: TextStyle(fontSize: 16.sp, color: Color(0xFF334155)),
+              ),
+            ],
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildBackButton() {
-    return IconButton(
-      icon: Icon(
-        Icons.arrow_back_ios,
-        size: 26.sp, // Increased from 24.sp
-        color: const Color(0xFF334155),
-      ),
-      onPressed: () {
-        context.go(RouteNames.homeScreen);
+      onMenuSelected: (value) {
+        if (value == 'edit') {
+          _editProduct(productId);
+        } else if (value == 'delete') {
+          ProductDeleteHandler.deleteProduct(context, productId, plantName);
+        }
       },
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Padding(
-      padding: EdgeInsets.only(right: 16.w),
-      child: TextButton(
-        onPressed: () {
-          context.goNamed(RouteNames.productsadd);
-        },
-        child: Row(
+      bodyItems: [
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(12.r),
+          ),
+          child: RichText(
+            text: TextSpan(
+              children: [
+                TextSpan(
+                  text: 'Plant Name: ',
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    color: const Color(0xFF334155),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                TextSpan(
+                  text: plantName,
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF3B82F6),
+                  ),
+                ),
+              ],
+            ),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
+        ),
+        SizedBox(height: 6.h),
+        Row(
           children: [
             Icon(
-              Icons.add,
-              size: 22.sp,
-              color: const Color(0xFF3B82F6),
-            ), // Increased from 20.sp
-            SizedBox(width: 4.w),
-            Text(
-              'Add Product',
-              style: TextStyle(
-                fontSize: 18.sp, // Increased from 16.sp
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF3B82F6),
+              Icons.person_outline,
+              size: 16.sp,
+              color: const Color(0xFF64748B),
+            ),
+            SizedBox(width: 8.w),
+            Expanded(
+              child: Text(
+                'Created by: $createdBy',
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: const Color(0xFF64748B),
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
             ),
           ],
         ),
-      ),
+        SizedBox(height: 6.h),
+        Row(
+          children: [
+            Icon(
+              Icons.access_time_outlined,
+              size: 16.sp,
+              color: const Color(0xFF64748B),
+            ),
+            SizedBox(width: 8.w),
+            Text(
+              'Created: ${_formatDateTime(createdAt)}',
+              style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
+            ),
+          ],
+        ),
+      ],
+      headerGradient: AppTheme.cardGradientList,
     );
   }
 
@@ -462,71 +304,84 @@ class _ProductsListViewState extends State<ProductsListView> {
   Widget build(BuildContext context) {
     ScreenUtil.init(context);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBars(
-        title: _buildLogoAndTitle(),
-        leading: _buildBackButton(),
-        action: [_buildActionButtons()],
-      ),
-      body: Consumer<ProductProvider>(
-        builder: (context, provider, child) {
-          // Show shimmer loading when initially loading
-          if (provider.isLoading &&
-              provider.products.isEmpty &&
-              provider.error == null) {
-            return ListView.builder(
-              itemCount: 5,
-              itemBuilder: (context, index) => buildShimmerCard(),
-            );
-          }
-
-          // Show error state
-          if (provider.error != null) {
-            return _buildErrorState(provider);
-          }
-
-          // Show empty state
-          if (provider.products.isEmpty && !provider.isLoading) {
-            return _buildEmptyState();
-          }
-
-          // Show products list
-          return RefreshIndicator(
-            onRefresh: () async {
-              await provider.loadAllProducts(refresh: true);
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          context.go(RouteNames.homeScreen);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBars(
+          title: TitleText(title: 'Products'),
+          leading: CustomBackButton(
+            onPressed: () {
+              context.go(RouteNames.homeScreen);
             },
-            color: const Color(0xFF3B82F6),
-            backgroundColor: Colors.white,
-            child: ListView.builder(
-              controller: _scrollController,
-              physics: const AlwaysScrollableScrollPhysics(),
-              itemCount:
-                  provider.products.length +
-                  (provider.hasMore && provider.isLoading ? 1 : 0),
-              itemBuilder: (context, index) {
-                // Show loading indicator at the end
-                if (index == provider.products.length &&
-                    provider.hasMore &&
-                    provider.isLoading) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Color(0xFF3B82F6),
-                        ),
-                      ),
-                    ),
-                  );
-                }
+          ),
+        ),
+        floatingActionButton: GradientIconTextButton(
+          onPressed: () => context.goNamed(RouteNames.productsadd),
+          label: 'Add Product',
+          icon: Icons.add,
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+        ),
+        body: Consumer<ProductProvider>(
+          builder: (context, provider, child) {
+            // Show shimmer loading when initially loading
+            if (provider.isLoading &&
+                provider.products.isEmpty &&
+                provider.error == null) {
+              return ListView.builder(
+                itemCount: 5,
+                itemBuilder: (context, index) => buildShimmerCard(),
+              );
+            }
 
-                // Build product card
-                return _buildProductCard(provider.products[index]);
+            // Show error state
+            if (provider.error != null) {
+              return _buildErrorState(provider);
+            }
+
+            // Show empty state
+            if (provider.products.isEmpty && !provider.isLoading) {
+              return _buildEmptyState();
+            }
+
+            // Show products list
+            return RefreshIndicator(
+              onRefresh: () async {
+                await provider.loadAllProducts(refresh: true);
               },
-            ),
-          );
-        },
+              color: const Color(0xFF3B82F6),
+              backgroundColor: Colors.white,
+              child: ListView.builder(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                itemCount:
+                    provider.products.length +
+                    (provider.hasMore && provider.isLoading ? 1 : 0),
+                itemBuilder: (context, index) {
+                  // Show loading indicator at the end
+                  if (index == provider.products.length &&
+                      provider.hasMore &&
+                      provider.isLoading) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: GradientLoader(),
+                      ),
+                    );
+                  }
+
+                  // Build product card
+                  return _buildProductCard(provider.products[index]);
+                },
+              ),
+            );
+          },
+        ),
       ),
     );
   }

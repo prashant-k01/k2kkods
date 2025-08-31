@@ -4,7 +4,10 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/list_helper/custom_back_button.dart';
+import 'package:k2k/common/list_helper/title.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
@@ -46,27 +49,33 @@ class _QcCheckFormScreenState extends State<QcCheckFormScreen> {
           context.go(RouteNames.qcCheck);
         }
       },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
-        resizeToAvoidBottomInset: true,
-        appBar: AppBars(
-          title: _buildLogoAndTitle(),
-          leading: _buildBackButton(),
-          action: [],
-        ),
-        body: GestureDetector(
-          onTap: () => FocusScope.of(context).unfocus(),
-          behavior: HitTestBehavior.opaque,
-          child: Consumer<QcCheckProvider>(
-            builder: (context, provider, child) {
-              return ListView(
-                controller: _scrollController,
-                padding: EdgeInsets.all(24.w).copyWith(
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
-                ),
-                children: [_buildFormCard(context, provider)],
-              );
-            },
+      child: Container(
+        decoration: BoxDecoration(gradient: AppTheme.backgroundGradient),
+        child: Scaffold(
+          backgroundColor: AppColors.transparent,
+          resizeToAvoidBottomInset: true,
+          appBar: AppBars(
+            title: TitleText(title: 'Create QC Check'),
+            leading: CustomBackButton(
+              onPressed: () => context.go(RouteNames.qcCheck),
+            ),
+          ),
+          body: SafeArea(
+            child: GestureDetector(
+              onTap: () => FocusScope.of(context).unfocus(),
+              behavior: HitTestBehavior.opaque,
+              child: Consumer<QcCheckProvider>(
+                builder: (context, provider, child) {
+                  return ListView(
+                    controller: _scrollController,
+                    padding: EdgeInsets.all(24.w).copyWith(
+                      bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
+                    ),
+                    children: [_buildFormCard(context, provider)],
+                  );
+                },
+              ),
+            ),
           ),
         ),
       ),
@@ -364,10 +373,7 @@ class _QcCheckFormScreenState extends State<QcCheckFormScreen> {
                         SizedBox(
                           width: 20.sp,
                           height: 20.sp,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2.w,
-                          ),
+                          child: GradientLoader(),
                         )
                       else
                         Icon(

@@ -7,7 +7,10 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/date_picker.dart';
+import 'package:k2k/common/list_helper/custom_back_button.dart';
+import 'package:k2k/common/list_helper/title.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
@@ -84,75 +87,50 @@ class _AddDispatchFormScreenState extends State<AddDispatchFormScreen> {
           context.go(RouteNames.dispatch);
         }
       },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
-        appBar: AppBars(
-          title: _buildLogoAndTitle(),
-          leading: _buildBackButton(),
-          action: [],
-        ),
-        body: Consumer<DispatchProvider>(
-          builder: (context, provider, child) {
-            return SingleChildScrollView(
-              padding: EdgeInsets.all(24.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (provider.isLoadingWorkOrders)
-                    const Center(child: CircularProgressIndicator())
-                  else if (provider.workOrderError != null)
-                    Padding(
-                      padding: EdgeInsets.only(bottom: 16.h),
-                      child: Text(
-                        provider.workOrderError!,
-                        style: TextStyle(
-                          color: AppTheme.errorColor,
-                          fontSize: 14.sp,
-                        ),
-                      ),
-                    )
-                  else
-                    _buildFormCard(context, provider.workOrders, provider),
-                ],
-              ),
-            );
-          },
+      child: Container(
+        decoration: BoxDecoration(gradient: AppTheme.backgroundGradient),
+        child: Scaffold(
+          backgroundColor: AppColors.transparent,
+          appBar: AppBars(
+            title: TitleText(title: 'Add Dispatch'),
+            leading: CustomBackButton(
+              onPressed: () {
+                context.go(RouteNames.dispatch);
+              },
+            ),
+            action: [],
+          ),
+          body: SafeArea(
+            child: Consumer<DispatchProvider>(
+              builder: (context, provider, child) {
+                return SingleChildScrollView(
+                  padding: EdgeInsets.all(24.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (provider.isLoadingWorkOrders)
+                        const Center(child: GradientLoader())
+                      else if (provider.workOrderError != null)
+                        Padding(
+                          padding: EdgeInsets.only(bottom: 16.h),
+                          child: Text(
+                            provider.workOrderError!,
+                            style: TextStyle(
+                              color: AppTheme.errorColor,
+                              fontSize: 14.sp,
+                            ),
+                          ),
+                        )
+                      else
+                        _buildFormCard(context, provider.workOrders, provider),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
         ),
       ),
-    );
-  }
-
-  Widget _buildLogoAndTitle() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'Add Dispatch',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF334155),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBackButton() {
-    return Builder(
-      builder: (BuildContext context) {
-        return IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios,
-            size: 24.sp,
-            color: const Color(0xFF334155),
-          ),
-          onPressed: () {
-            context.go(RouteNames.dispatch);
-          },
-          tooltip: 'Back',
-        );
-      },
     );
   }
 
@@ -322,10 +300,7 @@ class _AddDispatchFormScreenState extends State<AddDispatchFormScreen> {
                             ? SizedBox(
                                 width: 20.w,
                                 height: 20.h,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2.w,
-                                ),
+                                child: GradientLoader(),
                               )
                             : Text(
                                 'Scan',
@@ -340,7 +315,7 @@ class _AddDispatchFormScreenState extends State<AddDispatchFormScreen> {
                 ),
                 SizedBox(height: 24.h),
                 if (provider.isLoadingQrScan)
-                  const Center(child: CircularProgressIndicator())
+                  const Center(child: GradientLoader())
                 else if (provider.qrScanError != null)
                   Padding(
                     padding: EdgeInsets.only(bottom: 16.h),
@@ -606,10 +581,7 @@ class _AddDispatchFormScreenState extends State<AddDispatchFormScreen> {
                           ? SizedBox(
                               width: 20.w,
                               height: 20.h,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2.w,
-                              ),
+                              child: GradientLoader(),
                             )
                           : Text(
                               'Add Dispatch',

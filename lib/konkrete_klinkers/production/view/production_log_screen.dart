@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/konkrete_klinkers/production/model/production_logs_model.dart';
 import 'package:k2k/konkrete_klinkers/production/provider/production_provider.dart';
 import 'package:provider/provider.dart';
@@ -67,12 +68,7 @@ class _ProductionLogScreenState extends State<ProductionLogScreen> {
                 children: [
                   Expanded(
                     child: provider.isLoading
-                        ? Center(
-                            child: CircularProgressIndicator(
-                              color: Colors.blue[700],
-                              strokeWidth: 2.w,
-                            ),
-                          )
+                        ? Center(child: GradientLoader())
                         : _buildProductionLogList(
                             provider.productionLogs ?? [],
                             emptyMessage:

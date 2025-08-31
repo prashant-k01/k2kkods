@@ -5,17 +5,24 @@ import 'package:k2k/konkrete_klinkers/master_data/projects/repo/projects_repo.da
 class ProjectProvider with ChangeNotifier {
   final ProjectRepository _repository = ProjectRepository();
 
+  // Project list state
   List<ProjectModel> _projects = [];
   bool _isLoading = false;
   String? _error;
   bool _hasMore = true;
   String _searchQuery = '';
-  int _lastIndex = 0;
 
+  // CRUD loading states
   bool _isAddProjectLoading = false;
   bool _isUpdateProjectLoading = false;
   bool _isDeleteProjectLoading = false;
 
+  // Edit form state
+  bool _isLoadingEditForm = false;
+  ProjectModel? _editProject;
+  String? _editProjectError;
+
+  // Getters
   List<ProjectModel> get projects => _projects;
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -24,40 +31,35 @@ class ProjectProvider with ChangeNotifier {
   bool get isDeleteProjectLoading => _isDeleteProjectLoading;
   bool get hasMore => _hasMore;
   String get searchQuery => _searchQuery;
+  bool get isLoadingEditForm => _isLoadingEditForm;
+  ProjectModel? get editProject => _editProject;
+  String? get editProjectError => _editProjectError;
 
+  // =====================
+  // Project List
+  // =====================
   Future<void> loadAllProjects({bool refresh = false}) async {
     if (_isLoading || (!_hasMore && !refresh)) return;
 
     _isLoading = true;
     if (refresh) {
-      _hasMore = true; // Reset only on explicit refresh
       _projects.clear();
-      _lastIndex = 0;
+      _hasMore = true;
+      _error = null;
     }
-    _error = null;
     notifyListeners();
 
     try {
-      print('Loading Projects - Search: $_searchQuery, LastIndex: $_lastIndex');
-
       final response = await _repository.getAllProjects(
         search: _searchQuery.isNotEmpty ? _searchQuery : null,
       );
 
-      final newProjects = response.projectModels;
-      _projects.addAll(newProjects);
-      _lastIndex += newProjects.length;
-      _hasMore = false; // Assume all projects are loaded in one response
+      _projects.addAll(response.projectModels);
+      _hasMore = false; // Assume all projects are loaded in one go
       _error = null;
-
-      print('Loaded ${_projects.length} Projects');
     } catch (e) {
-      _error = _getErrorMessage(e);
-      if (refresh) {
-        _projects.clear();
-        _lastIndex = 0;
-      }
-      print('Error loading Projects: $e');
+      _error = e.toString();
+      if (refresh) _projects.clear();
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -65,19 +67,22 @@ class ProjectProvider with ChangeNotifier {
   }
 
   Future<void> searchProjects(String query) async {
-    if (_searchQuery == query) return; // Avoid redundant searches
+    if (_searchQuery == query) return;
     _searchQuery = query;
     await loadAllProjects(refresh: true);
   }
 
   Future<void> clearSearch() async {
-    if (_searchQuery.isEmpty) return; // Avoid redundant clears
+    if (_searchQuery.isEmpty) return;
     _searchQuery = '';
     await loadAllProjects(refresh: true);
   }
 
+  // =====================
+  // Create / Update / Delete
+  // =====================
   Future<bool> createProject(
-    String projectName,
+    String name,
     String address,
     String clientId,
   ) async {
@@ -87,21 +92,18 @@ class ProjectProvider with ChangeNotifier {
 
     try {
       final newProject = await _repository.createProject(
-        projectName,
+        name,
         address,
         clientId,
       );
-
       if (newProject.id.isNotEmpty) {
         await loadAllProjects(refresh: true);
         return true;
-      } else {
-        _error = 'Created project has no ID';
-        return false;
       }
+      _error = 'Created project has no ID';
+      return false;
     } catch (e) {
-      _error = _getErrorMessage(e);
-      print('Create Project Error: $_error');
+      _error = e.toString();
       return false;
     } finally {
       _isAddProjectLoading = false;
@@ -110,8 +112,8 @@ class ProjectProvider with ChangeNotifier {
   }
 
   Future<bool> updateProject(
-    String projectId,
-    String projectName,
+    String id,
+    String name,
     String address,
     String clientId,
   ) async {
@@ -121,21 +123,19 @@ class ProjectProvider with ChangeNotifier {
 
     try {
       final success = await _repository.updateProject(
-        projectId,
-        projectName,
+        id,
+        name,
         address,
         clientId,
       );
-
       if (success) {
         await loadAllProjects(refresh: true);
         return true;
-      } else {
-        _error = 'Failed to update Project';
-        return false;
       }
+      _error = 'Failed to update Project';
+      return false;
     } catch (e) {
-      _error = _getErrorMessage(e);
+      _error = e.toString();
       return false;
     } finally {
       _isUpdateProjectLoading = false;
@@ -143,23 +143,21 @@ class ProjectProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> deleteProject(String projectId) async {
+  Future<bool> deleteProject(String id) async {
     _isDeleteProjectLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final success = await _repository.deleteProject(projectId);
-
+      final success = await _repository.deleteProject(id);
       if (success) {
         await loadAllProjects(refresh: true);
         return true;
-      } else {
-        _error = 'Failed to delete Project';
-        return false;
       }
+      _error = 'Failed to delete Project';
+      return false;
     } catch (e) {
-      _error = _getErrorMessage(e);
+      _error = e.toString();
       return false;
     } finally {
       _isDeleteProjectLoading = false;
@@ -167,36 +165,39 @@ class ProjectProvider with ChangeNotifier {
     }
   }
 
-  Future<ProjectModel?> getProject(String projectId) async {
+  // =====================
+  // Single Project
+  // =====================
+  Future<void> loadEditProject(String id) async {
+    _isLoadingEditForm = true;
+    _editProject = null;
+    _editProjectError = null;
+    notifyListeners();
+
     try {
-      _error = null;
-      final project = await _repository.getProject(projectId);
-      return project;
+      final project = await _repository.getProject(id);
+      if (project == null) {
+        _editProjectError = 'Project not found';
+      } else {
+        _editProject = project;
+      }
     } catch (e) {
-      _error = _getErrorMessage(e);
-      return null;
+      _editProjectError = e.toString();
+    } finally {
+      _isLoadingEditForm = false;
+      notifyListeners();
     }
   }
 
-  ProjectModel? getProjectByIndex(int index) {
-    if (index >= 0 && index < _projects.length) {
-      return _projects[index];
-    }
-    return null;
+  void clearEditProject() {
+    _isLoadingEditForm = false;
+    _editProject = null;
+    _editProjectError = null;
+    notifyListeners();
   }
 
   void clearError() {
     _error = null;
     notifyListeners();
-  }
-
-  String _getErrorMessage(Object error) {
-    if (error is Exception) {
-      return error.toString().replaceFirst('Exception: ', '');
-    } else if (error is String) {
-      return error;
-    } else {
-      return 'An unexpected error occurred';
-    }
   }
 }

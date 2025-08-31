@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 
 WorkOrderModel workOrderModelFromJson(String str) =>
@@ -48,10 +47,8 @@ class Datum {
   final String id;
   final String? clientId;
   final String? clientName;
-
   final String? projectId;
   final String? projectName;
-
   final String workOrderNumber;
   final DateTime? date;
   final bool bufferStock;
@@ -336,27 +333,21 @@ class Product {
   final String productId;
   final Uom uom;
   final int poQuantity;
-  final int qtyInNos;
+  final int? qtyInNos;
   final DateTime? deliveryDate;
   final String id;
   final ProductModel? product;
   final PlantModel? plant;
-  // final int achievedQuantity;
-  // final int packedQuantity;
-  // final int dispatchedQuantity;
 
   Product({
     required this.productId,
     required this.uom,
     required this.poQuantity,
-    required this.qtyInNos,
+    this.qtyInNos,
     this.deliveryDate,
     required this.id,
     this.product,
     this.plant,
-    // required this.achievedQuantity,
-    // required this.packedQuantity,
-    // required this.dispatchedQuantity,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -403,9 +394,6 @@ class Product {
         id: json['_id'] as String? ?? '',
         product: productModel,
         plant: plantModel,
-        // achievedQuantity: json['achieved_quantity'] as int? ?? 0,
-        // packedQuantity: json['packed_quantity'] as int? ?? 0,
-        // dispatchedQuantity: json['dispatched_quantity'] as int? ?? 0,
       );
     } catch (e, stackTrace) {
       if (kDebugMode) {
@@ -424,9 +412,6 @@ class Product {
     '_id': id,
     'product': product?.toJson(),
     'plant': plant?.toJson(),
-    // 'achieved_quantity': achievedQuantity,
-    // 'packed_quantity': packedQuantity,
-    // 'dispatched_quantity': dispatchedQuantity,
   };
 }
 

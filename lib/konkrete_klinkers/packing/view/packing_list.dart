@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart' hide ScreenUtil;
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/list_helper/add_button.dart';
+import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
 import 'package:k2k/common/list_helper/shimmer.dart';
+import 'package:k2k/common/list_helper/title.dart';
 import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/custom_card.dart';
+import 'package:k2k/common/widgets/gradient_icon_button.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/konkrete_klinkers/packing/model/packing.dart';
 import 'package:k2k/konkrete_klinkers/packing/provider/packing_provider.dart';
 import 'package:k2k/konkrete_klinkers/packing/view/packing_delete.dart';
@@ -60,7 +65,17 @@ class _PackingListViewState extends State<PackingListView> {
     final createdBy = packing.displayCreatedBy;
     final createdAt = packing.displayCreatedAt;
 
-    return InkWell(
+    return CustomCard(
+      margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+      title: 'Work Order: $workOrderNumber',
+      titleColor: AppColors.background,
+      leading: SizedBox.shrink(), // No leading icon in original
+      headerGradient: AppTheme.cardGradientList,
+      backgroundColor: AppColors.cardBackground,
+      borderColor: const Color(0xFFE5E7EB),
+      borderWidth: 1,
+      borderRadius: 12,
+      elevation: 0,
       onTap: () {
         context.goNamed(
           RouteNames.packingDetails,
@@ -70,271 +85,145 @@ class _PackingListViewState extends State<PackingListView> {
           },
         );
       },
-      child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
-        child: Card(
-          elevation: 0,
-          color: AppColors.cardBackground,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.r),
-            side: BorderSide(color: const Color(0xFFE5E7EB), width: 1.w),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12.r),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Top Header Section
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.cardHeaderStart,
-                        AppColors.cardHeaderEnd,
-                        AppColors.cardBackground,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(12.r),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.shadow.withOpacity(0.03),
-                        blurRadius: 4.r,
-                        offset: Offset(0, 1.h),
-                      ),
-                    ],
-                  ),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12.w,
-                    vertical: 8.h,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(height: 4.h),
-                            Text(
-                              'Work Order: $workOrderNumber',
-                              style: TextStyle(
-                                fontSize: 14.sp,
-                                color: AppTheme.darkGray,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      PopupMenuButton<String>(
-                        icon: Icon(
-                          Icons.more_vert,
-                          size: 18.sp,
-                          color: AppColors.textSecondary,
-                        ),
-                        itemBuilder: (BuildContext context) => [
-                          PopupMenuItem<String>(
-                            value: 'view',
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.visibility,
-                                  size: 20.sp,
-                                  color: AppTheme.primaryBlue,
-                                ),
-                                SizedBox(width: 8.w),
-                                Text(
-                                  'View',
-                                  style: TextStyle(
-                                    fontSize: 14.sp,
-                                    color: AppTheme.mediumGray,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem<String>(
-                            value: 'edit',
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.edit_outlined,
-                                  size: 20.sp,
-                                  color: AppTheme.warningColor,
-                                ),
-                                SizedBox(width: 8.w),
-                                Text(
-                                  'Edit',
-                                  style: TextStyle(
-                                    fontSize: 14.sp,
-                                    color: AppTheme.mediumGray,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem<String>(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.delete_outline,
-                                  size: 20.sp,
-                                  color: AppTheme.errorColor,
-                                ),
-                                SizedBox(width: 8.w),
-                                Text(
-                                  'Delete',
-                                  style: TextStyle(
-                                    fontSize: 14.sp,
-                                    color: const Color(0xFF334155),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                        onSelected: (value) {
-                          if (value == 'view') {
-                            context.goNamed(
-                              RouteNames.packingDetails,
-                              pathParameters: {
-                                'workOrderId': packing.workOrderId,
-                                'productId': packing.productId,
-                              },
-                            );
-                          } else if (value == 'edit') {
-                            context.goNamed(
-                              RouteNames.packingadd,
-                              extra: packing.toJson(),
-                            );
-                          } else if (value == 'delete') {
-                            PackingDeleteHandler.deletePacking(
-                              context,
-                              packing.id,
-                              productName,
-                            );
-                          }
-                        },
-                        offset: Offset(0, 32.h),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                        color: AppColors.cardBackground,
-                        elevation: 2,
-                      ),
-                    ],
-                  ),
-                ),
-                // Body Section
-                Padding(
-                  padding: EdgeInsets.all(12.w),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.inventory,
-                            size: 16.sp,
-                            color: const Color(0xFF64748B),
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            'Product: $productName',
-                            style: TextStyle(
-                              fontSize: 13.sp,
-                              color: const Color(0xFF64748B),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 6.h),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.widgets_outlined,
-                            size: 16.sp,
-                            color: const Color(0xFF64748B),
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            'Total Bundles: $totalBundles',
-                            style: TextStyle(
-                              fontSize: 13.sp,
-                              color: const Color(0xFF64748B),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 6.h),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.format_list_numbered,
-                            size: 16.sp,
-                            color: const Color(0xFF64748B),
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            'Total Quantity: $totalQuantity',
-                            style: TextStyle(
-                              fontSize: 13.sp,
-                              color: const Color(0xFF64748B),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 6.h),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.person_outline,
-                            size: 16.sp,
-                            color: const Color(0xFF64748B),
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            'Created by: $createdBy',
-                            style: TextStyle(
-                              fontSize: 13.sp,
-                              color: const Color(0xFF64748B),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 6.h),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.access_time_outlined,
-                            size: 16.sp,
-                            color: AppTheme.mediumGray,
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            'Created: $createdAt',
-                            style: TextStyle(
-                              fontSize: 13.sp,
-                              color: AppTheme.mediumGray,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+      menuItems: [
+        PopupMenuItem<String>(
+          value: 'view',
+          child: Row(
+            children: [
+              Icon(Icons.visibility, size: 20.sp, color: AppTheme.primaryBlue),
+              SizedBox(width: 8.w),
+              Text(
+                'View',
+                style: TextStyle(fontSize: 14.sp, color: AppTheme.mediumGray),
+              ),
+            ],
           ),
         ),
-      ),
+        PopupMenuItem<String>(
+          value: 'edit',
+          child: Row(
+            children: [
+              Icon(
+                Icons.edit_outlined,
+                size: 20.sp,
+                color: AppTheme.warningColor,
+              ),
+              SizedBox(width: 8.w),
+              Text(
+                'Edit',
+                style: TextStyle(fontSize: 14.sp, color: AppTheme.mediumGray),
+              ),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(
+                Icons.delete_outline,
+                size: 20.sp,
+                color: AppTheme.errorColor,
+              ),
+              SizedBox(width: 8.w),
+              Text(
+                'Delete',
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: const Color(0xFF334155),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+      onMenuSelected: (value) {
+        if (value == 'view') {
+          context.goNamed(
+            RouteNames.packingDetails,
+            pathParameters: {
+              'workOrderId': packing.workOrderId,
+              'productId': packing.productId,
+            },
+          );
+        } else if (value == 'edit') {
+          context.goNamed(RouteNames.packingadd, extra: packing.toJson());
+        } else if (value == 'delete') {
+          PackingDeleteHandler.deletePacking(context, packing.id, productName);
+        }
+      },
+      bodyItems: [
+        Row(
+          children: [
+            Icon(Icons.inventory, size: 16.sp, color: const Color(0xFF64748B)),
+            SizedBox(width: 8.w),
+            Text(
+              'Product: $productName',
+              style: TextStyle(fontSize: 13.sp, color: const Color(0xFF64748B)),
+            ),
+          ],
+        ),
+        SizedBox(height: 6.h),
+        Row(
+          children: [
+            Icon(
+              Icons.widgets_outlined,
+              size: 16.sp,
+              color: const Color(0xFF64748B),
+            ),
+            SizedBox(width: 8.w),
+            Text(
+              'Total Bundles: $totalBundles',
+              style: TextStyle(fontSize: 13.sp, color: const Color(0xFF64748B)),
+            ),
+          ],
+        ),
+        SizedBox(height: 6.h),
+        Row(
+          children: [
+            Icon(
+              Icons.format_list_numbered,
+              size: 16.sp,
+              color: const Color(0xFF64748B),
+            ),
+            SizedBox(width: 8.w),
+            Text(
+              'Total Quantity: $totalQuantity',
+              style: TextStyle(fontSize: 13.sp, color: const Color(0xFF64748B)),
+            ),
+          ],
+        ),
+        SizedBox(height: 6.h),
+        Row(
+          children: [
+            Icon(
+              Icons.person_outline,
+              size: 16.sp,
+              color: const Color(0xFF64748B),
+            ),
+            SizedBox(width: 8.w),
+            Text(
+              'Created by: $createdBy',
+              style: TextStyle(fontSize: 13.sp, color: const Color(0xFF64748B)),
+            ),
+          ],
+        ),
+        SizedBox(height: 6.h),
+        Row(
+          children: [
+            Icon(
+              Icons.access_time_outlined,
+              size: 16.sp,
+              color: AppTheme.mediumGray,
+            ),
+            SizedBox(width: 8.w),
+            Text(
+              'Created: $createdAt',
+              style: TextStyle(fontSize: 13.sp, color: AppTheme.mediumGray),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -432,117 +321,123 @@ class _PackingListViewState extends State<PackingListView> {
           context.go(RouteNames.homeScreen);
         }
       },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
-        appBar: AppBars(
-          title: _buildLogoAndTitle(),
-          leading: _buildBackButton(),
-          action: [_buildActionButtons()],
-        ),
-        body: Consumer<PackingProvider>(
-          builder: (context, provider, child) {
-            print(
-              'Building PackingListView: '
-              'packings=${provider.packings.length}, '
-              'isLoading=${provider.isLoading}, '
-              'error=${provider.error}, '
-              'packingIds=${provider.packings.map((p) => p.id).toList()}',
-            );
+      child: Container(
+        decoration: BoxDecoration(gradient: AppTheme.backgroundGradient),
+        child: Scaffold(
+          backgroundColor: AppColors.transparent,
+          appBar: AppBars(
+            title: TitleText(title: 'Packings'),
+            leading: CustomBackButton(
+              onPressed: () => context.go(RouteNames.homeScreen),
+            ),
+          ),
+          floatingActionButton: GradientIconTextButton(
+            onPressed: () => context.go(RouteNames.packingadd),
+            label: 'Add Packing',
+            icon: Icons.add,
+          ),
+          body: Consumer<PackingProvider>(
+            builder: (context, provider, child) {
+              print(
+                'Building PackingListView: '
+                'packings=${provider.packings.length}, '
+                'isLoading=${provider.isLoading}, '
+                'error=${provider.error}, '
+                'packingIds=${provider.packings.map((p) => p.id).toList()}',
+              );
 
-            // Show error state only if there's an error and no packings
-            if (provider.error != null && provider.packings.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 64.sp,
-                      color: AppTheme.errorColor,
-                    ),
-                    SizedBox(height: 16.h),
-                    Text(
-                      'Error Loading Packings',
-                      style: TextStyle(
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF334155),
+              // Show error state only if there's an error and no packings
+              if (provider.error != null && provider.packings.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 64.sp,
+                        color: AppTheme.errorColor,
                       ),
-                    ),
-                    SizedBox(height: 8.h),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 24.w),
-                      child: Text(
-                        provider.error!,
-                        textAlign: TextAlign.center,
+                      SizedBox(height: 16.h),
+                      Text(
+                        'Error Loading Packings',
                         style: TextStyle(
-                          fontSize: 14.sp,
-                          color: const Color(0xFF64748B),
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF334155),
                         ),
                       ),
-                    ),
-                    SizedBox(height: 16.h),
-                    RefreshButton(
-                      text: 'Retry',
-                      icon: Icons.refresh,
-                      onTap: () {
-                        provider.clearError();
-                        provider.loadPackings(refresh: true);
-                      },
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            // Show loading shimmer only for initial load with no packings
-            if (provider.isLoading && provider.packings.isEmpty) {
-              return ListView.builder(
-                itemCount: 5,
-                itemBuilder: (context, index) => buildShimmerCard(),
-              );
-            }
-
-            // Show empty state only if no packings and not loading
-            if (provider.packings.isEmpty && !provider.isLoading) {
-              return _buildEmptyState();
-            }
-
-            // Show packing list with RefreshIndicator
-            return RefreshIndicator(
-              onRefresh: () async {
-                await provider.loadPackings(refresh: true);
-              },
-              color: AppTheme.primaryBlue,
-              backgroundColor: Colors.white,
-              child: ListView.builder(
-                padding: EdgeInsets.only(bottom: 80.h),
-                itemCount:
-                    provider.packings.length + (provider.isLoading ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index == provider.packings.length && provider.isLoading) {
-                    return const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            AppTheme.primaryBlue,
+                      SizedBox(height: 8.h),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 24.w),
+                        child: Text(
+                          provider.error!,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: const Color(0xFF64748B),
                           ),
                         ),
                       ),
-                    );
-                  }
-                  final packing = provider.packings[index];
-                  print(
-                    'Rendering packing card: id=${packing.id}, '
-                    'workOrder=${packing.displayWorkOrderNumber}, '
-                    'product=${packing.displayProductName}',
-                  );
-                  return _buildPackingCard(packing);
+                      SizedBox(height: 16.h),
+                      RefreshButton(
+                        text: 'Retry',
+                        icon: Icons.refresh,
+                        onTap: () {
+                          provider.clearError();
+                          provider.loadPackings(refresh: true);
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              // Show loading shimmer only for initial load with no packings
+              if (provider.isLoading && provider.packings.isEmpty) {
+                return ListView.builder(
+                  itemCount: 5,
+                  itemBuilder: (context, index) => buildShimmerCard(),
+                );
+              }
+
+              // Show empty state only if no packings and not loading
+              if (provider.packings.isEmpty && !provider.isLoading) {
+                return _buildEmptyState();
+              }
+
+              // Show packing list with RefreshIndicator
+              return RefreshIndicator(
+                onRefresh: () async {
+                  await provider.loadPackings(refresh: true);
                 },
-              ),
-            );
-          },
+                color: AppTheme.primaryBlue,
+                backgroundColor: Colors.white,
+                child: ListView.builder(
+                  padding: EdgeInsets.only(bottom: 80.h),
+                  itemCount:
+                      provider.packings.length + (provider.isLoading ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == provider.packings.length &&
+                        provider.isLoading) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: GradientLoader(),
+                        ),
+                      );
+                    }
+                    final packing = provider.packings[index];
+                    print(
+                      'Rendering packing card: id=${packing.id}, '
+                      'workOrder=${packing.displayWorkOrderNumber}, '
+                      'product=${packing.displayProductName}',
+                    );
+                    return _buildPackingCard(packing);
+                  },
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
