@@ -6,6 +6,7 @@ class GradientIconTextButton extends StatelessWidget {
   final String label;
   final IconData icon;
   final List<Color> gradientColors;
+  // final Gradient? gradient;
   final double borderRadius;
   final double iconSize;
   final double fontSize;
@@ -17,6 +18,7 @@ class GradientIconTextButton extends StatelessWidget {
     required this.label,
     required this.icon,
     this.gradientColors = const [Color(0xFF3A8DFF), Color(0xFF9B4DFF)],
+    // this.gradient,
     this.borderRadius = 12,
     this.iconSize = 18,
     this.fontSize = 16,

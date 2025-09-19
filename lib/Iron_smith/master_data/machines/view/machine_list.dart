@@ -382,7 +382,7 @@ class _IsMachinesListScreenState extends State<IsMachinesListScreen> {
                 child: provider.isLoading && provider.machines.isEmpty
                     ? ListView.builder(
                         itemCount: 5,
-                        itemBuilder: (context, index) => buildShimmerCard(),
+                        itemBuilder: (context, index) => ShimmerCard(),
                       )
                     : provider.machines.isEmpty
                     ? _buildEmptyState()

@@ -921,9 +921,17 @@ class _IronWorkorderAddScreenState extends State<IronWorkorderAddScreen> {
                         initialValue: product['weight'].toString(),
                         keyboardType: TextInputType.number,
                         focusNode: _getFocusNode('weight_$index'),
-                        onChanged: (value) => provider.updateProduct(index, {
-                          'weight': int.tryParse(value ?? '0') ?? 0,
-                        }),
+                        onChanged: (value) {
+                          if (_debounce?.isActive ?? false) _debounce!.cancel();
+                          _debounce = Timer(
+                            const Duration(milliseconds: 1000),
+                            () {
+                              provider.updateProduct(index, {
+                                'weight': int.tryParse(value ?? '0') ?? 0,
+                              });
+                            },
+                          );
+                        },
                         validators: [
                           FormBuilderValidators.required(
                             errorText: 'Weight is required',

@@ -506,7 +506,7 @@ class _JobOrderListViewState extends State<JobOrderListView> {
                 child: provider.isLoading && provider.jobOrders.isEmpty
                     ? ListView.builder(
                         itemCount: 5,
-                        itemBuilder: (context, index) => buildShimmerCard(),
+                        itemBuilder: (context, index) => ShimmerCard(),
                       )
                     : provider.jobOrders.isEmpty
                     ? _buildEmptyState()

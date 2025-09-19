@@ -347,7 +347,7 @@ class _QcCheckListViewState extends State<QcCheckListView> {
                 child: provider.isLoading
                     ? ListView.builder(
                         itemCount: 5,
-                        itemBuilder: (context, index) => buildShimmerCard(),
+                        itemBuilder: (context, index) => ShimmerCard(),
                       )
                     : provider.qcChecks.isEmpty
                     ? _buildEmptyState()

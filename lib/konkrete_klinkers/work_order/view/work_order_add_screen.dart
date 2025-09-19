@@ -1179,7 +1179,7 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
         validatedProducts.add(
           Product(
             productId: selectedProduct.id,
-            uom: uomValues.map[selectedUom] ?? Uom.NOS,
+            uom: uomValues.map[selectedUom] ?? Uom.nos,
             poQuantity: poQuantityDouble.toInt(),
             qtyInNos: qtyInNosInt,
             deliveryDate: deliveryDate,

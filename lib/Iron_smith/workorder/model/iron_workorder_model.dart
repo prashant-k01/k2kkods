@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io' as io;
 
 IronWorkOrder? ironWorkOrderFromJson(String str) =>
     str.isNotEmpty ? IronWorkOrder.fromJson(json.decode(str)) : null;
@@ -153,14 +154,23 @@ class AtedBy {
 class FileElement {
   String? fileName;
   String? fileUrl;
+  io.File? file;
   String? uploadedAt;
   String? id;
 
-  FileElement({this.fileName, this.fileUrl, this.uploadedAt, this.id});
+  FileElement({
+    this.fileName,
+    this.fileUrl,
+    this.file,
+    this.uploadedAt,
+    this.id,
+  });
 
   factory FileElement.fromJson(Map<String, dynamic> json) => FileElement(
     fileName: json["file_name"],
+    file: null,
     fileUrl: json["file_url"],
+
     uploadedAt: json["uploaded_at"],
     id: json["_id"],
   );

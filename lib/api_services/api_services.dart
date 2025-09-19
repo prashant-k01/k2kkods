@@ -183,6 +183,21 @@ class AppUrl {
   static String getProjectById(String id) => "$getAllProjects/$id";
   static const String deleteIsProject =
       "$baseUrlIronSmith/helpers/projects/delete";
+  //raw materials
+  static String getRawMaterials(String id) =>
+      "$baseUrlIronSmith/helpers/rawMaterials/project/$id";
+  static String updateRawMaterials(String id) =>
+      "$baseUrlIronSmith/helpers/rawMaterials/$id";
+  static const String createRawMaterial =
+      "$baseUrlIronSmith/helpers/rawMaterials";
+  static String getRawMaterialConsumption({
+    required String dia,
+    required String projectId,
+    required String id,
+  }) =>
+      "$baseUrlIronSmith/helpers/rawMaterials/consumption?dia=$dia&projectId=$projectId&_id=$id";
+
+  //dependent apis
 
   static String getProjectsByClientId(String clientId) =>
       "$baseUrlIronSmith/workorders-getProject?clientId=$clientId";
@@ -214,4 +229,83 @@ class AppUrl {
       "$baseUrlIronSmith/joborder/workorderdata/$id";
 
   static String getJobOrderById(String id) => "$baseUrlIronSmith/joborder/$id";
+
+  //Production
+  static const String getAllProduction = "$baseUrlIronSmith/production/get";
+  static const String manageProduction = "$baseUrlIronSmith/production/manage";
+  static const String updateQty = "baseUrlIronSmith/production/update-qty";
+  static const String addISDowntime = "$baseUrlIronSmith/production/downtime";
+  static String getISDowntime(
+    String jobOrderId,
+    String shapeId,
+    String downtimeId,
+  ) =>
+      "$baseUrl/production/downtime?job_order=$jobOrderId&shape_id=$shapeId&_id=$downtimeId";
+  static String getISProductionLogs(
+    String jobOrderId,
+    String shapeId,
+    String logId,
+  ) =>
+      "$baseUrl/production/production-log?job_order=$jobOrderId&shape_id=$shapeId&_id=$logId";
+  static const String addQC = "$baseUrlIronSmith/production/qc";
+
+  //QC Check
+  static const String getAllQCCheck = "$baseUrlIronSmith/qc/get";
+  static const String createQCCheck = "$baseUrlIronSmith/qc/create";
+  static const String deleteQCCheck = "$baseUrlIronSmith/qc/delete";
+  static String getQCCheckById(String id) => "$baseUrlIronSmith/qc/$id";
+
+  //Packing
+  static const String getAllISPacking = "$baseUrlIronSmith/packing/get";
+  static String getISPackingById(String woId, String shapeId) =>
+      "$baseUrl/packing/getbyid?wo_id=$woId&shape_id=$shapeId";
+  static const String createISPacking = "$baseUrlIronSmith/packing/create";
+  static const String addISPackingBundle =
+      "$baseUrlIronSmith/packing-bundle/create";
+  static String getISPackingShapes(String workOrderId) =>
+      "$baseUrl/packing/getshapes?work_order_id=$workOrderId";
+
+  //Dispatch
+  static const String getAllISDispatch = "$baseUrlIronSmith/dispatch";
+  static String getISDispatchById(String id) => "$baseUrl/dispatch/$id";
+  static const String createISDispatch = "$baseUrlIronSmith/dispatch/create";
+  static String scanISDispatchByQr(String qrCode) =>
+      "$baseUrl/dispatch/qrscan?qr_code=$qrCode";
+
+  //=====================Falcon Facade========================
+  //Clients
+  static const String getAllFFClients =
+      "$baseUrl/api/falconFacade/helpers/clients";
+  static String getFFClientById(String id) => "$getAllFFClients/$id";
+  static const String deleteFFClient =
+      "$baseUrl/api/falconFacade/helpers/clients/delete";
+
+  //Projects
+  static const String getAllFFProjects =
+      "$baseUrl/api/falconFacade/helpers/projects";
+  static String getFFProjectById(String id) => "$getAllFFProjects/$id";
+  static const String deleteFFProject =
+      "$baseUrl/api/falconFacade/helpers/projects/delete";
+
+  //Systems
+  static const String getAllFFSystems =
+      "$baseUrl/api/falconFacade/helpers/systems";
+  static String getFFSystemById(String id) => "$getAllFFSystems/$id";
+  static const String deleteFFSystem =
+      "$baseUrl/api/falconFacade/helpers/systems/delete";
+
+  //Product System
+  static const String getAllFFProductSystems =
+      "$baseUrl/api/falconFacade/helpers/prductsystems";
+  static String getFFProductSystemById(String id) =>
+      "$getAllFFProductSystems/$id";
+  static const String deleteFFProductSystem =
+      "$baseUrl/api/falconFacade/helpers/prductsystems/delete";
+
+  // Product
+  static const String getAllFFProducts =
+      "$baseUrl/api/falconFacade/helpers/products";
+  static String getFFProductById(String id) => "$getAllFFProducts/$id";
+  static const String deleteFFProduct =
+      "$baseUrl/api/falconFacade/helpers/products/delete";
 }

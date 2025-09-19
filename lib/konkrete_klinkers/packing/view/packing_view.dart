@@ -875,7 +875,7 @@ class _PackingDetailsViewState extends State<PackingDetailsView>
                       child: ListView.builder(
                         padding: EdgeInsets.symmetric(vertical: 16.h),
                         itemCount: 3,
-                        itemBuilder: (context, index) => buildShimmerCard(),
+                        itemBuilder: (context, index) => ShimmerCard(),
                       ),
                     ),
                   ],

@@ -267,7 +267,7 @@ class _ShapesListScreenState extends State<ShapesListScreen> {
                 child: provider.isLoading && provider.shapes.isEmpty
                     ? ListView.builder(
                         itemCount: 5,
-                        itemBuilder: (_, __) => buildShimmerCard(),
+                        itemBuilder: (_, __) => ShimmerCard(),
                       )
                     : provider.shapes.isEmpty
                     ? _buildEmptyState()

@@ -379,7 +379,7 @@ class _IsClientsListScreenState extends State<IsClientsListScreen> {
                 child: provider.isLoading && provider.clients.isEmpty
                     ? ListView.builder(
                         itemCount: 5,
-                        itemBuilder: (context, index) => buildShimmerCard(),
+                        itemBuilder: (context, index) => ShimmerCard(),
                       )
                     : provider.clients.isEmpty
                     ? _buildEmptyState()

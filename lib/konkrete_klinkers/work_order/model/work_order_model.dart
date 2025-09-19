@@ -371,15 +371,15 @@ class Product {
         plantModel = PlantModel.fromJson(json['plant'] as Map<String, dynamic>);
       }
 
-      Uom uomValue = Uom.NOS;
+      Uom uomValue = Uom.nos;
       if (json['uom'] is String) {
         uomValue =
-            uomValues.map[json['uom'].toString().toLowerCase()] ?? Uom.NOS;
+            uomValues.map[json['uom'].toString().toLowerCase()] ?? Uom.nos;
       } else if (json['uom'] is List<dynamic>) {
         final uomList = (json['uom'] as List<dynamic>).whereType<String>();
         uomValue = uomList.isNotEmpty
-            ? uomValues.map[uomList.first.toLowerCase()] ?? Uom.NOS
-            : Uom.NOS;
+            ? uomValues.map[uomList.first.toLowerCase()] ?? Uom.nos
+            : Uom.nos;
       }
 
       return Product(
@@ -415,13 +415,12 @@ class Product {
   };
 }
 
-enum Uom { METRE, NOS, SQMT }
+enum Uom { meter, nos, sqmt }
 
 final uomValues = EnumValues({
-  'metre': Uom.METRE,
-  'nos': Uom.NOS,
-  'square metre': Uom.SQMT,
-  'metre/no': Uom.METRE,
+  'metre': Uom.meter,
+  'nos': Uom.nos,
+  'square metre': Uom.sqmt,
 });
 
 enum Status { PENDING }

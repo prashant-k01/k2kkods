@@ -157,6 +157,15 @@ class AppTheme {
     end: Alignment.bottomRight,
     colors: [darkBlue, darkPurple],
   );
+  static const LinearGradient lightGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFB3E5FC), // Light Blue 100
+      Color(0xFFD1C4E9), // Light Purple 100
+    ],
+  );
+
   // static const LinearGradient ironSmithGradient = LinearGradient(
   //   begin: Alignment.topLeft,
   //   end: Alignment.bottomRight,

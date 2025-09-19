@@ -335,7 +335,7 @@ class _ProductsListViewState extends State<ProductsListView> {
                 provider.error == null) {
               return ListView.builder(
                 itemCount: 5,
-                itemBuilder: (context, index) => buildShimmerCard(),
+                itemBuilder: (context, index) => ShimmerCard(),
               );
             }
 

@@ -334,7 +334,7 @@ class _DispatchListViewState extends State<DispatchListView> {
                 child: provider.isLoading
                     ? ListView.builder(
                         itemCount: 5, // shimmer count
-                        itemBuilder: (context, index) => buildShimmerCard(),
+                        itemBuilder: (context, index) => ShimmerCard(),
                       )
                     : provider.dispatches.isEmpty
                     ? _buildEmptyState()

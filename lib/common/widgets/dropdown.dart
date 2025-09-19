@@ -11,6 +11,7 @@ class CustomDropdownFormField<T> extends StatelessWidget {
   final T? initialValue;
   final List<DropdownMenuItem<T>>? items;
   final List<T>? options;
+  final List<T>? disabledOptions;
   final String Function(T)? optionLabel;
   final IconData? prefixIcon;
   final Widget? suffixIcon;
@@ -46,6 +47,7 @@ class CustomDropdownFormField<T> extends StatelessWidget {
     this.initialValue,
     this.items,
     this.options,
+    this.disabledOptions,
     this.optionLabel,
     this.prefixIcon,
     this.suffixIcon,

@@ -72,7 +72,8 @@ class RouteNames {
   static const String isProjects = "/isProjects";
   static const String isProjectAdd = "/isProjectAdd";
   static const String isProjectEdit = "/isProjectEdit";
-
+  static const String isRawMaterial = "/isRawMaterial";
+  static const String isRawMaterialEdit = "/isRawMaterialAdd";
   //Shapes
   static const String allshapes = "/shapes";
   static const String addshapes = "/addshapes";

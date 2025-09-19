@@ -91,14 +91,13 @@ class SnackbarHelper {
         message: message,
         contentType: contentType,
       ),
-      action:
-          (actionLabel != null && onActionPressed != null)
-              ? SnackBarAction(
-                label: actionLabel,
-                onPressed: onActionPressed,
-                textColor: Colors.white,
-              )
-              : null,
+      action: (actionLabel != null && onActionPressed != null)
+          ? SnackBarAction(
+              label: actionLabel,
+              onPressed: onActionPressed,
+              textColor: Colors.white,
+            )
+          : null,
     );
 
     ScaffoldMessenger.of(context)
@@ -132,7 +131,8 @@ extension SnackbarExtension on BuildContext {
     );
   }
 
-  void showErrorSnackbar(String message, {Duration? duration}) {
+  void showErrorSnackbar(String? message, {Duration? duration}) {
+    if (message == null || message.isEmpty) return; // Skip if null or empty
     SnackbarHelper.showError(
       this,
       message,

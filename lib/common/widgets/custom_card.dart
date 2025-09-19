@@ -6,10 +6,8 @@ class CustomCard extends StatelessWidget {
   final String title;
   final Color? titleColor;
   final TextStyle? titleStyle;
-
   final String? subtitle;
   final Color? subtitleColor;
-
   final Widget leading;
   final List<PopupMenuEntry<String>>? menuItems;
   final VoidCallback? onTap;
@@ -24,17 +22,19 @@ class CustomCard extends StatelessWidget {
   final List<Tab>? tabs;
   final TabController? tabController;
   final EdgeInsetsGeometry margin;
-
   final EdgeInsets? headerPadding;
   final EdgeInsets? bodyPadding;
   final Color? shadowColor;
   final double? shadowSpread;
+  final VoidCallback? onAddPressed; // Callback for Add button
+  final bool showAddButton; // Toggle Add button visibility
+  final Gradient? addButtonGradient; // Gradient for Add button
+  final String? addButtonText; // Text to display inside the button
 
   const CustomCard({
     super.key,
     required this.title,
     this.titleStyle,
-
     required this.leading,
     required this.bodyItems,
     this.titleColor = Colors.black,
@@ -52,11 +52,14 @@ class CustomCard extends StatelessWidget {
     this.margin = const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
     this.tabs,
     this.tabController,
-
     this.headerPadding,
     this.bodyPadding,
     this.shadowColor,
     this.shadowSpread,
+    this.onAddPressed,
+    this.showAddButton = false,
+    this.addButtonGradient,
+    this.addButtonText,
   });
 
   @override
@@ -88,29 +91,29 @@ class CustomCard extends StatelessWidget {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.03),
-                        blurRadius: 4.r,
+                        color: shadowColor ?? Colors.black.withOpacity(0.03),
+                        blurRadius: shadowSpread ?? 4.r,
                         offset: Offset(0, 1.h),
                       ),
                     ],
                   ),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12.w,
-                    vertical: 8.h,
-                  ),
+                  padding:
+                      headerPadding ??
+                      EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
                   child: Row(
                     children: [
                       leading,
                       SizedBox(width: 8.w),
-                      SizedBox(width: 8.w),
                       Expanded(
                         child: Text(
                           title,
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w600,
-                            color: titleColor,
-                          ),
+                          style:
+                              titleStyle ??
+                              TextStyle(
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w600,
+                                color: titleColor,
+                              ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -152,13 +155,69 @@ class CustomCard extends StatelessWidget {
                       ),
                     ),
                   ),
-
                 // Body
                 Padding(
-                  padding: EdgeInsets.all(12.w),
+                  padding: bodyPadding ?? EdgeInsets.all(12.w),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: bodyItems,
+                    children: [
+                      ...bodyItems,
+                      if (showAddButton) ...[
+                        SizedBox(height: 12.h), // Space before button
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient:
+                                  addButtonGradient ??
+                                  AppTheme.ironSmithGradient,
+                              borderRadius: BorderRadius.circular(8.r),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 6.r,
+                                  offset: Offset(0, 2.h),
+                                ),
+                              ],
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(8.r),
+                                onTap: onAddPressed,
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 12.w,
+                                    vertical: 8.h,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.add,
+                                        size: 16.sp,
+                                        color: AppTheme.lightGray,
+                                      ),
+                                      if (addButtonText != null) ...[
+                                        SizedBox(width: 4.w),
+                                        Text(
+                                          addButtonText!,
+                                          style: TextStyle(
+                                            fontSize: 12.sp,
+                                            color: AppTheme.lightGray,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ],

@@ -150,6 +150,10 @@ class WODData {
     "dispatches": dispatches.map((x) => x.toJson()).toList(),
     "qc_details": qcDetails.map((x) => x.toJson()).toList(),
   };
+
+  void clear() {}
+
+  void add(WODData workOrder) {}
 }
 
 DateTime? _parseDateTime(String? dateStr) {

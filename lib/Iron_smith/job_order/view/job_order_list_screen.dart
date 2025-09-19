@@ -341,7 +341,7 @@ class _JobOrderListViewISState extends State<JobOrderListViewIS> {
                             right: 8.w,
                           ),
                           itemCount: 5,
-                          itemBuilder: (context, index) => buildShimmerCard(),
+                          itemBuilder: (context, index) => ShimmerCard(),
                         )
                       : provider.jobOrders.isEmpty
                       ? _buildEmptyState()

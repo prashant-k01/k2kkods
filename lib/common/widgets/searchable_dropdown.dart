@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
+import 'dart:async';
 
 class CustomSearchableDropdownFormField<T> extends StatelessWidget {
   final String name;
@@ -44,11 +45,11 @@ class CustomSearchableDropdownFormField<T> extends StatelessWidget {
     super.key,
     required this.name,
     this.labelText,
-    this.iconSize,
     this.hintText,
-    this.isEqual,
     this.helperText,
     this.initialValue,
+    this.isEqual,
+    this.iconSize,
     this.options,
     this.optionLabel,
     this.prefixIcon,
@@ -116,7 +117,7 @@ class CustomSearchableDropdownFormField<T> extends StatelessWidget {
                 ),
               ),
             GestureDetector(
-              onTap: enabled
+              onTap: enabled && field.mounted
                   ? () => _showSearchableDropdown(context, field)
                   : null,
               child: Container(
@@ -146,18 +147,21 @@ class CustomSearchableDropdownFormField<T> extends StatelessWidget {
                             margin: EdgeInsets.only(left: 12.w, right: 8.w),
                             child: Icon(
                               prefixIcon,
-                              size: 20.r,
-                              color: primaryColor,
+                              size: iconSize ?? 20.r,
+                              color: prefixIconColor ?? primaryColor,
                             ),
                           )
                         : null,
-                    suffixIcon: allowClear && field.value != null
+                    suffixIcon:
+                        allowClear && field.value != null && field.mounted
                         ? clearIcon ??
                               IconButton(
                                 icon: const Icon(Icons.clear, size: 20),
                                 onPressed: () {
-                                  field.didChange(null);
-                                  if (onChanged != null) onChanged!(null);
+                                  if (field.mounted) {
+                                    field.didChange(null);
+                                    if (onChanged != null) onChanged!(null);
+                                  }
                                 },
                               )
                         : suffixIcon ?? const Icon(Icons.arrow_drop_down),
@@ -246,6 +250,7 @@ class CustomSearchableDropdownFormField<T> extends StatelessWidget {
   }
 
   void _showSearchableDropdown(BuildContext context, FormFieldState<T> field) {
+    if (!field.mounted) return;
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -253,9 +258,13 @@ class CustomSearchableDropdownFormField<T> extends StatelessWidget {
           options: options!,
           optionLabel: optionLabel,
           onChanged: (T? value) {
-            field.didChange(value);
-            if (onChanged != null) onChanged!(value);
-            Navigator.of(context).pop();
+            if (field.mounted) {
+              field.didChange(value);
+              if (onChanged != null) onChanged!(value);
+            }
+            if (context.mounted) {
+              Navigator.of(context).pop();
+            }
           },
           textStyle: textStyle,
           menuMaxHeight: menuMaxHeight,
@@ -289,27 +298,34 @@ class _SearchableDropdownDialogState<T>
     extends State<_SearchableDropdownDialog<T>> {
   late List<T> filteredOptions;
   final TextEditingController _searchController = TextEditingController();
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
-    filteredOptions = widget.options;
+    filteredOptions = List.from(widget.options);
     _searchController.addListener(_filterOptions);
   }
 
   @override
   void dispose() {
+    _searchController.removeListener(_filterOptions);
     _searchController.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
   void _filterOptions() {
-    final query = _searchController.text.toLowerCase();
-    setState(() {
-      filteredOptions = widget.options.where((option) {
-        final label = widget.optionLabel?.call(option) ?? option.toString();
-        return label.toLowerCase().contains(query);
-      }).toList();
+    if (_debounce?.isActive ?? false) _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      setState(() {
+        final query = _searchController.text.toLowerCase();
+        filteredOptions = widget.options.where((option) {
+          final label = widget.optionLabel?.call(option) ?? option.toString();
+          return label.toLowerCase().contains(query);
+        }).toList();
+      });
     });
   }
 
@@ -377,7 +393,9 @@ class _SearchableDropdownDialogState<T>
                                 ),
                           ),
                           onTap: () {
-                            widget.onChanged?.call(option);
+                            if (mounted) {
+                              widget.onChanged?.call(option);
+                            }
                           },
                         );
                       },

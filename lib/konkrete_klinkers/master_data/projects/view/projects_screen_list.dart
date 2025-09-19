@@ -320,7 +320,7 @@ class _ProjectsListViewState extends State<ProjectsListView> {
                   provider.error == null) {
                 return ListView.builder(
                   itemCount: 5,
-                  itemBuilder: (context, index) => buildShimmerCard(),
+                  itemBuilder: (context, index) => ShimmerCard(),
                 );
               }
 

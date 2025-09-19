@@ -427,27 +427,22 @@ class IronWorkorderProvider with ChangeNotifier {
             final dimensionValue = product['dimensions']['dimension_$i'];
             dimensions.add({
               'name': 'Dimension ${String.fromCharCode(65 + i)}',
-              'value':
-                  num.tryParse(dimensionValue?.toString() ?? '0') ??
-                  0, // Send as number
+              'value': dimensionValue?.toString() ?? '0',
             });
           }
           return {
             'shapeId': product['shapeId'],
             'uom': product['uom'] ?? 'nos',
             'quantity': product['quantity'] ?? 0, // Send as number
-            'diameter':
-                int.tryParse(product['diameter']?.toString() ?? '0') ??
-                0, // Send as integer
-            'weight':
-                int.tryParse(product['weight']?.toString() ?? '0') ??
-                0.0, // Send as double
+            'diameter': product['diameter']?.toString() ?? '0',
+            // Send as integer
+            'weight': product['weight']?.toString() ?? '0',
             'deliveryDate': product['deliveryDate'] != null
                 ? dateFormat.format(product['deliveryDate'])
                 : null,
             'barMark': product['barMark'] ?? '',
             'memberDetails': product['memberDetail'] ?? '',
-            'memberQuantity': product['memberQuantity'] ?? 0, // Send as number
+            'memberQuantity': product['memberQuantity'].toString(),
             'dimensions': dimensions,
           };
         }).toList(),
@@ -458,7 +453,7 @@ class IronWorkorderProvider with ChangeNotifier {
                 'file_url': file.fileUrl, // Ensure valid file path
                 'uploaded_at':
                     file.uploadedAt ?? DateTime.now().toIso8601String(),
-                '_id': file.id ?? '',
+                // '_id': file.id ?? '',
               },
             )
             .toList(),

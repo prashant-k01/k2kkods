@@ -13,6 +13,7 @@ import 'package:k2k/Iron_smith/master_data/machines/view/machine_list.dart';
 import 'package:k2k/Iron_smith/master_data/projects/view/is_project_add_screen.dart';
 import 'package:k2k/Iron_smith/master_data/projects/view/is_project_edit_screen.dart';
 import 'package:k2k/Iron_smith/master_data/projects/view/is_project_list_screen.dart';
+import 'package:k2k/Iron_smith/master_data/projects/view/is_raw_material_screen.dart';
 import 'package:k2k/Iron_smith/master_data/shapes/view/shape_add_screen.dart';
 import 'package:k2k/Iron_smith/master_data/shapes/view/shape_detail_screen.dart';
 import 'package:k2k/Iron_smith/master_data/shapes/view/shape_edit_screen.dart';
@@ -496,6 +497,18 @@ class AppRoutes {
         name: RouteNames.isProjects,
         builder: (BuildContext context, GoRouterState state) {
           return const IsProjectsListScreen();
+        },
+      ),
+      GoRoute(
+        path:
+            '${RouteNames.isRawMaterial}/:projectId', // Define the path with projectId as a parameter
+        name: RouteNames.isRawMaterial,
+        builder: (BuildContext context, GoRouterState state) {
+          final projectId =
+              state.pathParameters['projectId']!; // Extract projectId from path
+          return IsRawMaterialScreen(
+            projectId: projectId,
+          ); // Pass it to the widget
         },
       ),
       GoRoute(

@@ -396,7 +396,7 @@ class _PackingListViewState extends State<PackingListView> {
               if (provider.isLoading && provider.packings.isEmpty) {
                 return ListView.builder(
                   itemCount: 5,
-                  itemBuilder: (context, index) => buildShimmerCard(),
+                  itemBuilder: (context, index) => ShimmerCard(),
                 );
               }
 

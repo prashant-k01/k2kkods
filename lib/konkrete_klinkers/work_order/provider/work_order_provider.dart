@@ -16,6 +16,7 @@ class WorkOrderProvider with ChangeNotifier {
   final WorkOrderRepository _repository = WorkOrderRepository();
 
   final List<Datum> _workOrders = [];
+  WODData? _workOrderDetails;
   List<TId> _projects = [];
   bool _isLoading = false;
   bool _isProjectsLoading = false;
@@ -31,6 +32,7 @@ class WorkOrderProvider with ChangeNotifier {
   WODData? _workOrderById;
   bool _isWorkOrderByIdLoading = false;
   String? _workOrderByIdError;
+  WODData? get workOrderDetails => _workOrderDetails;
 
   List<Map<String, dynamic>> _products = [
     {
@@ -151,7 +153,7 @@ class WorkOrderProvider with ChangeNotifier {
     return workOrder.projectName ?? 'Unknown Project';
   }
 
-  Map<int, List<String>> _uomListPerIndex = {};
+  final Map<int, List<String>> _uomListPerIndex = {};
   Map<int, List<String>> get uomListPerIndex => _uomListPerIndex;
 
   void updateUOMListForIndex({
@@ -196,7 +198,7 @@ class WorkOrderProvider with ChangeNotifier {
 
   void addProduct() {
     _products.add({
-      'formKey': GlobalKey<FormBuilderState>(),
+      // 'formKey': GlobalKey<FormBuilderState>(),
       'product_id': {'id': '', 'name': ''},
       'uom': 'nos',
       'po_quantity': '',
@@ -239,7 +241,7 @@ class WorkOrderProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void setUploadedFiles(List<FileElement>? files) {
+  void setUploadedFiles(List<WODFileElement>? files) {
     _uploadedFiles = files != null ? List.from(files) : [];
     notifyListeners();
   }
@@ -903,16 +905,71 @@ class WorkOrderProvider with ChangeNotifier {
     }
   }
 
+  // Utility function to map backend uom String to UI-friendly String
+  String mapStringToUom(String uomString) {
+    const uomValues = {
+      'nos': 'Nos',
+      'sqmt': 'Square Meter/Nos',
+      'meter': 'Meter/Nos',
+      // Add other mappings as needed
+    };
+
+    final result = uomValues[uomString.toLowerCase()];
+    if (result == null) {
+      debugPrint('Warning: Unknown UOM: $uomString');
+    }
+    return result ?? 'Square Meter'; // Fallback to 'Square Meter'
+  }
+
+  List<String> parseProductUom(List<String> uomList) {
+    final result = <String>{};
+    for (final uom in uomList) {
+      // Split combined UOMs like "Square Meter/No"
+      final splitUoms = uom.split('/');
+      for (final splitUom in splitUoms) {
+        final trimmedUom = splitUom.trim();
+        if (trimmedUom.isNotEmpty) {
+          result.add(trimmedUom);
+        }
+      }
+    }
+    return result.isNotEmpty
+        ? result.toList()
+        : ['Square Meter', 'Nos', 'Meter'];
+  }
+
+  // Utility function to map updatedBy ID String to UpdatedBy enum
+  UpdatedBy mapStringToUpdatedBy(String? updatedById) {
+    if (updatedById == null || updatedById.isEmpty) {
+      return UpdatedBy.THE_68467_BBCC6407_E1_FDF09_D18_E; // Fallback
+    }
+    try {
+      return UpdatedBy.values.firstWhere(
+        (e) => e.toString().split('.').last == updatedById,
+        orElse: () => UpdatedBy.THE_68467_BBCC6407_E1_FDF09_D18_E,
+      );
+    } catch (e) {
+      debugPrint('Warning: Unknown UpdatedBy ID: $updatedById');
+      return UpdatedBy.THE_68467_BBCC6407_E1_FDF09_D18_E;
+    }
+  }
+
   Future<void> _fetchWorkOrderData(String workOrderId) async {
     try {
-      final workOrder = await getWorkOrder(workOrderId);
-      if (workOrder == null) {
+      final workOrderDetails = await getWorkOrderById(
+        workOrderId,
+      ); // Returns WODWorkOrderDetails
+      if (workOrderDetails == null) {
         throw Exception('Work order not found or access denied');
       }
-      setBufferStockEnabled(workOrder.bufferStock);
-      setUploadedFiles(List.from(workOrder.files));
-      final products = workOrder.products.map((product) {
-        final productId = product.productId.toString();
+      workOrderDetails.clear();
+      workOrderDetails.add(workOrderDetails);
+      setBufferStockEnabled(workOrderDetails.bufferStock);
+      setUploadedFiles(List.from(workOrderDetails.files));
+      final products = workOrderDetails.products.asMap().entries.map((entry) {
+        final index = entry.key;
+        final product = entry.value;
+        final productId = product.product.id;
         final productModel = _allProducts.firstWhere(
           (p) => p.id == productId,
           orElse: () => ProductModel(
@@ -932,7 +989,7 @@ class WorkOrderProvider with ChangeNotifier {
               updatedAt: DateTime.now(),
               version: 0,
             ),
-            uom: [],
+            uom: ['Square Meter', 'Nos', 'Meter'],
             areas: {},
             noOfPiecesPerPunch: 0,
             qtyInBundle: 0,
@@ -947,13 +1004,13 @@ class WorkOrderProvider with ChangeNotifier {
             version: 0,
           ),
         );
-        if (productId.isEmpty) {
-          if (kDebugMode) {
-            print(
-              '📝 [WorkOrderProvider] Warning: Empty productId for product: ${product.toJson()}',
-            );
-          }
-        }
+        final uom = mapStringToUom(product.uom); // e.g., "Square Meter"
+        // Update uomListPerIndex with parsed product.uom
+        updateUOMListForIndex(
+          index: index,
+          product: productModel,
+          prefilledUom: uom,
+        );
         return {
           'formKey': GlobalKey<FormBuilderState>(),
           'product_id': {
@@ -962,24 +1019,26 @@ class WorkOrderProvider with ChangeNotifier {
                 ? '${productModel.materialCode} - ${productModel.description}'
                 : 'Unknown Product',
           },
-          'uom': uomValues.reverse[product.uom] ?? 'nos',
+          'uom': uom,
           'po_quantity': product.poQuantity.toString(),
           'qty_in_nos': product.qtyInNos.toString(),
           'qtyController': TextEditingController(
             text: product.qtyInNos.toString(),
           ),
-          'qtyNotifier': ValueNotifier<int>(product.qtyInNos!),
+          'qtyNotifier': ValueNotifier<int>(product.qtyInNos),
           'delivery_date': product.deliveryDate,
-          'plant_code': productModel.plant.plantCode,
+          'plant_code': product.plant.plantCode,
         };
       }).toList();
       setProducts(products);
-      if (!(workOrder.bufferStock)) {
-        final clientId = workOrder.clientId?.toString() ?? '';
+      if (!workOrderDetails.bufferStock) {
+        final clientId = workOrderDetails.clientId.id;
         if (clientId.isNotEmpty) {
           await loadProjectsByClient(clientId);
         }
       }
+      _workOrderById = workOrderDetails;
+      notifyListeners();
     } catch (e, stackTrace) {
       debugPrint('Error fetching work order: $e\n$stackTrace');
       throw Exception('Failed to load work order details. Please try again.');
@@ -1237,7 +1296,7 @@ class WorkOrderProvider with ChangeNotifier {
           Product(
             id: product['id'] ?? '',
             productId: selectedProduct.id,
-            uom: uomValues.map[selectedUom] ?? Uom.NOS,
+            uom: uomValues.map[selectedUom] ?? Uom.nos,
             poQuantity: poQuantityDouble.toInt(),
             qtyInNos: qtyInNosInt,
             deliveryDate: deliveryDate,

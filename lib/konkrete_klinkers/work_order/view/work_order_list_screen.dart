@@ -329,7 +329,7 @@ class _WorkOrderListViewState extends State<WorkOrderListView> {
                           right: 8.w,
                         ),
                         itemCount: 5,
-                        itemBuilder: (context, index) => buildShimmerCard(),
+                        itemBuilder: (context, index) => ShimmerCard(),
                       )
                     : provider.workOrders.isEmpty
                     ? _buildEmptyState()

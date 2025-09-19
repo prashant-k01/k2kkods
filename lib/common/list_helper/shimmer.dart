@@ -1,23 +1,30 @@
-  import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:k2k/utils/sreen_util.dart';
+import 'package:shimmer/shimmer.dart';
 
-Widget buildShimmerCard() {
-    return Container(
-      margin: EdgeInsets.symmetric(
-        horizontal: ScreenUtil.spacingLarge,
-        vertical: ScreenUtil.spacingMedium,
+Widget ShimmerCard() {
+  return Container(
+    margin: EdgeInsets.symmetric(
+      horizontal: ScreenUtil.spacingLarge,
+      vertical: ScreenUtil.spacingMedium,
+    ),
+    child: Card(
+      elevation: 4,
+      shadowColor: Colors.black.withOpacity(0.08),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(ScreenUtil.borderRadiusLarge),
       ),
-      child: Card(
-        elevation: 4,
-        shadowColor: Colors.black.withOpacity(0.15),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(ScreenUtil.borderRadiusLarge),
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(ScreenUtil.spacingLarge),
+      child: Padding(
+        padding: EdgeInsets.all(ScreenUtil.spacingLarge),
+        child: Shimmer.fromColors(
+          baseColor: Colors.grey.shade200, // light background
+          highlightColor: Colors.grey.shade400, // darker wave
+          direction: ShimmerDirection.ltr,
+          period: const Duration(milliseconds: 1200),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              /// Header Row
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -25,7 +32,7 @@ Widget buildShimmerCard() {
                     child: Container(
                       height: ScreenUtil.textSizeLarge + 4,
                       decoration: BoxDecoration(
-                        color: Colors.grey[300],
+                        color: Colors.grey.shade200,
                         borderRadius: BorderRadius.circular(
                           ScreenUtil.borderRadiusSmall,
                         ),
@@ -41,7 +48,7 @@ Widget buildShimmerCard() {
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: Colors.grey[300],
+                          color: Colors.grey.shade200,
                           borderRadius: BorderRadius.circular(
                             ScreenUtil.borderRadiusMedium,
                           ),
@@ -51,7 +58,10 @@ Widget buildShimmerCard() {
                   ),
                 ],
               ),
+
               SizedBox(height: ScreenUtil.spacingLarge),
+
+              /// Body Rows
               ...List.generate(
                 3,
                 (index) => Padding(
@@ -62,7 +72,7 @@ Widget buildShimmerCard() {
                         width: ScreenUtil.iconSizeSmall,
                         height: ScreenUtil.iconSizeSmall,
                         decoration: BoxDecoration(
-                          color: Colors.grey[300],
+                          color: Colors.grey.shade200,
                           borderRadius: BorderRadius.circular(
                             ScreenUtil.borderRadiusSmall,
                           ),
@@ -73,7 +83,7 @@ Widget buildShimmerCard() {
                         child: Container(
                           height: ScreenUtil.textSizeMedium,
                           decoration: BoxDecoration(
-                            color: Colors.grey[300],
+                            color: Colors.grey.shade200,
                             borderRadius: BorderRadius.circular(
                               ScreenUtil.borderRadiusSmall,
                             ),
@@ -88,5 +98,6 @@ Widget buildShimmerCard() {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}

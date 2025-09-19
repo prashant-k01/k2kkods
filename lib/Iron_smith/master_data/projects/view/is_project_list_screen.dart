@@ -16,6 +16,7 @@ import 'package:k2k/utils/sreen_util.dart';
 import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:k2k/common/widgets/custom_card.dart';
 
 class IsProjectsListScreen extends StatefulWidget {
   const IsProjectsListScreen({super.key});
@@ -79,204 +80,139 @@ class _IsProjectsListScreenState extends State<IsProjectsListScreen> {
     final createdBy = _getCreatedBy(project.createdBy);
     final createdAt = project.createdAt;
 
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
-      child: Card(
-        elevation: 0,
-        color: AppColors.cardBackground,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.r),
-          side: BorderSide(color: const Color(0xFFE5E7EB), width: 1.w),
+    return CustomCard(
+      title: projectName,
+      titleColor: const Color(0xFF334155),
+      leading: const SizedBox.shrink(),
+      headerGradient: AppTheme.lightGradient,
+      bodyItems: [
+        Text(
+          "Client: $clientName",
+          style: TextStyle(
+            fontSize: 16.sp,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.ironSmithSecondary,
+          ),
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12.r),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        SizedBox(height: 6.h),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(12.r),
+          ),
+          child: Text(
+            "Address: $address",
+            style: TextStyle(
+              fontSize: 14.sp,
+              color: AppTheme.ironSmithSecondary,
+            ),
+          ),
+        ),
+        SizedBox(height: 6.h),
+        Row(
+          children: [
+            Icon(
+              Icons.person_outline,
+              size: 16.sp,
+              color: const Color(0xFF64748B),
+            ),
+            SizedBox(width: 8.w),
+            Text(
+              'Created by: $createdBy',
+              style: TextStyle(fontSize: 13.sp, color: const Color(0xFF64748B)),
+            ),
+          ],
+        ),
+        SizedBox(height: 6.h),
+        if (createdAt != null)
+          Row(
             children: [
-              // Header (Project Name)
-              Container(
-                decoration: BoxDecoration(
-                  gradient: AppTheme.ironSmithGradient,
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(12.r),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.shadow.withOpacity(0.03),
-                      blurRadius: 4.r,
-                      offset: Offset(0, 1.h),
-                    ),
-                  ],
-                ),
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        projectName,
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF334155),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    PopupMenuButton<String>(
-                      icon: Icon(
-                        Icons.more_vert,
-                        size: 18.sp,
-                        color: AppColors.textSecondary,
-                      ),
-                      onSelected: (value) {
-                        if (value == 'edit') {
-                          _editProject(projectId);
-                        } else if (value == 'delete') {
-                          ProjectDeleteHandler.confirmDelete(
-                            context,
-                            projectId: projectId,
-                            projectName: projectName,
-                          );
-                        }
-                      },
-                      itemBuilder: (BuildContext context) => [
-                        PopupMenuItem<String>(
-                          value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.edit_outlined,
-                                size: 20.sp,
-                                color: AppTheme.ironSmithSecondary,
-                              ),
-                              SizedBox(width: 8.w),
-                              Text(
-                                'Edit',
-                                style: TextStyle(
-                                  fontSize: 14.sp,
-                                  color: const Color(0xFF334155),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        PopupMenuItem<String>(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.delete_outline,
-                                size: 20.sp,
-                                color: const Color(0xFFF43F5E),
-                              ),
-                              SizedBox(width: 8.w),
-                              Text(
-                                'Delete',
-                                style: TextStyle(
-                                  fontSize: 14.sp,
-                                  color: const Color(0xFF334155),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                      offset: Offset(0, 32.h),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8.r),
-                      ),
-                      color: AppColors.cardBackground,
-                      elevation: 2,
-                    ),
-                  ],
+              Icon(
+                Icons.access_time_outlined,
+                size: 16.sp,
+                color: const Color(0xFF64748B),
+              ),
+              SizedBox(width: 8.w),
+              Text(
+                'Created At: ${_formatDateTime(project.createdAt)}',
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  color: const Color(0xFF64748B),
                 ),
               ),
-
-              // Body (Client + Address + Created Info)
-              Padding(
-                padding: EdgeInsets.all(12.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Client Name
-                    Text(
-                      "Client: $clientName",
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.ironSmithSecondary,
-                      ),
-                    ),
-                    SizedBox(height: 6.h),
-
-                    // Address
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12.w,
-                        vertical: 6.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                      child: Text(
-                        "Address: $address",
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          color: AppTheme.ironSmithSecondary,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 6.h),
-
-                    // Created By
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.person_outline,
-                          size: 16.sp,
-                          color: const Color(0xFF64748B),
-                        ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          'Created by: $createdBy',
-                          style: TextStyle(
-                            fontSize: 13.sp,
-                            color: const Color(0xFF64748B),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 6.h),
-
-                    // Created At
-                    if (createdAt != null)
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.access_time_outlined,
-                            size: 16.sp,
-                            color: const Color(0xFF64748B),
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            'Created At: ${_formatDateTime(project.createdAt)}',
-                            style: TextStyle(
-                              fontSize: 13.sp,
-                              color: const Color(0xFF64748B),
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
+            ],
+          ),
+      ],
+      menuItems: [
+        PopupMenuItem<String>(
+          value: 'edit',
+          child: Row(
+            children: [
+              Icon(
+                Icons.edit_outlined,
+                size: 20.sp,
+                color: AppTheme.ironSmithSecondary,
+              ),
+              SizedBox(width: 8.w),
+              Text(
+                'Edit',
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: const Color(0xFF334155),
                 ),
               ),
             ],
           ),
         ),
-      ),
+        PopupMenuItem<String>(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(
+                Icons.delete_outline,
+                size: 20.sp,
+                color: const Color(0xFFF43F5E),
+              ),
+              SizedBox(width: 8.w),
+              Text(
+                'Delete',
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: const Color(0xFF334155),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+      onMenuSelected: (value) {
+        if (value == 'edit') {
+          _editProject(projectId);
+        } else if (value == 'delete') {
+          ProjectDeleteHandler.confirmDelete(
+            context,
+            projectId: projectId,
+            projectName: projectName,
+          );
+        }
+      },
+      backgroundColor: AppColors.cardBackground,
+      borderColor: const Color(0xFFE5E7EB),
+      borderWidth: 1.w,
+      elevation: 0,
+      margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+      showAddButton: true,
+      addButtonGradient: AppTheme.darkGradient,
+      addButtonText: 'Add Raw Materials', // Text inside the button
+      onAddPressed: () {
+        if (projectId != null) {
+          context.goNamed(
+            RouteNames.isRawMaterial,
+            pathParameters: {'projectId': projectId},
+          );
+        }
+      },
     );
   }
 
@@ -333,7 +269,10 @@ class _IsProjectsListScreenState extends State<IsProjectsListScreen> {
           ),
         ),
         floatingActionButton: GradientIconTextButton(
-          gradientColors: [Color(0xFFBBDEFB), Color(0xFFB2EBF2)],
+          gradientColors: [
+            Color(0xFFB3E5FC), // Light Blue 100
+            Color(0xFFD1C4E9), // Light Purple 100
+          ],
           label: 'Create Project',
           icon: Icons.add,
           onPressed: () => context.go(RouteNames.isProjectAdd),
@@ -395,7 +334,7 @@ class _IsProjectsListScreenState extends State<IsProjectsListScreen> {
                 child: provider.isLoading && provider.projects.isEmpty
                     ? ListView.builder(
                         itemCount: 5,
-                        itemBuilder: (context, index) => buildShimmerCard(),
+                        itemBuilder: (context, index) => ShimmerCard(),
                       )
                     : provider.projects.isEmpty
                     ? _buildEmptyState()

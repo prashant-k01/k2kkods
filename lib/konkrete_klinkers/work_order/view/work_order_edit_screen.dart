@@ -15,6 +15,7 @@ import 'package:k2k/common/widgets/textfield.dart';
 import 'package:k2k/konkrete_klinkers/work_order/model/client_model.dart'
     hide CreatedBy, Username;
 import 'package:k2k/konkrete_klinkers/work_order/model/work_order_model.dart';
+import 'package:k2k/konkrete_klinkers/work_order/model/work_order_detail_model.dart';
 import 'package:k2k/konkrete_klinkers/work_order/provider/work_order_provider.dart';
 import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
@@ -31,6 +32,20 @@ class EditWorkOrderScreen extends StatefulWidget {
 }
 
 class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
+  String? mapStringToUom(String? uomString) {
+    if (uomString == null) return null;
+    switch (uomString.toLowerCase()) {
+      case 'nos':
+        return 'nos';
+      case 'Meter':
+        return 'meter';
+      case 'Square Meter':
+        return 'sqmt';
+      default:
+        return 'Nos';
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -67,7 +82,7 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
           }
           if (workOrderProvider.editScreenError != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              context.showErrorSnackbar(workOrderProvider.editScreenError!);
+              context.showErrorSnackbar(workOrderProvider.editScreenError);
             });
           }
           return Container(
@@ -149,30 +164,39 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
     BuildContext context,
     WorkOrderProvider workOrderProvider,
   ) {
-    final workOrder = workOrderProvider.workOrders.firstWhere(
-      (wo) => wo.id == widget.workOrderId,
-      orElse: () => Datum(
-        id: '',
-        workOrderNumber: '',
-        products: [],
-        status: Status.PENDING,
-        clientId: null,
-        projectId: null,
-        date: null,
-        bufferStock: false,
-        files: [],
-        createdBy: CreatedBy(
-          id: UpdatedBy.THE_68467_BBCC6407_E1_FDF09_D18_E,
-          username: Username.ADMIN,
+    final workOrder = workOrderProvider.workOrderById;
+
+    if (workOrder == null) {
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: 8.h),
+        child: Container(
+          width: double.infinity,
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFEBEE),
+            borderRadius: BorderRadius.circular(8.r),
+            border: Border.all(color: Colors.redAccent.withOpacity(0.4)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, color: Colors.red, size: 18.sp),
+              SizedBox(width: 8.w),
+              Expanded(
+                child: Text(
+                  'No work order available',
+                  style: TextStyle(
+                    color: Colors.red.shade700,
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-        updatedBy: UpdatedBy.THE_68467_BBCC6407_E1_FDF09_D18_E,
-        bufferTransferLogs: [],
-        jobOrders: [],
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        v: 0,
-      ),
-    );
+      );
+    }
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 12.w),
@@ -288,7 +312,7 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
 
   Widget _buildClientDropdown(
     WorkOrderProvider workOrderProvider,
-    Datum workOrder,
+    WODData workOrder,
   ) {
     if (workOrderProvider.isClientsLoading) {
       return const Center(child: GradientLoader());
@@ -302,9 +326,9 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
       return _buildErrorContainer('No clients available');
     }
     ClientModel? initialClient;
-    if (workOrder.clientId != null && workOrder.clientId!.isNotEmpty) {
+    if (workOrder.clientId.id.isNotEmpty) {
       initialClient = workOrderProvider.clients.firstWhere(
-        (c) => c.id == workOrder.clientId,
+        (c) => c.id == workOrder.clientId.id,
         // orElse: () => ClientModel(id: '', name: 'Unknown Client', address: '', createdBy: null, isDeleted: false, createdAt: null, updatedAt: null, v: null),
       );
     }
@@ -339,19 +363,19 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
 
   Widget _buildProjectDropdown(
     WorkOrderProvider workOrderProvider,
-    Datum workOrder,
+    WODData workOrder,
   ) {
     final selectedClient =
         workOrderProvider.editFormKey.currentState?.fields['client_id']?.value
             as ClientModel?;
     final clientId = selectedClient?.id;
     TId? initialProject;
-    if (workOrder.projectId != null && workOrder.projectId!.isNotEmpty) {
+    if (workOrder.projectId != null && workOrder.projectId!.id.isNotEmpty) {
       initialProject = workOrderProvider.projects.firstWhere(
-        (p) => p.id == workOrder.projectId,
+        (p) => p.id == workOrder.projectId!.id,
         orElse: () => TId(
-          id: workOrder.projectId!,
-          name: workOrderProvider.getProjectName(workOrder.projectId),
+          id: workOrder.projectId!.id,
+          name: workOrderProvider.getProjectName(workOrder.projectId!.id),
         ),
       );
     }
@@ -385,42 +409,23 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
   }
 
   Widget _buildProductForms(WorkOrderProvider workOrderProvider) {
+    final workOrder = workOrderProvider.workOrderById;
+    if (workOrder == null) {
+      return const SizedBox.shrink();
+    }
     return SingleChildScrollView(
       child: Column(
         children: workOrderProvider.products.asMap().entries.map((entry) {
           int index = entry.key;
           Map<String, dynamic> product = entry.value;
           final uomItems = workOrderProvider.uomListPerIndex[index] ?? [];
-          final formKey = product['formKey'] as GlobalKey<FormBuilderState>;
+          // Create a new GlobalKey for each product form
+          final formKey = GlobalKey<FormBuilderState>();
           final qtyNotifier = product['qtyNotifier'] as ValueNotifier<int>;
           final qtyController =
               product['qtyController'] as TextEditingController;
 
           // Initialize form fields with product data
-          final workOrder = workOrderProvider.workOrders.firstWhere(
-            (wo) => wo.id == widget.workOrderId,
-            orElse: () => Datum(
-              id: '',
-              workOrderNumber: '',
-              products: [],
-              status: Status.PENDING,
-              clientId: null,
-              projectId: null,
-              date: null,
-              bufferStock: false,
-              files: [],
-              createdBy: CreatedBy(
-                id: UpdatedBy.THE_68467_BBCC6407_E1_FDF09_D18_E,
-                username: Username.ADMIN,
-              ),
-              updatedBy: UpdatedBy.THE_68467_BBCC6407_E1_FDF09_D18_E,
-              bufferTransferLogs: [],
-              jobOrders: [],
-              createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
-              v: 0,
-            ),
-          );
           final productData = workOrder.products.length > index
               ? workOrder.products[index]
               : null;
@@ -580,18 +585,11 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
                               name: 'uom_$index',
                               labelText: 'UOM',
                               initialValue: () {
-                                final value = productData?.uom != null
-                                    ? uomValues.reverse[productData!.uom] ??
-                                          'nos'
-                                    : uomItems.isNotEmpty
-                                    ? uomItems.first
-                                    : 'nos';
-                                if (kDebugMode) {
-                                  print(
-                                    'UOM Dropdown for index $index: initialValue=$value, items=$uomItems',
-                                  );
+                                if (productData?.uom != null) {
+                                  return mapStringToUom(productData!.uom) ??
+                                      "Nos";
                                 }
-                                return value;
+                                return "Nos"; // fallback default
                               }(),
                               items: [
                                 const DropdownMenuItem<String>(
@@ -645,22 +643,11 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
                                         .firstWhere(
                                           (p) => p.id == productMap['id'],
                                         );
-                                    if (kDebugMode) {
-                                      print(
-                                        'UOM Dropdown for index $index: Updating quantity for product=${selectedProduct.id}',
-                                      );
-                                    }
                                     workOrderProvider.updateQuantity(
                                       index: index,
                                       product: selectedProduct,
                                       formKey: formKey,
                                     );
-                                  } else {
-                                    if (kDebugMode) {
-                                      print(
-                                        'UOM Dropdown for index $index: No valid product selected, productMap=$productMap',
-                                      );
-                                    }
                                   }
                                 }
                               },
@@ -774,45 +761,7 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
                               labelText: 'Plant Code',
                               hintText: 'Auto-fetched',
                               initialValue: productData != null
-                                  ? workOrderProvider.allProducts
-                                        .firstWhere(
-                                          (p) => p.id == productData.productId,
-                                          orElse: () => ProductModel(
-                                            id: '',
-                                            materialCode: '',
-                                            description: '',
-                                            plant: PlantModel(
-                                              id: '',
-                                              plantCode: '',
-                                              plantName: '',
-                                              createdBy: CreatedBy(
-                                                id: UpdatedBy
-                                                    .THE_68467_BBCC6407_E1_FDF09_D18_E,
-                                                username: Username.ADMIN,
-                                              ),
-                                              isDeleted: false,
-                                              createdAt: DateTime.now(),
-                                              updatedAt: DateTime.now(),
-                                              version: 0,
-                                            ),
-                                            uom: [],
-                                            areas: {},
-                                            noOfPiecesPerPunch: 0,
-                                            qtyInBundle: 0,
-                                            createdBy: CreatedBy(
-                                              id: UpdatedBy
-                                                  .THE_68467_BBCC6407_E1_FDF09_D18_E,
-                                              username: Username.ADMIN,
-                                            ),
-                                            status: '',
-                                            isDeleted: false,
-                                            createdAt: DateTime.now(),
-                                            updatedAt: DateTime.now(),
-                                            version: 0,
-                                          ),
-                                        )
-                                        .plant
-                                        .plantCode
+                                  ? productData.plant.plantCode
                                   : '',
                               prefixIcon: Icons.factory,
                               textStyle: TextStyle(fontSize: 14.sp),
@@ -894,7 +843,7 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
     int index,
     WorkOrderProvider workOrderProvider,
     GlobalKey<FormBuilderState> formKey,
-    Product? productData,
+    WODDataProduct? productData,
   ) {
     if (workOrderProvider.isProductLoading) {
       return Container(
@@ -994,7 +943,7 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
     Map<String, String>? initialProduct;
     if (productData != null) {
       final selectedProduct = workOrderProvider.allProducts.firstWhere(
-        (p) => p.id == productData.productId,
+        (p) => p.id == productData.product.id,
         orElse: () => ProductModel(
           id: '',
           materialCode: '',
@@ -1068,7 +1017,9 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
             index: index,
             product: selectedProduct,
             prefilledUom: productData?.uom != null
-                ? uomValues.reverse[productData!.uom]?.toLowerCase()
+                ? workOrderProvider
+                      .mapStringToUom(productData!.uom)
+                      .toLowerCase()
                 : null,
           );
           // Reset UOM field to ensure valid initial value
@@ -1374,7 +1325,7 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
         validatedProducts.add(
           Product(
             productId: selectedProduct.id,
-            uom: uomValues.map[selectedUom] ?? Uom.NOS,
+            uom: uomValues.map[selectedUom] ?? Uom.nos,
             poQuantity: poQuantityDouble.toInt(),
             qtyInNos: qtyInNosInt,
             deliveryDate: deliveryDate,
@@ -1400,12 +1351,12 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
       final selectedClient = formData['client_id'] != null
           ? provider.clients.firstWhere(
               (client) =>
-                  client.name == (formData['client_id'] as ClientModel).name,
+                  client.id == (formData['client_id'] as ClientModel).id,
             )
           : null;
       final selectedProject = formData['project_id'] != null
           ? provider.projects.firstWhere(
-              (project) => project.name == (formData['project_id'] as TId).name,
+              (project) => project.id == (formData['project_id'] as TId).id,
             )
           : null;
 

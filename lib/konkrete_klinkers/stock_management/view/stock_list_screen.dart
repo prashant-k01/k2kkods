@@ -366,7 +366,7 @@ class _StockManagementListViewState extends State<StockManagementListView> {
               child: provider.isLoading && provider.transfers.isEmpty
                   ? ListView.builder(
                       itemCount: 5,
-                      itemBuilder: (context, index) => buildShimmerCard(),
+                      itemBuilder: (context, index) => ShimmerCard(),
                     )
                   : provider.transfers.isEmpty
                   ? _buildEmptyState()

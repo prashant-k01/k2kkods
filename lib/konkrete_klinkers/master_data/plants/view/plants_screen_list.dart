@@ -331,7 +331,7 @@ class _PlantsListViewState extends State<PlantsListView> {
                 child: provider.isLoading && provider.plants.isEmpty
                     ? ListView.builder(
                         itemCount: 5,
-                        itemBuilder: (context, index) => buildShimmerCard(),
+                        itemBuilder: (context, index) => ShimmerCard(),
                       )
                     : provider.plants.isEmpty
                     ? _buildEmptyState()

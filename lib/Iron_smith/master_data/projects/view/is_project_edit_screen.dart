@@ -33,60 +33,61 @@ class _IsProjectEditScreenState extends State<IsProjectEditScreen> {
   void initState() {
     super.initState();
 
-    // Fetch clients and reset project form
-    Future.microtask(() {
-      final clientProvider = Provider.of<IsClientProvider>(
-        context,
-        listen: false,
-      );
-      clientProvider.fetchClients();
-      Provider.of<IsProjectProvider>(context, listen: false).resetForm();
+    // Initialize data after the widget is mounted
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final clientProvider = context.read<IsClientProvider>();
+        final projectProvider = context.read<IsProjectProvider>();
 
-      // If editing, set selected client after project is loaded
-      final projectProvider = Provider.of<IsProjectProvider>(
-        context,
-        listen: false,
-      );
-      final project = projectProvider.projects.firstWhere(
-        (p) => p.id == widget.projectId,
-        orElse: () => IsProject(name: '', address: '', isDeleted: false, v: 0),
-      );
+        // Fetch clients if not already loaded
+        if (clientProvider.clients.isEmpty) {
+          clientProvider.fetchClients();
+        }
 
-      if (project != null && project.client?.id != null) {
-        clientProvider.setSelectedClient(project.client!.id!);
+        // Reset project form
+        projectProvider.resetForm();
+
+        // Set selected client based on project
+        final project = projectProvider.projects.firstWhere(
+          (p) => p.id == widget.projectId,
+          orElse: () =>
+              IsProject(id: '', name: '', address: '', isDeleted: false, v: 0),
+        );
+
+        if (project.client?.id != null) {
+          clientProvider.setSelectedClient(project.client!.id!);
+        }
       }
     });
   }
 
-  Future<void> _submitForm(IsProject project) async {
+  Future<void> _submitForm() async {
     if (_formKey.currentState!.saveAndValidate()) {
       final formData = _formKey.currentState!.value;
 
       final updatedProject = IsProject(
-        address: formData['project_address'],
-        client: IsPClient(id: formData['client'], name: ""),
-        name: formData['project_name'],
+        id: widget.projectId,
+        address: formData['project_address'] as String,
+        client: IsPClient(id: formData['client'] as String, name: ''),
+        name: formData['project_name'] as String,
       );
 
-      print("✅ Form Data: $formData");
-      print("✅ Payload: ${updatedProject.toJson()}");
-
       try {
-        final provider = Provider.of<IsProjectProvider>(context, listen: false);
-        await provider.updateProject(
+        final provider = context.read<IsProjectProvider>();
+        final success = await provider.updateProject(
           widget.projectId,
-          updatedProject.name ?? '',
           updatedProject.address ?? '',
-          updatedProject.client?.id ?? '', // send clientId
+          updatedProject.client?.id ?? '',
+          updatedProject.name ?? '',
         );
 
-        if (mounted) {
+        if (success && mounted) {
           context.showSuccessSnackbar('Project updated successfully');
           context.go(RouteNames.isProjects);
+        } else if (mounted) {
+          context.showErrorSnackbar('Failed to update project');
         }
-      } catch (e, stack) {
-        print("❌ Error: $e");
-        print("❌ Stacktrace: $stack");
+      } catch (e) {
         if (mounted) {
           context.showErrorSnackbar('Failed to update project: $e');
         }
@@ -96,12 +97,11 @@ class _IsProjectEditScreenState extends State<IsProjectEditScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final clients = context.watch<IsClientProvider>().clients;
     final projectProvider = context.watch<IsProjectProvider>();
-
     final project = projectProvider.projects.firstWhere(
       (p) => p.id == widget.projectId,
-      orElse: () => IsProject(name: '', address: '', isDeleted: false, v: 0),
+      orElse: () =>
+          IsProject(id: '', name: '', address: '', isDeleted: false, v: 0),
     );
 
     return PopScope(
@@ -120,17 +120,14 @@ class _IsProjectEditScreenState extends State<IsProjectEditScreen> {
         body: SafeArea(
           child: SingleChildScrollView(
             padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-            child: _buildFormCard(project, clients),
+            child: _buildFormCard(project),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildFormCard(IsProject project, List<IsClient> clients) {
-    final clientProvider = context.read<IsClientProvider>();
-    clientProvider.setSelectedClient(project.client?.id);
-
+  Widget _buildFormCard(IsProject project) {
     return Container(
       padding: EdgeInsets.all(24.w),
       decoration: BoxDecoration(
@@ -167,8 +164,13 @@ class _IsProjectEditScreenState extends State<IsProjectEditScreen> {
               initialValue: project.name,
               prefixIcon: Icons.work_outline,
               validators: [
-                FormBuilderValidators.required(),
-                FormBuilderValidators.minLength(2),
+                FormBuilderValidators.required(
+                  errorText: 'Project name is required',
+                ),
+                FormBuilderValidators.minLength(
+                  2,
+                  errorText: 'Name must be at least 2 characters',
+                ),
               ],
               fillColor: AppTheme.white,
               prefixIconColor: AppTheme.ironSmithPrimary,
@@ -181,25 +183,33 @@ class _IsProjectEditScreenState extends State<IsProjectEditScreen> {
             // Client Dropdown
             Consumer<IsClientProvider>(
               builder: (context, clientProvider, child) {
-                final clients = clientProvider.clients;
-
                 return CustomSearchableDropdownFormField<String>(
                   name: 'client',
                   labelText: 'Select Client',
                   hintText: 'Search client...',
                   prefixIcon: Icons.person_outline,
                   initialValue: clientProvider.selectedClientId,
-                  options: clients.map((c) => c.id ?? "").toList(),
+                  options: clientProvider.clients
+                      .map((c) => c.id ?? '')
+                      .toList(),
                   optionLabel: (id) =>
-                      clients
+                      clientProvider.clients
                           .firstWhere(
                             (c) => c.id == id,
                             orElse: () => IsClient(id: '', name: 'Unknown'),
                           )
                           .name ??
-                      "Unnamed Client",
-                  validators: [FormBuilderValidators.required()],
-                  onChanged: (value) => clientProvider.setSelectedClient(value),
+                      'Unnamed Client',
+                  validators: [
+                    FormBuilderValidators.required(
+                      errorText: 'Client is required',
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      clientProvider.setSelectedClient(value);
+                    }
+                  },
                   fillColor: AppTheme.white,
                   borderColor: AppTheme.grey,
                   focusedBorderColor: AppTheme.ironSmithSecondary,
@@ -217,8 +227,13 @@ class _IsProjectEditScreenState extends State<IsProjectEditScreen> {
               initialValue: project.address,
               prefixIcon: Icons.location_on_outlined,
               validators: [
-                FormBuilderValidators.required(),
-                FormBuilderValidators.minLength(5),
+                FormBuilderValidators.required(
+                  errorText: 'Address is required',
+                ),
+                FormBuilderValidators.minLength(
+                  5,
+                  errorText: 'Address must be at least 5 characters',
+                ),
               ],
               fillColor: AppTheme.white,
               prefixIconColor: AppTheme.ironSmithPrimary,
@@ -240,7 +255,7 @@ class _IsProjectEditScreenState extends State<IsProjectEditScreen> {
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () => _submitForm(project),
+                    onTap: _submitForm,
                     borderRadius: BorderRadius.circular(12.r),
                     child: Center(
                       child: Text(
