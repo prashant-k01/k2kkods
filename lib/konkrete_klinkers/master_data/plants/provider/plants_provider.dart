@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/model/plants_model.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/repo/plants.repo.dart';
@@ -6,55 +7,45 @@ class PlantProvider with ChangeNotifier {
   final PlantRepository _repository = PlantRepository();
 
   List<PlantModel> _plants = [];
+  List<PlantModel> _allPlants = [];
   bool _isLoading = false;
+  bool _isAllPlantsLoading = false;
   String? _error;
-  bool _showAll = false; // Flag to indicate if all data should be shown
-
-  // Pagination properties
-  int _currentPage = 1;
-  int _totalPages = 1;
-  int _totalItems = 0;
-  bool _hasNextPage = false;
-  bool _hasPreviousPage = false;
+  bool _hasMore = true;
+  int _skip = 0;
   final int _limit = 10;
   String _searchQuery = '';
-
-  // Loading states for specific operations
   bool _isAddPlantLoading = false;
   bool _isUpdatePlantLoading = false;
   bool _isDeletePlantLoading = false;
+  bool _isPlantLoading = false; // New: For single plant loading
+  PlantModel? _currentPlant; // New: For single plant data
+  String? _plantError; // New: For single plant error
 
   // Getters
   List<PlantModel> get plants => _plants;
+  List<PlantModel> get allPlants => _allPlants;
   bool get isLoading => _isLoading;
+  bool get isAllPlantsLoading => _isAllPlantsLoading;
   String? get error => _error;
+  bool get hasMore => _hasMore;
+  String get searchQuery => _searchQuery;
   bool get isAddPlantLoading => _isAddPlantLoading;
   bool get isUpdatePlantLoading => _isUpdatePlantLoading;
   bool get isDeletePlantLoading => _isDeletePlantLoading;
-  bool get showAll => _showAll;
+  bool get isPlantLoading => _isPlantLoading;
+  PlantModel? get currentPlant => _currentPlant;
+  String? get plantError => _plantError;
 
-  // Pagination getters
-  int get currentPage => _currentPage;
-  int get totalPages => _totalPages;
-  int get totalItems => _totalItems;
-  bool get hasNextPage => _hasNextPage;
-  bool get hasPreviousPage => _hasPreviousPage;
-  int get limit => _limit;
-  String get searchQuery => _searchQuery;
+  Future<void> loadPlants({bool refresh = false}) async {
+    if (_isLoading || (!_hasMore && !refresh)) return;
 
-  // Toggle between paginated and show all modes
-  void toggleShowAll(bool value) {
-    _showAll = value;
-    _currentPage = 1;
-    notifyListeners();
-    loadAllPlants(refresh: true);
-  }
-
-  // Load plants for current page or all plants
-  Future<void> loadAllPlants({bool refresh = false}) async {
     if (refresh) {
-      _currentPage = 1;
-      _plants = []; // Clear existing plants for refresh
+      _skip = 0;
+      _plants.clear();
+      _hasMore = true;
+    } else {
+      _skip += _limit;
     }
 
     _isLoading = true;
@@ -62,94 +53,54 @@ class PlantProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      print(
-        'Loading plants - Page: $_currentPage, Limit: ${_showAll ? "all" : _limit}, ShowAll: $_showAll',
-      ); // Debug print
-
-      final response = await _repository.getAllPlants(
-        page: _showAll ? 1 : _currentPage, // Use page 1 for show all
-        limit: _showAll ? 1000 : _limit,   // Use high limit for show all
+      final newPlants = await _repository.getPlants(
+        skip: _skip,
+        limit: _limit,
         search: _searchQuery.isNotEmpty ? _searchQuery : null,
       );
 
-      if (_showAll) {
-        _plants = response.plants; // Replace all plants
-        _totalPages = 1; // Single page for all data
-        _totalItems = response.plants.length;
-        _hasNextPage = false;
-        _hasPreviousPage = false;
+      if (refresh) {
+        _plants = newPlants;
       } else {
-        _plants = response.plants;
-        _updatePaginationInfo(response.pagination);
+        _plants.addAll(newPlants);
       }
-      _error = null;
 
-      print(
-        'Loaded ${_plants.length} plants, Total: $_totalItems, Pages: $_totalPages',
-      ); // Debug print
+      _hasMore = newPlants.length >= _limit;
+      _error = null;
     } catch (e) {
       _error = _getErrorMessage(e);
-      _plants = [];
-      print('Error loading plants: $e'); // Debug print
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // Load specific page
-  Future<void> loadPage(int page) async {
-    if (_showAll || page < 1 || page > _totalPages || page == _currentPage) return;
+  Future<void> loadAllPlantsForDropdown({bool refresh = false}) async {
+    if (_isAllPlantsLoading) return;
 
-    print('Loading page: $page'); // Debug print
-    _currentPage = page;
-    await loadAllPlants();
-  }
+    if (refresh) {
+      _allPlants.clear();
+    }
 
-  // Go to next page
-  Future<void> nextPage() async {
-    if (_showAll || !_hasNextPage) return;
-    await loadPage(_currentPage + 1);
-  }
+    _isAllPlantsLoading = true;
+    _error = null;
+    notifyListeners();
 
-  // Go to previous page
-  Future<void> previousPage() async {
-    if (_showAll || !_hasPreviousPage) return;
-    await loadPage(_currentPage - 1);
-  }
+    try {
+      final plants = await _repository.getPlants(
+        skip: 0,
+        limit: 100,
+        search: _searchQuery.isNotEmpty ? _searchQuery : null,
+      );
 
-  // Go to first page
-  Future<void> firstPage() async {
-    if (_showAll) return;
-    await loadPage(1);
-  }
-
-  // Go to last page
-  Future<void> lastPage() async {
-    if (_showAll) return;
-    await loadPage(_totalPages);
-  }
-
-  // Search plants
-  Future<void> searchPlants(String query) async {
-    _searchQuery = query;
-    _currentPage = 1;
-    await loadAllPlants();
-  }
-
-  // Clear search
-  Future<void> clearSearch() async {
-    _searchQuery = '';
-    _currentPage = 1;
-    await loadAllPlants();
-  }
-
-  // Update pagination info
-  void _updatePaginationInfo(PaginationInfo pagination) {
-    _totalPages = pagination.totalPages;
-    _totalItems = pagination.total;
-    _hasNextPage = pagination.hasNextPage;
-    _hasPreviousPage = pagination.hasPreviousPage;
+      _allPlants = plants;
+    } catch (e) {
+      _error = _getErrorMessage(e);
+      _allPlants.clear();
+    } finally {
+      _isAllPlantsLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<bool> createPlant(String plantCode, String plantName) async {
@@ -159,20 +110,15 @@ class PlantProvider with ChangeNotifier {
 
     try {
       final newPlant = await _repository.createPlant(plantCode, plantName);
-
       if (newPlant.id.isNotEmpty) {
-        // After creating, go to first page to show the new plant
-        _currentPage = 1;
-        await loadAllPlants();
+        _skip = 0;
+        await loadPlants(refresh: true);
+        await loadAllPlantsForDropdown(refresh: true);
         return true;
-      } else {
-        _error = 'Failed to create plant - no ID returned';
-        notifyListeners();
-        return false;
       }
+      return false;
     } catch (e) {
       _error = _getErrorMessage(e);
-      notifyListeners();
       return false;
     } finally {
       _isAddPlantLoading = false;
@@ -197,17 +143,14 @@ class PlantProvider with ChangeNotifier {
       );
 
       if (success) {
-        // Refresh current page to show updated data
-        await loadAllPlants();
+        await loadPlants(refresh: true);
+        await loadAllPlantsForDropdown(refresh: true);
         return true;
-      } else {
-        _error = 'Failed to update plant';
-        notifyListeners();
-        return false;
       }
+      _error = 'Failed to update plant';
+      return false;
     } catch (e) {
       _error = _getErrorMessage(e);
-      notifyListeners();
       return false;
     } finally {
       _isUpdatePlantLoading = false;
@@ -215,53 +158,48 @@ class PlantProvider with ChangeNotifier {
     }
   }
 
-Future<bool> deletePlant(String plantId) async {
-  _isDeletePlantLoading = true;
-  _error = null;
-  notifyListeners();
+  Future<bool> deletePlant(String plantId) async {
+    _isDeletePlantLoading = true;
+    _error = null;
+    notifyListeners();
 
-  try {
-    final success = await _repository.deletePlant(plantId);
-
-    if (success) {
-      // Only adjust pagination if deletion was successful
-      final currentPageItemCount = _plants.length;
-      final isLastItemOnPage = currentPageItemCount == 1;
-      final isNotFirstPage = _currentPage > 1;
-
-      if (isLastItemOnPage && isNotFirstPage && !_showAll) {
-        // Go to previous page if current page will be empty
-        _currentPage--;
+    try {
+      final success = await _repository.deletePlant(plantId);
+      if (success) {
+        await loadPlants(refresh: true);
+        await loadAllPlantsForDropdown(refresh: true);
+        return true;
       }
-
-      // Refresh current page
-      await loadAllPlants();
-      return true;
-    } else {
       _error = 'Failed to delete plant';
-      notifyListeners();
       return false;
+    } catch (e) {
+      _error = _getErrorMessage(e);
+      return false;
+    } finally {
+      _isDeletePlantLoading = false;
+      notifyListeners();
     }
-  } catch (e) {
-    _error = _getErrorMessage(e);
-    notifyListeners();
-    return false;
-  } finally {
-    _isDeletePlantLoading = false;
-    notifyListeners();
   }
-}
+
   Future<PlantModel?> getPlant(String plantId) async {
     try {
-      _error = null;
+      _isPlantLoading = true;
+      _plantError = null;
+      _currentPlant = null;
       notifyListeners();
 
       final plant = await _repository.getPlant(plantId);
+      _currentPlant = plant;
+      if (plant == null) {
+        _plantError = 'Plant not found';
+      }
       return plant;
     } catch (e) {
-      _error = _getErrorMessage(e);
-      notifyListeners();
+      _plantError = _getErrorMessage(e);
       return null;
+    } finally {
+      _isPlantLoading = false;
+      notifyListeners();
     }
   }
 
@@ -277,13 +215,39 @@ Future<bool> deletePlant(String plantId) async {
     notifyListeners();
   }
 
+  void clearPlantError() {
+    _plantError = null;
+    _currentPlant = null;
+    _isPlantLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> searchPlants(String query) async {
+    _searchQuery = query;
+    _skip = 0;
+    _hasMore = true;
+    await loadPlants(refresh: true);
+  }
+
+  Future<void> clearSearch() async {
+    _searchQuery = '';
+    _skip = 0;
+    _hasMore = true;
+    await loadPlants(refresh: true);
+  }
+
   String _getErrorMessage(Object error) {
-    if (error is Exception) {
-      return error.toString();
+    if (error is SocketException) {
+      return 'No internet connection. Please check your network.';
+    } else if (error is HttpException) {
+      return 'Network error: $error';
+    } else if (error is FormatException) {
+      return 'Invalid response format. Please contact support.';
+    } else if (error is Exception) {
+      return error.toString().replaceFirst('Exception: ', '');
     } else if (error is String) {
       return error;
-    } else {
-      return 'An unexpected error occurred';
     }
+    return 'Unexpected error occurred.';
   }
 }

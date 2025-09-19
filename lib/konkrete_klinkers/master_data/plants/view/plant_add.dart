@@ -3,14 +3,19 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/list_helper/custom_back_button.dart';
+import 'package:k2k/common/list_helper/title.dart';
+import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/provider/plants_provider.dart';
+import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class PlantFormScreen extends StatelessWidget {
-  PlantFormScreen({super.key});
+class AddPlantFormScreen extends StatelessWidget {
+  AddPlantFormScreen({super.key});
 
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
 
@@ -18,23 +23,32 @@ class PlantFormScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final plantProvider = Provider.of<PlantProvider>(context, listen: false);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: const Text('Create New Plant'),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF334155),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => context.go(RouteNames.plants),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(24.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [_buildFormCard(context, plantProvider)],
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          context.go(RouteNames.plants);
+        }
+      },
+      child: Container(
+        decoration: BoxDecoration(gradient: AppTheme.backgroundGradient),
+        child: Scaffold(
+          backgroundColor: AppColors.transparent,
+          appBar: AppBars(
+            title: TitleText(title: 'Create Plant'),
+            leading: CustomBackButton(
+              onPressed: () {
+                context.go(RouteNames.plants);
+              },
+            ),
+          ),
+          body: SingleChildScrollView(
+            padding: EdgeInsets.all(24.w),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [_buildFormCard(context, plantProvider)],
+            ),
+          ),
         ),
       ),
     );
@@ -105,7 +119,7 @@ class PlantFormScreen extends StatelessWidget {
               ],
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
-              focusedBorderColor: const Color(0xFF8B5CF6),
+              focusedBorderColor: const Color(0xFF3B82F6),
               borderRadius: 12.r,
             ),
             SizedBox(height: 40.h),
@@ -153,10 +167,7 @@ class PlantFormScreen extends StatelessWidget {
                 ? Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
+                      const GradientLoader(),
                       SizedBox(width: 12.w),
                       Text(
                         'Creating Plant...',
@@ -213,7 +224,7 @@ class PlantFormScreen extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircularProgressIndicator(color: Color(0xFF3B82F6)),
+                const GradientLoader(),
                 SizedBox(height: 16.h),
                 Text(
                   'Creating Plant...',

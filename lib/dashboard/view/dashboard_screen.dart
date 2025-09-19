@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:k2k/common/widgets/appbar/app_bar.dart';
 import 'package:k2k/common/widgets/menu_drawer.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -16,20 +17,20 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Colors.white,
       drawer: const EnhancedMenuDrawer(),
+      appBar: AppBars(
+        title: _buildLogoAndTitle(),
+        leading: _buildMenuButton(),
+        action: [_buildActionButtons()],
+      ),
+
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
-          ),
-        ),
+        decoration: const BoxDecoration(color: Colors.white),
         child: SafeArea(
           child: Column(
             children: [
-              _buildAppBar(),
+              // _buildAppBar(),
               Flexible(
                 child: Container(
                   margin: EdgeInsets.only(top: 20.h),
@@ -66,82 +67,77 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-Widget _buildAppBar() {
-  return Container(
-    padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 15.h),
-    child: Row(
-      children: [
-        // Left: Menu Button
-        _buildMenuButton(),
-        
-        // Center: Logo (Centered by Spacer on both sides)
-        Expanded(
-          child: Center(child: _buildLogoAndTitle()),
-        ),
+  // Widget _buildAppBar() {
+  //   return Container(
+  //     padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 15.h),
+  //     child: Row(
+  //       children: [
+  //         // Left: Menu Button
+  //         _buildMenuButton(),
 
-        // Right: Notification Bell
-        _buildActionButtons(),
-      ],
-    ),
-  );
-}
+  //         // Center: Logo (Centered by Spacer on both sides)
+  //         Expanded(child: Center(child: _buildLogoAndTitle())),
+
+  //         // Right: Notification Bell
+  //         _buildActionButtons(),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildMenuButton() {
+    return
+    // decoration: BoxDecoration(
+    //   color: Colors.white.withOpacity(0.2),
+    //   borderRadius: BorderRadius.circular(12.r),
+    // ),
+    IconButton(
+      onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+      icon: Icon(Icons.menu, color: Colors.black, size: 32.sp),
+    );
+  }
+
+  Widget _buildLogoAndTitle() {
     return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+      width: 120.w, // Wider
+      height: 48.h, // Taller
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12.r),
       ),
-      child: IconButton(
-        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-        icon: Icon(Icons.menu, color: Colors.white, size: 24.sp),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8.r),
+        child: Image.asset(
+          'assets/images/login_image_1.png',
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) {
+            return Center(
+              child: Icon(
+                Icons.precision_manufacturing_outlined,
+                color: Colors.white,
+                size: 32.sp,
+              ),
+            );
+          },
+        ),
       ),
     );
   }
 
-Widget _buildLogoAndTitle() {
-  return Container(
-    width: 140.w, // Wider
-    height: 56.h, // Taller
-    decoration: BoxDecoration(
-      color: Colors.white.withOpacity(0.2),
-      borderRadius: BorderRadius.circular(12.r),
-    ),
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(8.r),
-      child: Image.asset(
-        'assets/images/login_image_1.png',
-        fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) {
-          return Center(
-            child: Icon(
-              Icons.precision_manufacturing_outlined,
-              color: Colors.white,
-              size: 32.sp,
-            ),
-          );
-        },
-      ),
-    ),
-  );
-}
-
-
   Widget _buildActionButtons() {
     return Row(
       children: [
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-          child: IconButton(
-            onPressed: () {},
-            icon: Icon(
-              Icons.notifications_outlined,
-              color: Colors.white,
-              size: 20.sp,
-            ),
+        // decoration: BoxDecoration(
+        //   color: Colors.white.withOpacity(0.2),
+        //   borderRadius: BorderRadius.circular(12.r),
+        // ),
+        IconButton(
+          onPressed: () {},
+          icon: Icon(
+            Icons.notifications_outlined,
+            color: Colors.black,
+            size: 32.sp,
           ),
         ),
         SizedBox(width: 15.w),
