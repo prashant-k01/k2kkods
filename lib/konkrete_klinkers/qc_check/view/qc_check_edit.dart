@@ -95,33 +95,6 @@ class _QcCheckEditScreenState extends State<QcCheckEditScreen> {
     );
   }
 
-  Widget _buildLogoAndTitle() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'Edit QC Check',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF334155),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBackButton() {
-    return IconButton(
-      icon: Icon(
-        Icons.arrow_back_ios,
-        size: 24.sp,
-        color: const Color(0xFF334155),
-      ),
-      onPressed: () => context.go(RouteNames.qcCheck),
-    );
-  }
-
   Widget _buildFormCard(
     BuildContext context,
     QcCheckProvider provider,
@@ -176,7 +149,7 @@ class _QcCheckEditScreenState extends State<QcCheckEditScreen> {
               options: provider.jobOrders
                   .map((job) => job['job_order_id']!)
                   .toList(),
-              enabled: !provider.isJobOrdersLoading,
+              enabled: false,
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
               focusedBorderColor: AppTheme.primaryBlue,
@@ -203,7 +176,7 @@ class _QcCheckEditScreenState extends State<QcCheckEditScreen> {
               ),
             ],
             SizedBox(height: 18.h),
-            CustomSearchableDropdownFormField(
+            CustomTextFormField(
               name: 'work_order',
               labelText: 'Work Order',
               hintText: provider.isWorkOrderAndProductsLoading
@@ -212,12 +185,8 @@ class _QcCheckEditScreenState extends State<QcCheckEditScreen> {
                   ? 'Select Job Order First'
                   : 'Select Work Order',
               prefixIcon: Icons.work,
-              options: provider.workOrder != null
-                  ? [provider.workOrder!['work_order_number']!]
-                  : [],
-              enabled:
-                  !provider.isWorkOrderAndProductsLoading &&
-                  provider.workOrder != null,
+              controller: provider.workOrderController,
+              enabled: false,
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
               focusedBorderColor: AppTheme.primaryBlue,
@@ -229,13 +198,25 @@ class _QcCheckEditScreenState extends State<QcCheckEditScreen> {
               ],
             ),
             SizedBox(height: 18.h),
-            CustomTextFormField(
+            CustomSearchableDropdownFormField(
               name: 'product_name',
               labelText: 'Product Name',
-              hintText: 'Product cannot be changed',
+              hintText: provider.isWorkOrderAndProductsLoading
+                  ? 'Loading Products...'
+                  : provider.products.isEmpty
+                  ? 'Select Job Order First'
+                  : 'Select Product',
+              initialValue: provider.products.isNotEmpty
+                  ? provider.products.firstWhere(
+                      (p) => p['_id'] == qcCheck.productId?.id,
+                      orElse: () => {'description': ''},
+                    )['description']
+                  : null,
+              options: provider.products
+                  .map((product) => product['description'])
+                  .toList(),
               prefixIcon: Icons.inventory_2,
               enabled: false,
-              initialValue: '',
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
               focusedBorderColor: AppTheme.primaryBlue,
@@ -334,21 +315,8 @@ class _QcCheckEditScreenState extends State<QcCheckEditScreen> {
                   : () async {
                       if (_formKey.currentState!.saveAndValidate()) {
                         final formData = _formKey.currentState!.value;
-                        final selectedJob = provider.jobOrders.firstWhere(
-                          (job) => job['job_order_id'] == formData['job_order'],
-                          orElse: () => {
-                            '_id': qcCheck.jobOrder ?? '',
-                            'job_order_id': formData['job_order'] ?? 'N/A',
-                          },
-                        );
 
                         final qcCheckData = {
-                          'job_order': selectedJob['_id'],
-                          'work_order':
-                              provider.workOrder?['_id'] ??
-                              qcCheck.workOrder ??
-                              '',
-                          'product_id': qcCheck.productId ?? '',
                           'rejected_quantity': int.parse(
                             formData['rejected_quantity'],
                           ),
@@ -356,7 +324,6 @@ class _QcCheckEditScreenState extends State<QcCheckEditScreen> {
                             formData['recycled_quantity'],
                           ),
                           'remarks': formData['rejected_reasons'],
-                          'updated_by': qcCheck.updatedBy ?? '',
                         };
 
                         try {

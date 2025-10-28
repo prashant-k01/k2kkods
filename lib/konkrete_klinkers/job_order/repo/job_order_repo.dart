@@ -1,13 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:k2k/api_services/api_services.dart';
+import 'package:k2k/common/constant/app_url.dart';
+import 'package:k2k/core/shared_preference/shared_preference.dart';
 import 'package:k2k/konkrete_klinkers/job_order/model/job_order.dart';
-import 'package:k2k/api_services/shared_preference/shared_preference.dart';
+import 'package:k2k/konkrete_klinkers/job_order/model/job_order_detail_model.dart';
 
 class JobOrderRepository {
   Future<Map<String, String>> get headers async {
-    final token = await fetchAccessToken();
+    final token = await SessionManager.getAccessToken();
     return {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
@@ -17,12 +18,12 @@ class JobOrderRepository {
   bool isAddJobOrderLoading = false;
   JobOrderModel? _lastCreatedJobOrder;
   JobOrderModel? get lastCreatedJobOrder => _lastCreatedJobOrder;
-  Future<JobOrderModel?> getJobOrderById(String mongoId) async {
+  Future<JobOrderDetailResponse?> getJobOrderById(String mongoId) async {
     try {
       final authHeaders = await headers;
       final uri = Uri.parse('${AppUrl.getjoborderbyId}/$mongoId');
 
-      print('Raw JobOrderById Response: ${uri.toString()}');
+      print('Fetching JobOrder by ID from: ${uri.toString()}');
 
       final response = await http
           .get(uri, headers: authHeaders)
@@ -31,12 +32,10 @@ class JobOrderRepository {
       print('Raw JobOrderById Response: ${response.body}');
 
       if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        final jobOrderData = (jsonData is Map<String, dynamic>)
-            ? jsonData['data'] ?? jsonData
-            : jsonData;
+        final Map<String, dynamic> jsonData = json.decode(response.body);
 
-        return JobOrderModel.fromJson(jobOrderData);
+        // Safely parse with null-aware checks
+        return JobOrderDetailResponse.fromJson(jsonData);
       } else if (response.statusCode == 404) {
         return null;
       } else {
@@ -59,6 +58,7 @@ class JobOrderRepository {
       final response = await http
           .get(uri, headers: authHeaders)
           .timeout(const Duration(seconds: 30));
+      print('📦 Received response with status: ${response.statusCode}');
 
       print('Raw API Response: ${response.body}');
 
@@ -87,7 +87,7 @@ class JobOrderRepository {
     }
   }
 
-  Future<JobOrderModel?> getJobOrder(String mongoId) async {
+  Future<JobOrderDetailResponse?> getJobOrder(String mongoId) async {
     try {
       final authHeaders = await headers;
       final uri = Uri.parse('${AppUrl.getjoborder}/$mongoId');
@@ -100,11 +100,8 @@ class JobOrderRepository {
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-        final jobOrderData = (jsonData is Map<String, dynamic>)
-            ? jsonData['data'] ?? jsonData
-            : jsonData;
 
-        return JobOrderModel.fromJson(jobOrderData);
+        return JobOrderDetailResponse.fromJson(jsonData);
       } else if (response.statusCode == 404) {
         return null;
       } else {
@@ -222,9 +219,8 @@ class JobOrderRepository {
     while (retryCount < maxRetries) {
       try {
         final authHeaders = await headers;
-        final uri = Uri.parse(
-          'http://3.6.6.231/api/konkreteKlinkers/joborder-getMachine?material_code=$productId',
-        );
+        final url = "${AppUrl.getJOMachinesbyProduct}$productId";
+        final uri = Uri.parse(url);
 
         print(
           '🔗 Fetching machine names from: $uri (Attempt ${retryCount + 1}/$maxRetries)',
@@ -252,11 +248,9 @@ class JobOrderRepository {
         } else {
           final errorMessage =
               'Failed to fetch machine names: ${response.statusCode} - ${response.body}';
-          print('❌ $errorMessage');
           if (response.statusCode >= 500 && retryCount < maxRetries - 1) {
             retryCount++;
             final delay = baseDelay * (1 << retryCount);
-            print('⏳ Retrying after ${delay.inMilliseconds}ms...');
             await Future.delayed(delay);
             continue;
           } else if (response.statusCode == 401) {
@@ -267,20 +261,16 @@ class JobOrderRepository {
           throw Exception(errorMessage);
         }
       } on SocketException catch (e) {
-        print('❌ Network error: $e');
         if (retryCount < maxRetries - 1) {
           retryCount++;
           final delay = baseDelay * (1 << retryCount);
-          print('⏳ Retrying after ${delay.inMilliseconds}ms...');
           await Future.delayed(delay);
           continue;
         }
         throw Exception('No internet connection: $e');
       } on FormatException catch (e) {
-        print('❌ Invalid response format: $e');
         throw Exception('Invalid response format: $e');
       } catch (e) {
-        print('❌ Error in fetchMachineNamesByProductId: $e');
         throw Exception('Error fetching machine names: $e');
       }
     }
@@ -295,7 +285,6 @@ class JobOrderRepository {
       final response = await http
           .get(uri, headers: authHeaders)
           .timeout(const Duration(seconds: 30));
-      print('Work Order fetch response: ${response.body}');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonData = json.decode(response.body);
@@ -363,8 +352,6 @@ class JobOrderRepository {
     try {
       final authHeaders = await headers;
       final updateUrl = '${AppUrl.updateJobOrder}/$mongoId';
-      print('🔗 Updating JobOrder at URL: $updateUrl');
-      print('📤 Payload: ${jsonEncode(payload)}');
 
       final response = await http
           .put(
@@ -374,26 +361,18 @@ class JobOrderRepository {
           )
           .timeout(const Duration(seconds: 30));
 
-      print('📱 Update Response Status: ${response.statusCode}');
-      print('📄 Update Response Body: ${response.body}');
-
       if (response.statusCode == 200) {
-        print('✅ JobOrder updated successfully');
         return true;
       } else {
         final errorMessage =
             'Failed to update JobOrder: ${response.statusCode} - ${response.body}';
-        print('❌ $errorMessage');
         throw Exception(errorMessage);
       }
     } on SocketException catch (e) {
-      print('❌ SocketException: $e');
       throw Exception('No internet connection: $e');
     } on FormatException catch (e) {
-      print('❌ FormatException: $e');
       throw Exception('Invalid response format: $e');
     } catch (e) {
-      print('❌ Unexpected error updating JobOrder: $e');
       throw Exception('Unexpected error updating JobOrder: $e');
     }
   }
@@ -402,8 +381,6 @@ class JobOrderRepository {
     try {
       final authHeaders = await headers;
       final deleteUrl = AppUrl.deleteJobOrder;
-      print('🔗 Deleting JobOrder at URL: $deleteUrl');
-      print('📤 Payload: {"ids": ["$mongoId"]}');
 
       final response = await http
           .delete(
@@ -415,9 +392,6 @@ class JobOrderRepository {
           )
           .timeout(const Duration(seconds: 30));
 
-      print('📱 Delete Response Status: ${response.statusCode}');
-      print('📄 Delete Response Body: ${response.body}');
-
       if (response.statusCode == 200 || response.statusCode == 204) {
         return true;
       } else {
@@ -426,17 +400,53 @@ class JobOrderRepository {
         );
       }
     } on SocketException catch (e) {
-      print('❌ SocketException: $e');
       throw Exception('No internet connection: $e');
     } on HttpException catch (e) {
-      print('❌ HttpException: $e');
       throw Exception('Network error occurred: $e');
     } on FormatException catch (e) {
-      print('❌ FormatException: $e');
       throw Exception('Invalid response format: $e');
     } catch (e) {
-      print('❌ Unexpected error deleting JobOrder: $e');
       throw Exception('Unexpected error deleting JobOrder: $e');
+    }
+  }
+
+  Future<MachineResponse> getMachinesByProductId(String materialCode) async {
+    if (materialCode.isEmpty) {
+      throw Exception("❌ materialCode cannot be empty");
+    }
+
+    try {
+      final authHeaders = await headers;
+      final uri = Uri.parse("${AppUrl.getJOMachinesbyProduct}$materialCode");
+
+      final response = await http
+          .get(uri, headers: authHeaders)
+          .timeout(const Duration(seconds: 30));
+
+      print("📡 Status Code: ${response.statusCode}");
+      print("📄 Response Body: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonData = json.decode(response.body);
+        final machineResponse = MachineResponse.fromJson(jsonData);
+        return machineResponse;
+      } else if (response.statusCode == 404) {
+        return MachineResponse(
+          success: false,
+          message: "No machines found for material_code: $materialCode",
+          data: [],
+        );
+      } else {
+        throw Exception(
+          "❌ Failed to fetch machines: ${response.statusCode} - ${response.body}",
+        );
+      }
+    } on SocketException catch (e) {
+      throw Exception("🚫 No internet connection: $e");
+    } on FormatException catch (e) {
+      throw Exception("⚠️ Invalid response format: $e");
+    } catch (e) {
+      throw Exception("💥 Error fetching machines by productId: $e");
     }
   }
 }

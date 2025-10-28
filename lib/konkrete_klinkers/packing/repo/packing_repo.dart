@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:k2k/api_services/api_services.dart';
+import 'package:k2k/common/constant/app_url.dart';
 import 'package:k2k/konkrete_klinkers/packing/model/packing.dart';
-import 'package:k2k/api_services/shared_preference/shared_preference.dart';
+import 'package:k2k/core/shared_preference/shared_preference.dart';
 
 class PackingRepository {
   Future<Map<String, String>> get headers async {
-    final token = await fetchAccessToken();
+    final token = await SessionManager.getAccessToken();
     return {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
@@ -16,11 +16,6 @@ class PackingRepository {
 
   Future<List<PackingModel>> getPackings() async {
     try {
-      final token = await fetchAccessToken();
-      if (token == null || token.isEmpty) {
-        throw Exception('Authentication token not found.');
-      }
-
       final authHeaders = await headers;
       final uri = Uri.parse(AppUrl.getpacking);
 
@@ -45,109 +40,121 @@ class PackingRepository {
       throw Exception('No internet connection.');
     }
   }
-Future<List<Map<String, dynamic>>> getPackingDetails(
-  String workOrderId,
-  String productId,
-) async {
-  try {
-    final token = await fetchAccessToken();
-    if (token == null || token.isEmpty) {
-      throw Exception('Authentication token not found.');
-    }
 
-    final authHeaders = await headers;
-    final correctUri = Uri.parse(
-      'https://k2k.kods.work/api/konkreteKlinkers/packing/get?work_order_id=$workOrderId&product_id=$productId',
-    );
+  Future<List<Map<String, dynamic>>> getPackingDetails(
+    String workOrderId,
+    String productId,
+  ) async {
+    try {
+      final authHeaders = await headers;
+      final correctUri = Uri.parse(
+        AppUrl.getPackingDetails(workOrderId, productId),
+      );
 
-    print('Fetching packing details for workOrderId: $workOrderId, productId: $productId');
-    print('Trying website endpoint: $correctUri');
+      var response = await http
+          .get(correctUri, headers: authHeaders)
+          .timeout(const Duration(seconds: 30));
 
-    var response = await http
-        .get(correctUri, headers: authHeaders)
-        .timeout(const Duration(seconds: 30));
+      print('Packing Details API Response Status: ${response.statusCode}');
+      print('Packing Details API Response Body: ${response.body}');
 
-    print('Packing Details API Response Status: ${response.statusCode}');
-    print('Packing Details API Response Body: ${response.body}');
+      if (response.statusCode == 200) {
+        final responseBody = response.body;
+        if (responseBody.isEmpty) {
+          print('Empty packing details response body');
+          return [];
+        }
 
-    if (response.statusCode == 200) {
-      final responseBody = response.body;
-      if (responseBody.isEmpty) {
-        print('Empty packing details response body');
-        return [];
-      }
+        final jsonData = json.decode(responseBody);
+        print('Parsed Packing Details JSON: $jsonData');
 
-      final jsonData = json.decode(responseBody);
-      print('Parsed Packing Details JSON: $jsonData');
+        List<dynamic> rawList = jsonData['data'] ?? [];
+        List<Map<String, dynamic>> allPackings = [];
 
-      List<dynamic> rawList = jsonData['data'] ?? [];
-      List<Map<String, dynamic>> allPackings = [];
+        // Iterate through all items in the data array
+        for (var item in rawList) {
+          if (item is Map<String, dynamic>) {
+            print(
+              'Processing item with work_order_id: ${item['work_order_id']}',
+            );
 
-      // Iterate through all items in the data array
-      for (var item in rawList) {
-        if (item is Map<String, dynamic>) {
-          print('Processing item with work_order_id: ${item['work_order_id']}');
+            // Check if this item matches the work order
+            bool workOrderMatches = item['work_order_id'] == workOrderId;
+            print('Work order matches: $workOrderMatches');
 
-          // Check if this item matches the work order
-          bool workOrderMatches = item['work_order_id'] == workOrderId;
-          print('Work order matches: $workOrderMatches');
+            if (workOrderMatches && item['packing_details'] != null) {
+              // Extract packing_details array
+              List<dynamic> packingsList = item['packing_details'];
+              print(
+                'Found packing_details array with ${packingsList.length} items',
+              );
 
-          if (workOrderMatches && item['packing_details'] != null) {
-            // Extract packing_details array
-            List<dynamic> packingsList = item['packing_details'];
-            print('Found packing_details array with ${packingsList.length} items');
+              // Add all packings from this item with enhanced data
+              for (var packing in packingsList) {
+                if (packing is Map<String, dynamic>) {
+                  // Create enhanced packing object with all required fields
+                  Map<String, dynamic> enhancedPacking =
+                      Map<String, dynamic>.from(packing);
 
-            // Add all packings from this item with enhanced data
-            for (var packing in packingsList) {
-              if (packing is Map<String, dynamic>) {
-                // Create enhanced packing object with all required fields
-                Map<String, dynamic> enhancedPacking = Map<String, dynamic>.from(packing);
+                  // Add missing fields from parent object
+                  enhancedPacking['work_order_number'] =
+                      packing['work_order_number'] ??
+                      item['work_order_name'] ??
+                      'N/A';
+                  enhancedPacking['client_name'] =
+                      packing['client_name'] ??
+                      item['client_project']?['client_name'] ??
+                      'N/A';
+                  enhancedPacking['project_name'] =
+                      packing['project_name'] ??
+                      item['client_project']?['project_name'] ??
+                      'N/A';
+                  enhancedPacking['job_order_name'] =
+                      packing['job_order_name'] ??
+                      item['job_order_name'] ??
+                      'N/A';
+                  enhancedPacking['uom'] =
+                      packing['uom'] ?? item['uom'] ?? 'N/A';
+                  enhancedPacking['status'] =
+                      packing['status'] ?? item['status'] ?? 'N/A';
+                  enhancedPacking['qr_code_id'] = packing['qr_id'] ?? 'N/A';
+                  enhancedPacking['qr_code'] = packing['qr_code'] ?? 'N/A';
 
-                // Add missing fields from parent object
-                enhancedPacking['work_order_number'] =
-                    packing['work_order_number'] ?? item['work_order_name'] ?? 'N/A';
-                enhancedPacking['client_name'] =
-                    packing['client_name'] ?? item['client_project']?['client_name'] ?? 'N/A';
-                enhancedPacking['project_name'] =
-                    packing['project_name'] ?? item['client_project']?['project_name'] ?? 'N/A';
-                enhancedPacking['job_order_name'] =
-                    packing['job_order_name'] ?? item['job_order_name'] ?? 'N/A';
-                enhancedPacking['uom'] = packing['uom'] ?? item['uom'] ?? 'N/A';
-                enhancedPacking['status'] = packing['status'] ?? item['status'] ?? 'N/A';
-                enhancedPacking['qr_code_id'] = packing['qr_id'] ?? 'N/A';
-                enhancedPacking['qr_code'] = packing['qr_code'] ?? 'N/A';
-
-                print('Adding enhanced packing with ID: ${enhancedPacking['packing_id']}');
-                print('Enhanced packing data: $enhancedPacking');
-                allPackings.add(enhancedPacking);
+                  print(
+                    'Adding enhanced packing with ID: ${enhancedPacking['packing_id']}',
+                  );
+                  print('Enhanced packing data: $enhancedPacking');
+                  allPackings.add(enhancedPacking);
+                }
               }
             }
           }
         }
-      }
 
-      print('Total collected packings: ${allPackings.length}');
-      print('Collected packings IDs: ${allPackings.map((p) => p['packing_id']).toList()}');
-      return allPackings;
-    } else {
-      print('Failed to load packing details - Status: ${response.statusCode}');
-      throw Exception('Failed to load packing details: ${response.statusCode}');
+        print('Total collected packings: ${allPackings.length}');
+        print(
+          'Collected packings IDs: ${allPackings.map((p) => p['packing_id']).toList()}',
+        );
+        return allPackings;
+      } else {
+        print(
+          'Failed to load packing details - Status: ${response.statusCode}',
+        );
+        throw Exception(
+          'Failed to load packing details: ${response.statusCode}',
+        );
+      }
+    } on SocketException {
+      print('No internet connection while fetching packing details');
+      throw Exception('No internet connection.');
+    } catch (e) {
+      print('Error in getPackingDetails: $e');
+      rethrow;
     }
-  } on SocketException {
-    print('No internet connection while fetching packing details');
-    throw Exception('No internet connection.');
-  } catch (e) {
-    print('Error in getPackingDetails: $e');
-    rethrow;
   }
-}
+
   Future<List<Map<String, String>>> getWorkOrders() async {
     try {
-      final token = await fetchAccessToken();
-      if (token == null || token.isEmpty) {
-        throw Exception('Authentication token not found.');
-      }
-
       final authHeaders = await headers;
       final uri = Uri.parse(AppUrl.fetchWorkOrderDetailsUrl);
 
@@ -180,15 +187,8 @@ Future<List<Map<String, dynamic>>> getPackingDetails(
 
   Future<int?> getBundleSize(String productId) async {
     try {
-      final token = await fetchAccessToken();
-      if (token == null || token.isEmpty) {
-        throw Exception('Authentication token not found.');
-      }
-
       final authHeaders = await headers;
-      final uri = Uri.parse(
-        '${AppUrl.baseUrl}/konkreteKlinkers/packing/bundlesize?product_id=$productId',
-      );
+      final uri = Uri.parse('${AppUrl.getpackingbundlesizeurl}$productId');
 
       print('Fetching bundle size for productId: $productId');
       print('Bundle size request URI: $uri');
@@ -250,11 +250,6 @@ Future<List<Map<String, dynamic>>> getPackingDetails(
 
   Future<PackingModel> createPacking(Map<String, dynamic> packingData) async {
     try {
-      final token = await fetchAccessToken();
-      if (token == null || token.isEmpty) {
-        throw Exception('Authentication token not found.');
-      }
-
       final authHeaders = await headers;
       final uri = Uri.parse(AppUrl.createPacking);
 
@@ -307,20 +302,12 @@ Future<List<Map<String, dynamic>>> getPackingDetails(
 
   Future<void> submitQrCode(String packingId, String qrCode) async {
     try {
-      final token = await fetchAccessToken();
-      if (token == null || token.isEmpty) {
-        throw Exception('Authentication token not found.');
-      }
-
       final authHeaders = await headers;
       final uri = Uri.parse(AppUrl.getpackingqr);
 
       final body = json.encode({
         'packings': [
-          {
-            'packing_id': packingId,
-            'qrCodeId': qrCode,
-          },
+          {'packing_id': packingId, 'qrCodeId': qrCode},
         ],
       });
 
@@ -388,7 +375,9 @@ Future<List<Map<String, dynamic>>> getPackingDetails(
       } else {
         final errorData = jsonDecode(response.body);
         final errorMessage = errorData['message'] ?? 'Unknown error';
-        print('Failed to delete packing: ${response.statusCode} - $errorMessage');
+        print(
+          'Failed to delete packing: ${response.statusCode} - $errorMessage',
+        );
         throw Exception('Failed to delete packing: $errorMessage');
       }
     } on SocketException catch (e) {
@@ -402,11 +391,6 @@ Future<List<Map<String, dynamic>>> getPackingDetails(
 
   Future<List<Map<String, String>>> getProducts(String workOrderId) async {
     try {
-      final token = await fetchAccessToken();
-      if (token == null || token.isEmpty) {
-        throw Exception('Authentication token not found.');
-      }
-
       final authHeaders = await headers;
       final uri = Uri.parse('${AppUrl.getproductsbyworkOrder}$workOrderId');
 
@@ -454,11 +438,15 @@ Future<List<Map<String, dynamic>>> getPackingDetails(
                 item['productId'] != null) {
               id = item['productId'].toString();
             }
-
+            String total = '';
+            if (item.containsKey('available_to_pack') &&
+                item['available_to_pack'] != null) {
+              total = item['available_to_pack'].toString();
+            }
             String name = '';
-            if (item.containsKey('material_code') &&
-                item['material_code'] != null) {
-              name = item['material_code'].toString();
+            if (item.containsKey('description') &&
+                item['description'] != null) {
+              name = item['description'].toString();
             } else if (item.containsKey('name') && item['name'] != null) {
               name = item['name'].toString();
             } else if (item.containsKey('product_name') &&
@@ -468,10 +456,8 @@ Future<List<Map<String, dynamic>>> getPackingDetails(
               name = item['code'].toString();
             }
 
-            print('Extracted - ID: "$id", Name: "$name"');
-
             if (id.isNotEmpty && name.isNotEmpty) {
-              products.add({'id': id, 'name': name});
+              products.add({'id': id, 'name': name, "total": total});
               print('Added product: {id: $id, name: $name}');
             } else {
               print('Skipped product due to empty ID or name');
@@ -480,9 +466,6 @@ Future<List<Map<String, dynamic>>> getPackingDetails(
             print('Item is not a Map<String, dynamic>: ${item.runtimeType}');
           }
         }
-
-        print('Final products list: $products');
-        print('Final products list length: ${products.length}');
 
         return products;
       } else {

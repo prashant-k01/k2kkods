@@ -9,7 +9,7 @@ String workOrderModelToJson(WorkOrderModel data) => json.encode(data.toJson());
 class WorkOrderModel {
   final bool success;
   final String message;
-  final List<Datum> data;
+  final List<WorkOrder> data;
 
   WorkOrderModel({
     required this.success,
@@ -18,12 +18,12 @@ class WorkOrderModel {
   });
 
   factory WorkOrderModel.fromJson(Map<String, dynamic> json) {
-    List<Datum> dataList = [];
+    List<WorkOrder> dataList = [];
     if (json['data'] is Map<String, dynamic>) {
-      dataList = [Datum.fromJson(json['data'] as Map<String, dynamic>)];
+      dataList = [WorkOrder.fromJson(json['data'] as Map<String, dynamic>)];
     } else if (json['data'] is List<dynamic>) {
       dataList = (json['data'] as List<dynamic>)
-          .map((x) => Datum.fromJson(x as Map<String, dynamic>))
+          .map((x) => WorkOrder.fromJson(x as Map<String, dynamic>))
           .toList();
     } else {
       dataList = [];
@@ -43,7 +43,7 @@ class WorkOrderModel {
   };
 }
 
-class Datum {
+class WorkOrder {
   final String id;
   final String? clientId;
   final String? clientName;
@@ -63,7 +63,7 @@ class Datum {
   final DateTime updatedAt;
   final int v;
 
-  Datum({
+  WorkOrder({
     required this.id,
     this.clientId,
     this.clientName,
@@ -84,7 +84,7 @@ class Datum {
     required this.v,
   });
 
-  factory Datum.fromJson(Map<String, dynamic> json) {
+  factory WorkOrder.fromJson(Map<String, dynamic> json) {
     try {
       String? clientId;
       String? clientName;
@@ -128,7 +128,7 @@ class Datum {
         updatedById = '';
       }
 
-      return Datum(
+      return WorkOrder(
         id: json['_id'] is String ? json['_id'] as String? ?? '' : '',
         clientId: clientId,
         clientName: clientName,
@@ -335,9 +335,8 @@ class Product {
   final int poQuantity;
   final int? qtyInNos;
   final DateTime? deliveryDate;
-  final String id;
-  final ProductModel? product;
-  final PlantModel? plant;
+  final String? id;
+  final String? plantCode; // new field
 
   Product({
     required this.productId,
@@ -345,32 +344,14 @@ class Product {
     required this.poQuantity,
     this.qtyInNos,
     this.deliveryDate,
-    required this.id,
-    this.product,
-    this.plant,
+    this.id,
+    this.plantCode, // new field
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
     String? productId;
-    ProductModel? productModel;
-    PlantModel? plantModel;
 
     try {
-      if (json['product'] is String) {
-        productId = json['product'] as String?;
-      } else if (json['product'] is Map<String, dynamic>) {
-        productModel = ProductModel.fromJson(
-          json['product'] as Map<String, dynamic>,
-        );
-        productId = productModel.id;
-      } else {
-        productId = '';
-      }
-
-      if (json['plant'] is Map<String, dynamic>) {
-        plantModel = PlantModel.fromJson(json['plant'] as Map<String, dynamic>);
-      }
-
       Uom uomValue = Uom.nos;
       if (json['uom'] is String) {
         uomValue =
@@ -392,8 +373,6 @@ class Product {
             : DateTime.tryParse(json['delivery_date'] as String) ??
                   DateTime.now(),
         id: json['_id'] as String? ?? '',
-        product: productModel,
-        plant: plantModel,
       );
     } catch (e, stackTrace) {
       if (kDebugMode) {
@@ -410,8 +389,7 @@ class Product {
     'qty_in_nos': qtyInNos,
     'delivery_date': deliveryDate?.toIso8601String(),
     '_id': id,
-    'product': product?.toJson(),
-    'plant': plant?.toJson(),
+    'plant_code': plantCode, // include in JSON
   };
 }
 

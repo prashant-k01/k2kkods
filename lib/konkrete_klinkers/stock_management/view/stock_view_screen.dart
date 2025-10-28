@@ -253,14 +253,7 @@ class _StockDetailsScreenState extends State<StockDetailsScreen> {
                         label: 'Work Order ID',
                         value: from?.workOrderId ?? 'N/A',
                       ),
-                      DetailItem(
-                        label: 'Client Name',
-                        value: from?.client ?? 'N/A',
-                      ),
-                      DetailItem(
-                        label: 'Project Name',
-                        value: from?.project ?? 'N/A',
-                      ),
+
                       DetailItem(
                         label: 'Transferred Qty',
                         value: '${from?.quantityTransferred ?? 0}',
@@ -291,14 +284,7 @@ class _StockDetailsScreenState extends State<StockDetailsScreen> {
                         label: 'Work Order ID',
                         value: to?.workOrderId ?? 'N/A',
                       ),
-                      DetailItem(
-                        label: 'Client Name',
-                        value: to?.client ?? 'N/A',
-                      ),
-                      DetailItem(
-                        label: 'Project Name',
-                        value: to?.project ?? 'N/A',
-                      ),
+
                       DetailItem(
                         label: 'Received Qty',
                         value: '${to?.quantityTransferred ?? 0}',
@@ -311,35 +297,6 @@ class _StockDetailsScreenState extends State<StockDetailsScreen> {
           },
         ),
       ),
-    );
-  }
-
-  Widget _buildLogoAndTitle() {
-    return Row(
-      children: [
-        SizedBox(width: 8.w),
-        Text(
-          'Stock Transfer Details',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF334155),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBackButton() {
-    return IconButton(
-      icon: Icon(
-        Icons.arrow_back_ios,
-        size: 24.sp,
-        color: const Color(0xFF334155),
-      ),
-      onPressed: () {
-        context.go(RouteNames.stockmanagement);
-      },
     );
   }
 
@@ -409,13 +366,13 @@ class IconContainer extends StatelessWidget {
   final Color iconColor;
 
   const IconContainer({
-    Key? key,
+    super.key,
     required this.icon,
     this.gradientColors = const [Colors.orange, Colors.pink],
     this.size = 48,
     this.borderRadius = 12,
     this.iconColor = Colors.red,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

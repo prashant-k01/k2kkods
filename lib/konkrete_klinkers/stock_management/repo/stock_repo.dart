@@ -7,7 +7,7 @@ import 'package:k2k/konkrete_klinkers/stock_management/model/stock.dart';
 
 class StockManagementRepository {
   Future<Map<String, String>> get headers async {
-    final token = SessionManager.getAccessToken();
+    final token = await SessionManager.getAccessToken();
     return {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',

@@ -31,6 +31,10 @@ class _QcCheckFormScreenState extends State<QcCheckFormScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<QcCheckProvider>(context, listen: false).loadJobOrders();
+      Provider.of<QcCheckProvider>(
+        context,
+        listen: false,
+      ).workOrderController.clear();
     });
   }
 
@@ -79,33 +83,6 @@ class _QcCheckFormScreenState extends State<QcCheckFormScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildLogoAndTitle() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'Add QC Check',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF334155),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBackButton() {
-    return IconButton(
-      icon: Icon(
-        Icons.arrow_back_ios,
-        size: 24.sp,
-        color: const Color(0xFF334155),
-      ),
-      onPressed: () => context.go(RouteNames.qcCheck),
     );
   }
 
@@ -179,7 +156,7 @@ class _QcCheckFormScreenState extends State<QcCheckFormScreen> {
               ),
             ],
             SizedBox(height: 18.h),
-            CustomSearchableDropdownFormField(
+            CustomTextFormField(
               name: 'work_order',
               labelText: 'Work Order',
               hintText: provider.isWorkOrderAndProductsLoading
@@ -188,12 +165,8 @@ class _QcCheckFormScreenState extends State<QcCheckFormScreen> {
                   ? 'Select Job Order First'
                   : 'Select Work Order',
               prefixIcon: Icons.work,
-              options: provider.workOrder != null
-                  ? [provider.workOrder!['work_order_number']!]
-                  : [],
-              enabled:
-                  !provider.isWorkOrderAndProductsLoading &&
-                  provider.workOrder != null,
+              controller: provider.workOrderController,
+              enabled: false,
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
               focusedBorderColor: AppTheme.primaryBlue,
@@ -215,7 +188,7 @@ class _QcCheckFormScreenState extends State<QcCheckFormScreen> {
                   : 'Select Product',
               prefixIcon: Icons.inventory_2,
               options: provider.products
-                  .map((product) => product['material_code']!)
+                  .map((product) => product['description']!)
                   .toList(),
               enabled:
                   !provider.isWorkOrderAndProductsLoading &&
@@ -336,6 +309,7 @@ class _QcCheckFormScreenState extends State<QcCheckFormScreen> {
                           'job_order': selectedJob['_id'],
                           'work_order': provider.workOrder!['_id'],
                           'product_id': selectedProduct['_id'],
+                          'production_id': selectedProduct['prod_id'],
                           'rejected_quantity': int.parse(
                             formData['rejected_quantity'],
                           ),

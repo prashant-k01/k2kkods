@@ -7,11 +7,10 @@ import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/date_picker.dart';
 import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/title.dart';
-import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/app_bar.dart';
 import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/ranger_date_pciker.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
-import 'package:k2k/common/widgets/dropdown.dart';
 import 'package:k2k/common/widgets/textfield.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/konkrete_klinkers/job_order/provider/job_order_provider.dart';
@@ -34,14 +33,21 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
   @override
   void initState() {
     super.initState();
+    print(
+      'JobOrderEditFormScreen initState called with mongoId=${widget.mongoId}',
+    );
+
     if (widget.mongoId.isEmpty) {
+      print('Invalid Job Order ID triggered!');
       WidgetsBinding.instance.addPostFrameCallback((_) {
         context.showWarningSnackbar('Invalid job order ID.');
         context.go(RouteNames.jobOrder);
       });
       return;
     }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      print('Initializing form for mongoId=${widget.mongoId}');
       context.read<JobOrderProvider>().initializeForm(widget.mongoId);
     });
   }
@@ -79,24 +85,33 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
               body: provider.isFormLoading
                   ? const Center(child: GradientLoader())
                   : provider.formError != null
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            provider.formError!,
-                            style: TextStyle(
-                              fontSize: 16.sp,
-                              color: Colors.red,
-                            ),
+                  ? Builder(
+                      builder: (context) {
+                        print(
+                          'JobOrderProvider.formError: ${provider.formError}',
+                        );
+
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                provider.formError!,
+                                style: TextStyle(
+                                  fontSize: 16.sp,
+                                  color: Colors.red,
+                                ),
+                              ),
+                              SizedBox(height: 16.h),
+                              ElevatedButton(
+                                onPressed: () =>
+                                    context.go(RouteNames.jobOrder),
+                                child: const Text('Back to Job Orders'),
+                              ),
+                            ],
                           ),
-                          SizedBox(height: 16.h),
-                          ElevatedButton(
-                            onPressed: () => context.go(RouteNames.jobOrder),
-                            child: const Text('Back to Job Orders'),
-                          ),
-                        ],
-                      ),
+                        );
+                      },
                     )
                   : SafeArea(
                       child: GestureDetector(
@@ -205,7 +220,7 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
                   prefixIcon: Icons.work,
                   initialValue:
                       provider.selectedWorkOrder ??
-                      jobOrder.actualWorkOrderNumber,
+                      jobOrder.workOrderDetails?.workOrderNumber,
                   options: provider.workOrderNumbers,
                   fillColor: const Color(0xFFF8FAFC),
                   borderColor: Colors.grey.shade300,
@@ -418,23 +433,16 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
             ),
             SizedBox(height: 18.h),
             CustomTextFormField(
-              name: 'batch_number',
-              labelText: 'Batch Number',
-              hintText: 'Enter Batch Number',
-              focusNode: provider.getFocusNode('batch_number'),
+              name: 'batch_date',
+              labelText: 'Batch Date',
+              hintText: 'Select Batch Date',
+              focusNode: provider.getFocusNode('batch_date'),
               prefixIcon: Icons.numbers,
               keyboardType: TextInputType.number,
-              initialValue: jobOrder.batchNumber.toString(),
-              validators: [
-                FormBuilderValidators.required(),
-                FormBuilderValidators.numeric(
-                  errorText: 'Batch number must be a number',
-                ),
-                FormBuilderValidators.min(
-                  1,
-                  errorText: 'Batch number must be positive',
-                ),
-              ],
+              initialValue: jobOrder.batchDate != null
+                  ? jobOrder.batchDate!.toIso8601String().split('T')[0]
+                  : 'N/A', // or any default string
+              validators: [FormBuilderValidators.required()],
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
               focusedBorderColor: const Color(0xFF3B82F6),
@@ -442,7 +450,7 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
               onTap: () => provider.scrollToFocusedField(
                 context,
                 _scrollController,
-                'batch_number',
+                'batch_date',
               ),
             ),
             SizedBox(height: 18.h),
@@ -451,10 +459,10 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
               labelText: 'Date Range (from & to)',
               hintText: 'Select Date Range (from & to)',
               initialValue:
-                  jobOrder.date.from.isNotEmpty && jobOrder.date.to.isNotEmpty
+                  (jobOrder.date?.from != null && jobOrder.date?.to != null)
                   ? DateTimeRange(
-                      start: DateTime.parse(jobOrder.date.from),
-                      end: DateTime.parse(jobOrder.date.to),
+                      start: jobOrder.date!.from!,
+                      end: jobOrder.date!.to!,
                     )
                   : null,
             ),
@@ -462,7 +470,7 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
             ...provider.products.asMap().entries.map((entry) {
               final index = entry.key;
               return _buildProductSection(context, index, provider);
-            }).toList(),
+            }),
             SizedBox(height: 18.h),
             _buildAddProductButton(provider),
             SizedBox(height: 40.h),
@@ -842,34 +850,28 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
                     errorText: 'Please select a machine',
                   ),
                 ],
+                onChanged: (value) {
+                  if (value is String) {
+                    provider.handleMachineSelection(index, value, _formKey);
+                  }
+                },
               );
             },
           ),
           SizedBox(height: 18.h),
-          CustomDropdownFormField<String>(
+          CustomTextFormField(
             name: 'uom_$index',
             labelText: 'UOM',
-            items: ['Square Meter/No', 'Meter/No']
-                .map(
-                  (item) =>
-                      DropdownMenuItem<String>(value: item, child: Text(item)),
-                )
-                .toList(),
-            hintText: 'Select UOM',
-            enabled: false,
+
+            hintText: 'Selected UOM',
+            enabled: true,
             prefixIcon: Icons.workspaces,
             fillColor: const Color(0xFFF8FAFC),
             borderColor: Colors.grey.shade300,
             focusedBorderColor: const Color(0xFF3B82F6),
             borderRadius: 12.r,
-            initialValue:
-                provider.products.length > index &&
-                    provider.products[index]['uom'] != null
-                ? (provider.products[index]['uom'] == 'sqmt'
-                      ? 'Square Meter/No'
-                      : provider.products[index]['uom'] == 'meter'
-                      ? 'Meter/No'
-                      : null)
+            initialValue: provider.machines.length > index
+                ? provider.machines[index].uom
                 : null,
           ),
           SizedBox(height: 18.h),
@@ -915,7 +917,10 @@ class _JobOrderEditFormScreenState extends State<JobOrderEditFormScreen> {
             initialValue:
                 provider.products.length > index &&
                     provider.products[index]['scheduled_date'] != null
-                ? DateTime.tryParse(provider.products[index]['scheduled_date'])
+                ? DateTime.tryParse(
+                    provider.products[index]['scheduled_date']
+                        .toIso8601String(),
+                  )
                 : null,
             validators: [
               FormBuilderValidators.required(

@@ -12,7 +12,6 @@ import 'package:k2k/common/widgets/gradient_icon_button.dart';
 import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/konkrete_klinkers/packing/model/packing.dart';
 import 'package:k2k/konkrete_klinkers/packing/provider/packing_provider.dart';
-import 'package:k2k/konkrete_klinkers/packing/view/packing_delete.dart';
 import 'package:k2k/utils/sreen_util.dart';
 import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
@@ -48,15 +47,6 @@ class _PackingListViewState extends State<PackingListView> {
     }
   }
 
-  // Handle back navigation properly
-  void _handleBackNavigation() {
-    if (context.canPop()) {
-      context.pop();
-    } else {
-      context.go(RouteNames.homeScreen);
-    }
-  }
-
   Widget _buildPackingCard(PackingModel packing) {
     final workOrderNumber = packing.displayWorkOrderNumber;
     final productName = packing.displayProductName;
@@ -69,7 +59,11 @@ class _PackingListViewState extends State<PackingListView> {
       margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
       title: 'Work Order: $workOrderNumber',
       titleColor: AppColors.background,
-      leading: SizedBox.shrink(), // No leading icon in original
+      leading: Icon(
+        Icons.category_sharp,
+        color: AppTheme.lightGray,
+        size: 36.sp,
+      ), // No leading icon in original
       headerGradient: AppTheme.cardGradientList,
       backgroundColor: AppColors.cardBackground,
       borderColor: const Color(0xFFE5E7EB),
@@ -85,73 +79,7 @@ class _PackingListViewState extends State<PackingListView> {
           },
         );
       },
-      menuItems: [
-        PopupMenuItem<String>(
-          value: 'view',
-          child: Row(
-            children: [
-              Icon(Icons.visibility, size: 20.sp, color: AppTheme.primaryBlue),
-              SizedBox(width: 8.w),
-              Text(
-                'View',
-                style: TextStyle(fontSize: 14.sp, color: AppTheme.mediumGray),
-              ),
-            ],
-          ),
-        ),
-        PopupMenuItem<String>(
-          value: 'edit',
-          child: Row(
-            children: [
-              Icon(
-                Icons.edit_outlined,
-                size: 20.sp,
-                color: AppTheme.warningColor,
-              ),
-              SizedBox(width: 8.w),
-              Text(
-                'Edit',
-                style: TextStyle(fontSize: 14.sp, color: AppTheme.mediumGray),
-              ),
-            ],
-          ),
-        ),
-        PopupMenuItem<String>(
-          value: 'delete',
-          child: Row(
-            children: [
-              Icon(
-                Icons.delete_outline,
-                size: 20.sp,
-                color: AppTheme.errorColor,
-              ),
-              SizedBox(width: 8.w),
-              Text(
-                'Delete',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  color: const Color(0xFF334155),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-      onMenuSelected: (value) {
-        if (value == 'view') {
-          context.goNamed(
-            RouteNames.packingDetails,
-            pathParameters: {
-              'workOrderId': packing.workOrderId,
-              'productId': packing.productId,
-            },
-          );
-        } else if (value == 'edit') {
-          context.goNamed(RouteNames.packingadd, extra: packing.toJson());
-        } else if (value == 'delete') {
-          PackingDeleteHandler.deletePacking(context, packing.id, productName);
-        }
-      },
+
       bodyItems: [
         Row(
           children: [
@@ -224,54 +152,6 @@ class _PackingListViewState extends State<PackingListView> {
           ],
         ),
       ],
-    );
-  }
-
-  Widget _buildLogoAndTitle() {
-    return Row(
-      children: [
-        SizedBox(width: 8.w),
-        Text(
-          'Packings',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: AppTheme.darkGray,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBackButton() {
-    return IconButton(
-      icon: Icon(Icons.arrow_back_ios, size: 24.sp, color: AppTheme.darkGray),
-      onPressed: _handleBackNavigation,
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Padding(
-      padding: EdgeInsets.only(right: 16.w),
-      child: TextButton(
-        onPressed: () {
-          context.goNamed(RouteNames.packingadd);
-        },
-        child: Row(
-          children: [
-            Icon(Icons.add, size: 20.sp, color: AppTheme.primaryBlue),
-            SizedBox(width: 4.w),
-            Text(
-              'Add Packing',
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.primaryBlue,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 

@@ -7,7 +7,7 @@ import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
 import 'package:k2k/common/list_helper/shimmer.dart';
 import 'package:k2k/common/list_helper/title.dart';
-import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/app_bar.dart';
 import 'package:k2k/common/widgets/custom_card.dart';
 import 'package:k2k/common/widgets/gradient_icon_button.dart';
 import 'package:k2k/common/widgets/gradient_loader.dart';
@@ -52,7 +52,7 @@ class _MachinesListScreenState extends State<MachinesListScreen> {
           final provider = context.read<MachinesProvider>();
           if (provider.machines.isEmpty && provider.error == null) {
             print('Loading machines on MachinesListScreen init');
-            provider.loadAllMachines(refresh: true);
+            provider.loadMachines(refresh: true);
           }
         }
       });
@@ -66,7 +66,7 @@ class _MachinesListScreenState extends State<MachinesListScreen> {
           !context.read<MachinesProvider>().isLoading &&
           context.read<MachinesProvider>().hasMore) {
         print('Loading more machines');
-        context.read<MachinesProvider>().loadAllMachines();
+        context.read<MachinesProvider>().loadMachines();
       }
     });
   }
@@ -85,22 +85,22 @@ class _MachinesListScreenState extends State<MachinesListScreen> {
     return DateFormat('dd-MM-yyyy, hh:mm a').format(dateTime);
   }
 
-  String _getCreatedBy(CreatedBy? createdBy) {
-    if (createdBy == null || createdBy.username.isEmpty) {
+  String _getCreatedBy(MachineCreatedBy? createdBy) {
+    if (createdBy == null || createdBy.username!.isEmpty) {
       return 'Unknown';
     }
-    return createdBy.username;
+    return createdBy.username!;
   }
 
-  Widget _buildMachineCard(MachineElement machine) {
+  Widget _buildMachineCard(Machine machine) {
     final machineId = machine.id;
     final name = machine.name;
-    final plantName = machine.plantId.plantName;
+    final plantName = machine.plantId?.plantName;
     final createdBy = _getCreatedBy(machine.createdBy);
     final createdAt = machine.createdAt;
 
     return CustomCard(
-      title: name,
+      title: name!,
       titleColor: AppColors.background,
       leading: Icon(
         Icons.memory_outlined,
@@ -206,7 +206,7 @@ class _MachinesListScreenState extends State<MachinesListScreen> {
             ),
             SizedBox(width: 8.w),
             Text(
-              'Created: ${_formatDateTime(createdAt)}',
+              'Created: ${_formatDateTime(createdAt!)}',
               style: TextStyle(fontSize: 13.sp, color: const Color(0xFF64748B)),
             ),
           ],
@@ -289,7 +289,6 @@ class _MachinesListScreenState extends State<MachinesListScreen> {
             child: Consumer<MachinesProvider>(
               builder: (context, provider, child) {
                 if (provider.error != null) {
-                  print('Error in MachinesProvider: ${provider.error}');
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -325,9 +324,8 @@ class _MachinesListScreenState extends State<MachinesListScreen> {
                           text: 'Retry',
                           icon: Icons.refresh,
                           onTap: () {
-                            print('Retrying to load machines');
                             provider.clearError();
-                            provider.loadAllMachines(refresh: true);
+                            provider.loadMachines(refresh: true);
                           },
                         ),
                       ],
@@ -337,8 +335,7 @@ class _MachinesListScreenState extends State<MachinesListScreen> {
 
                 return RefreshIndicator(
                   onRefresh: () async {
-                    print('Refreshing machines list');
-                    await provider.loadAllMachines(refresh: true);
+                    await provider.loadMachines(refresh: true);
                   },
                   color: const Color(0xFF3B82F6),
                   backgroundColor: Colors.white,

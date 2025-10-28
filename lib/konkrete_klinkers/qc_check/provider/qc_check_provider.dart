@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:k2k/konkrete_klinkers/qc_check/model/qc_check.dart';
+import 'package:k2k/konkrete_klinkers/qc_check/model/qc_check_detail_model.dart';
 import 'package:k2k/konkrete_klinkers/qc_check/repo/qc_check_repo.dart';
 
 class QcCheckProvider with ChangeNotifier {
@@ -10,7 +11,12 @@ class QcCheckProvider with ChangeNotifier {
   List<QcCheckModel> _qcChecks = [];
   List<Map<String, String>> _jobOrders = [];
   Map<String, String>? _workOrder;
-  List<Map<String, String>> _products = [];
+  TextEditingController workOrderController = TextEditingController();
+
+  QcCheckDetail? _qcCheckData;
+  QcCheckDetail? get qcCheckData => _qcCheckData;
+
+  List<Map<String, dynamic>> _products = [];
   bool _isLoading = false;
   bool _isJobOrdersLoading = false;
   bool _isWorkOrderAndProductsLoading = false;
@@ -25,7 +31,7 @@ class QcCheckProvider with ChangeNotifier {
   List<QcCheckModel> get qcChecks => _qcChecks;
   List<Map<String, String>> get jobOrders => _jobOrders;
   Map<String, String>? get workOrder => _workOrder;
-  List<Map<String, String>> get products => _products;
+  List<Map<String, dynamic>> get products => _products;
   bool get isLoading => _isLoading;
   bool get isJobOrdersLoading => _isJobOrdersLoading;
   bool get isWorkOrderAndProductsLoading => _isWorkOrderAndProductsLoading;
@@ -45,6 +51,7 @@ class QcCheckProvider with ChangeNotifier {
     _qcChecks = [];
     _jobOrders = [];
     _workOrder = null;
+    workOrderController.clear();
     _products = [];
     _isLoading = false;
     _isJobOrdersLoading = false;
@@ -109,7 +116,9 @@ class QcCheckProvider with ChangeNotifier {
 
       _workOrder = data['work_order'] as Map<String, String>?;
       _products = (data['products'] as List<dynamic>)
-          .cast<Map<String, String>>();
+          .cast<Map<String, dynamic>>();
+      workOrderController.text = _workOrder?['work_order_number'] ?? '';
+
       _error = null;
 
       print(
@@ -173,6 +182,24 @@ class QcCheckProvider with ChangeNotifier {
       print(
         'Load QC checks completed - isLoading: $_isLoading, error: $_error',
       );
+    }
+  }
+
+  Future<void> fetchQcCheckById(String id) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final response = await _repository.getQcCheckById(id);
+      _qcCheckData = response.data;
+      _error = null;
+    } catch (e) {
+      _error = e.toString();
+      _qcCheckData = null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
@@ -297,41 +324,15 @@ class QcCheckProvider with ChangeNotifier {
     try {
       final updatedQcCheck = await _repository.updateQcCheck(id, qcCheckData);
 
-      final jobOrder = _jobOrders.firstWhere(
-        (job) => job['_id'] == qcCheckData['job_order'],
-        orElse: () => {'job_order_id': qcCheckData['job_order'] ?? 'N/A'},
-      );
-      final workOrder =
-          _workOrder != null && _workOrder!['_id'] == qcCheckData['work_order']
-          ? _workOrder
-          : {'work_order_number': qcCheckData['work_order'] ?? 'N/A'};
-
-      final enrichedQcCheck = QcCheckModel(
-        id: updatedQcCheck.id,
-        workOrder: updatedQcCheck.workOrder,
-        jobOrder: updatedQcCheck.jobOrder,
-        productId: updatedQcCheck.productId,
-        rejectedQuantity: updatedQcCheck.rejectedQuantity,
-        recycledQuantity: updatedQcCheck.recycledQuantity,
-        remarks: updatedQcCheck.remarks,
-        createdBy: updatedQcCheck.createdBy,
-        updatedBy: updatedQcCheck.updatedBy,
-        status: updatedQcCheck.status,
-        createdAt: updatedQcCheck.createdAt,
-        updatedAt: updatedQcCheck.updatedAt,
-        workOrderNumber: workOrder?['work_order_number'],
-        jobOrderNumber: jobOrder['job_order_id'],
-      );
-
       final index = _qcChecks.indexWhere((qc) => qc.id == id);
       if (index != -1) {
-        _qcChecks[index] = enrichedQcCheck;
+        _qcChecks[index] = updatedQcCheck;
       } else {
-        _qcChecks.insert(0, enrichedQcCheck);
+        _qcChecks.insert(0, updatedQcCheck);
       }
 
       _error = null;
-      print('QC check updated successfully: ${enrichedQcCheck.id}');
+      print('QC check updated successfully: ${updatedQcCheck.id}');
     } catch (e) {
       print('Error updating QC check: $e');
       _error = _getErrorMessage(e);

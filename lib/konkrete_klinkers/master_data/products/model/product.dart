@@ -276,7 +276,7 @@ class ProductResponse {
       
       if (dataList != null) {
         products = dataList
-            .where((item) => item is Map<String, dynamic>)
+            .whereType<Map<String, dynamic>>()
             .map((item) {
               try {
                 return ProductModel.fromJson(item as Map<String, dynamic>);

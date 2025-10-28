@@ -3,6 +3,7 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/konkrete_klinkers/job_order/model/job_order.dart';
+import 'package:k2k/konkrete_klinkers/job_order/model/job_order_detail_model.dart';
 import 'package:k2k/konkrete_klinkers/job_order/repo/job_order_repo.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 
@@ -15,12 +16,23 @@ class JobOrderProvider with ChangeNotifier {
   bool _isAddJobOrderLoading = false;
   bool _isUpdateJobOrderLoading = false;
   bool _isDeleteJobOrderLoading = false;
-  bool _isInitialized = false;
-  JobOrderModel? _jobOrder;
-  bool _showAreaPerUnit = true;
+  final bool _isInitialized = false;
+  Data? _jobOrder;
+  // bool _showAreaPerUnit = true;
 
   bool _isFormLoading = true;
   String? _formError;
+
+  DateTime? _batchDate;
+
+  // Getter
+  DateTime? get batchDate => _batchDate;
+
+  // Setter
+  void setBatchDate(DateTime? date) {
+    _batchDate = date;
+    notifyListeners();
+  }
 
   List<String> _workOrderNumbers = [];
   List<Map<String, dynamic>> _workOrderDetails = [];
@@ -32,6 +44,116 @@ class JobOrderProvider with ChangeNotifier {
   final List<List<String>> _machineNames = [];
   Map<int, List<Map<String, dynamic>>> _machineDataByProduct = {};
   final List<bool> _isLoadingMachineNames = [];
+
+  final List<List<Map<String, dynamic>>> _machinesForProduct = [];
+  List<List<Map<String, dynamic>>> get machinesForProduct =>
+      _machinesForProduct;
+
+  List<Machine> _machines = [];
+  List<Machine> get machines => _machines;
+
+  Machine? _selectedMachine;
+  Machine? get selectedMachine => _selectedMachine;
+
+  String? _uom;
+  String? get uom => _uom;
+
+  Future<void> fetchMachinesByProduct(String materialCode) async {
+    try {
+      final response = await _repository.getMachinesByProductId(materialCode);
+      _machines = response.data;
+      _selectedMachine = null;
+      _uom = null;
+    } catch (e) {
+      _machines = [];
+      _error = 'Failed to fetch machines: $e';
+      notifyListeners();
+    }
+  }
+
+  void selectMachine(Machine machine) {
+    _selectedMachine = machine;
+    _uom = machine.uom;
+    notifyListeners();
+  }
+
+  /// Clear machines when switching products
+  void clearMachines() {
+    _machines = [];
+    _selectedMachine = null;
+    _uom = null;
+    notifyListeners();
+  }
+
+  void handleMachineSelection(
+    int index,
+    String? machineName,
+    GlobalKey<FormBuilderState> formKey,
+  ) {
+    debugPrint(
+      '🔹 handleMachineSelection called for index: $index, machineName: $machineName',
+    );
+
+    if (machineName == null) {
+      debugPrint('⚠️ machineName is null, returning without action');
+      return;
+    }
+
+    // Get machines for this product
+    final machinesForProduct = _machineDataByProduct.length > index
+        ? _machineDataByProduct[index] ?? []
+        : [];
+    debugPrint(
+      '📦 Machines for product at index $index: ${machinesForProduct.map((m) => m['name']).toList()}',
+    );
+
+    if (machinesForProduct.isEmpty) {
+      debugPrint('⚠️ No machines available for this product');
+      return;
+    }
+
+    // Find the machine
+    Map<String, dynamic>? machine;
+    try {
+      machine = machinesForProduct.firstWhere(
+        (m) => m['name'] == machineName,
+        orElse: () => <String, dynamic>{},
+      );
+    } catch (e) {
+      debugPrint('❌ Error while searching machine: $e');
+      machine = null;
+    }
+
+    if (machine != null) {
+      debugPrint(
+        '✅ Machine found: ${machine['name']} | UOM: ${machine['uom']}',
+      );
+
+      // Save to _products
+      _products[index]['machine_name'] = machine['name'];
+      _products[index]['uom'] = machine['uom'];
+      debugPrint('📝 _products updated at index $index: ${_products[index]}');
+
+      // Update FormBuilder field
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final fieldKey = 'uom_$index';
+        final fields = formKey.currentState?.fields;
+        if (fields != null && fields.containsKey(fieldKey)) {
+          debugPrint(
+            '🧩 Updating FormBuilder field [$fieldKey] with value: ${machine?['uom']}',
+          );
+          fields[fieldKey]?.didChange(machine?['uom']);
+        } else {
+          debugPrint('⚠️ FormBuilder field [$fieldKey] not found');
+        }
+      });
+
+      notifyListeners();
+      debugPrint('🔔 notifyListeners called');
+    } else {
+      debugPrint('❌ Machine not found for name: $machineName');
+    }
+  }
 
   final Map<String, FocusNode> _focusNodes = {
     'work_order': FocusNode(),
@@ -48,8 +170,7 @@ class JobOrderProvider with ChangeNotifier {
   bool get isUpdateJobOrderLoading => _isUpdateJobOrderLoading;
   bool get isDeleteJobOrderLoading => _isDeleteJobOrderLoading;
   bool get isInitialized => _isInitialized;
-  JobOrderModel? get jobOrder => _jobOrder;
-  bool get showAreaPerUnit => _showAreaPerUnit;
+  Data? get jobOrder => _jobOrder;
   bool get isFormLoading => _isFormLoading;
   String? get formError => _formError;
   List<String> get workOrderNumbers => _workOrderNumbers;
@@ -111,17 +232,41 @@ class JobOrderProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<JobOrderModel?> getJobOrderById(String mongoId) async {
+  Future<void> getJobOrderById(String mongoId) async {
     try {
       _error = null;
-      final jobOrder = await _repository.getJobOrderById(mongoId);
-      _jobOrder = jobOrder;
+      debugPrint('🔄 Fetching JobOrder with ID: $mongoId');
+
+      // Fetch the JobOrder using the repository
+      final JobOrderDetailResponse? response = await _repository
+          .getJobOrderById(mongoId);
+
+      if (response != null) {
+        _jobOrder = response.data;
+        debugPrint('✅ JobOrder fetched successfully: ${_jobOrder?.toJson()}');
+        if (_jobOrder?.workOrderDetails == null) {
+          debugPrint(
+            '⚠️ Warning: workOrderDetails is null in fetched JobOrder',
+          );
+        } else {
+          debugPrint(
+            'WorkOrderNumber: ${_jobOrder?.workOrderDetails?.workOrderNumber}',
+          );
+          debugPrint('Products count: ${_jobOrder?.products?.length}');
+        }
+      } else {
+        _jobOrder = null;
+        _error = 'Job order not found';
+        debugPrint('❌ Job order not found for ID: $mongoId');
+      }
+
       notifyListeners();
-      return jobOrder;
-    } catch (e) {
-      _error = _getErrorMessage(e);
+    } catch (e, st) {
+      _jobOrder = null;
+      _error = 'Failed to fetch job order: $e';
+      debugPrint('❌ Exception while fetching JobOrder: $e');
+      debugPrint('📄 Stack trace: $st');
       notifyListeners();
-      return null;
     }
   }
 
@@ -130,6 +275,8 @@ class JobOrderProvider with ChangeNotifier {
     GlobalKey<FormBuilderState> formKey,
   ) async {
     if (formKey.currentState?.saveAndValidate() ?? false) {
+      debugPrint("Form validation failed: ${formKey.currentState?.value}");
+
       final formData = formKey.currentState!.value;
       try {
         final selectedWO = _workOrderDetails.firstWhere(
@@ -237,6 +384,8 @@ class JobOrderProvider with ChangeNotifier {
               ? 'sqmt'
               : uom == 'Meter/No'
               ? 'meter'
+              : uom == 'Nos'
+              ? 'nos'
               : null;
 
           products.add({
@@ -258,18 +407,11 @@ class JobOrderProvider with ChangeNotifier {
           return;
         }
 
-        final batchNumberStr = formData['batch_number']?.toString() ?? '0';
-        final batchNumber = int.tryParse(batchNumberStr) ?? 0;
-        if (batchNumber <= 0) {
-          context.showWarningSnackbar("Please enter a valid batch number.");
-          return;
-        }
-
         final payload = {
           'work_order': workOrderId,
           'sales_order_number':
               formData['sales_order_number']?.toString() ?? '',
-          'batch_number': batchNumber,
+          'batch_date': batchDate?.toIso8601String().split('T')[0],
           'date': {
             'from': dateRange.start.toUtc().toIso8601String(),
             'to': dateRange.end.toUtc().toIso8601String(),
@@ -318,47 +460,88 @@ class JobOrderProvider with ChangeNotifier {
     _formError = null;
     notifyListeners();
 
+    debugPrint('[InitForm] Starting initialization for mongoId=$mongoId');
+
     try {
+      // Step 1: Load work order details
+      debugPrint('[InitForm] Loading work order details...');
       await loadWorkOrderDetails();
+      debugPrint(
+        '[InitForm] Work order details loaded: ${_workOrderDetails.length} items',
+      );
+
+      // Step 2: Fetch job order from API
+      debugPrint('[InitForm] Fetching JobOrder with id: $mongoId');
       final jobOrder = await getJobOrder(mongoId);
       if (jobOrder == null) {
-        _formError = _error ?? 'Invalid Job Order ID.';
+        debugPrint('[InitForm] JobOrder is null for mongoId=$mongoId');
+        _formError = 'Invalid Job Order ID.';
         _isFormLoading = false;
         notifyListeners();
         return;
       }
+      debugPrint('[InitForm] JobOrder fetched: ${jobOrder.toJson()}');
 
-      final workOrderNumber = jobOrder.actualWorkOrderNumber;
-      if (workOrderNumber.isEmpty) {
+      // Step 3: Extract work order number
+      final workOrderNumber = jobOrder.workOrderDetails?.workOrderNumber
+          ?.trim();
+      debugPrint('[InitForm] workOrderNumber extracted: "$workOrderNumber"');
+
+      if (workOrderNumber == null || workOrderNumber.isEmpty) {
+        debugPrint('[InitForm] Work order number missing in JobOrder data');
         _formError = 'Work order number not found in job order data.';
         _isFormLoading = false;
         notifyListeners();
         return;
       }
 
+      // Step 4: Set selected work order
+      debugPrint('[InitForm] Setting selected work order: $workOrderNumber');
       setSelectedWorkOrder(workOrderNumber);
+
+      // Step 5: Find work order details
       final workOrder = _workOrderDetails.firstWhere(
-        (e) => e['work_order_number'] == workOrderNumber,
+        (e) => e['work_order_number']?.toString().trim() == workOrderNumber,
         orElse: () => {},
       );
+      debugPrint('[InitForm] Matching workOrder details: $workOrder');
+
       final workOrderId =
           workOrder['id']?.toString() ?? workOrder['_id']?.toString();
+      debugPrint('[InitForm] workOrderId resolved: $workOrderId');
 
       if (workOrderId == null || workOrderId.isEmpty) {
+        debugPrint(
+          '[InitForm] Failed to resolve work order ID for $workOrderNumber',
+        );
         _formError = 'Failed to find work order ID for $workOrderNumber.';
         _isFormLoading = false;
         notifyListeners();
         return;
       }
 
+      // Step 6: Load products by work order
+      debugPrint('[InitForm] Loading products for workOrderId=$workOrderId');
       await loadProductsByWorkOrder(workOrderId);
-      final updatedProducts = jobOrder.jobOrders.map((item) {
+      debugPrint(
+        '[InitForm] Available products loaded: ${_availableProducts.length}',
+      );
+
+      // Step 7: Map job order products
+      final updatedProducts = jobOrder.products?.map((item) {
         final product = _availableProducts.firstWhere(
           (p) =>
               p['product_id']?.toString() == item.product ||
               p['_id']?.toString() == item.product,
           orElse: () => {},
         );
+
+        if (product.isEmpty) {
+          debugPrint(
+            '[InitForm] Warning: Product not found in available products: ${item.product}',
+          );
+        }
+
         return {
           'product_id': item.product,
           'description':
@@ -370,23 +553,52 @@ class JobOrderProvider with ChangeNotifier {
           'scheduled_date': item.scheduledDate,
         };
       }).toList();
+
+      debugPrint(
+        '[InitForm] Updated products mapped: ${updatedProducts?.length}',
+      );
+      for (int i = 0; i < (updatedProducts?.length ?? 0); i++) {
+        debugPrint('[InitForm] Product[$i]: ${updatedProducts?[i]}');
+      }
+
+      if (updatedProducts == null || updatedProducts.isEmpty) {
+        debugPrint('[InitForm] No products found for job order');
+        _formError = 'No products found for this job order.';
+        _isFormLoading = false;
+        notifyListeners();
+        return;
+      }
+
+      // Step 8: Update provider/UI
       updateProducts(updatedProducts);
       initializeProductFocusNodes(updatedProducts.length);
 
-      for (int i = 0; i < updatedProducts.length; i++) {
-        final productId = updatedProducts[i]['product_id']?.toString();
-        if (productId != null && productId.isNotEmpty) {
-          await loadMachineNamesByProductId(i, productId);
-        }
-      }
+      // Step 9: Load machine names
+      debugPrint('[InitForm] Loading machine names for products...');
+      await Future.wait(
+        List.generate(updatedProducts.length, (i) {
+          final productId = updatedProducts[i]['product_id']?.toString();
+          debugPrint('[InitForm] Loading machine for productId=$productId');
+          if (productId != null && productId.isNotEmpty) {
+            return loadMachineNamesByProductId(i, productId);
+          }
+          return Future.value();
+        }),
+      );
 
+      debugPrint('[InitForm] All machine names loaded.');
+
+      // Step 10: Finalize
       _isFormLoading = false;
       _formError = null;
-    } catch (e) {
+      notifyListeners();
+      debugPrint('[InitForm] Form initialization completed successfully.');
+    } catch (e, stackTrace) {
+      debugPrint('[InitForm] Exception occurred: $e\n$stackTrace');
       _formError = _getErrorMessage(e);
       _isFormLoading = false;
+      notifyListeners();
     }
-    notifyListeners();
   }
 
   void updateProducts(List<Map<String, dynamic>> newProducts) {
@@ -409,22 +621,50 @@ class JobOrderProvider with ChangeNotifier {
   }
 
   Future<void> loadMachineNamesByProductId(int index, String productId) async {
+    print(
+      "🔄 [Provider] loadMachineNamesByProductId called with index=$index, productId=$productId",
+    );
+
+    // Ensure lists are large enough
     while (_machineNames.length <= index) {
       _machineNames.add([]);
       _isLoadingMachineNames.add(false);
+      print(
+        "➕ Expanded _machineNames & _isLoadingMachineNames to size ${_machineNames.length}",
+      );
     }
+
     _isLoadingMachineNames[index] = true;
     _error = null;
     notifyListeners();
+    print(
+      "⏳ Set loading state for index=$index, _isLoadingMachineNames=$_isLoadingMachineNames",
+    );
 
     try {
+      print("📤 [Repo] Fetching machine names for productId=$productId...");
       final machineData = await _repository.fetchMachineNamesByProductId(
         productId,
       );
+      print(
+        "✅ [Repo] Response received for productId=$productId → ${machineData.length} machines",
+      );
+
       updateMachineNames(index, machineData);
-    } catch (e) {
+      print(
+        "📥 Updated machine names at index=$index with ${machineData.length} items",
+      );
+    } catch (e, st) {
       _error = _getErrorMessage(e);
+      print(
+        "❌ Error while fetching machine names for productId=$productId: $_error",
+      );
+      print("📄 Stack trace: $st");
+
       updateMachineNames(index, []);
+      print(
+        "⚠️ Updated machine names at index=$index with empty list due to error",
+      );
     }
   }
 
@@ -525,16 +765,10 @@ class JobOrderProvider with ChangeNotifier {
       };
       updateProducts(updatedProducts);
       final quantityInNo = selectedProduct['quantity_in_no']?.toString();
-      final uom = selectedProduct['uom']?.toString();
-      final mappedUom = uom == 'sqmt'
-          ? 'Square Meter/No'
-          : uom == 'meter'
-          ? 'Meter/No'
-          : null;
+
       formKey.currentState?.fields['planned_quantity_$index']?.didChange(
         quantityInNo,
       );
-      formKey.currentState?.fields['uom_$index']?.didChange(mappedUom);
       final productId =
           selectedProduct['product_id']?.toString() ??
           selectedProduct['_id']?.toString();
@@ -659,15 +893,26 @@ class JobOrderProvider with ChangeNotifier {
     }
   }
 
-  Future<JobOrderModel?> getJobOrder(String mongoId) async {
+  Future<Data?> getJobOrder(String mongoId) async {
     try {
-      _error = null;
-      final jobOrder = await _repository.getJobOrder(mongoId);
-      _jobOrder = jobOrder;
-      notifyListeners();
-      return jobOrder;
+      _formError = null;
+
+      final response = await _repository.getJobOrder(mongoId);
+      // response should have: { success: true, data: {...} }
+
+      if (response != null && response.data != null) {
+        _jobOrder = response.data;
+        notifyListeners();
+        return _jobOrder;
+      } else {
+        _formError = 'Invalid Job Order ID.';
+        _jobOrder = null;
+        notifyListeners();
+        return null;
+      }
     } catch (e) {
       _error = _getErrorMessage(e);
+      _jobOrder = null;
       notifyListeners();
       return null;
     }
@@ -809,18 +1054,13 @@ class JobOrderProvider with ChangeNotifier {
           return;
         }
 
-        final batchNumberStr = formData['batch_number']?.toString() ?? '0';
-        final batchNumber = int.tryParse(batchNumberStr) ?? 0;
-        if (batchNumber <= 0) {
-          context.showWarningSnackbar("Please enter a valid batch number.");
-          return;
-        }
+        final batchDate = formData['batch_date']?.toString() ?? '0';
 
         final payload = {
           'work_order': workOrderId,
           'sales_order_number':
-              formData['sales_order_number']?.toString() ?? '',
-          'batch_number': batchNumber,
+              formData['sales_order_number']?.toString() ?? '0',
+          'batch_date': batchDate,
           'date': {
             'from': dateRange.start.toUtc().toIso8601String(),
             'to': dateRange.end.toUtc().toIso8601String(),

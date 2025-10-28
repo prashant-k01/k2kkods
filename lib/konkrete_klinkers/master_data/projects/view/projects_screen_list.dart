@@ -7,7 +7,7 @@ import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
 import 'package:k2k/common/list_helper/shimmer.dart';
 import 'package:k2k/common/list_helper/title.dart';
-import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/app_bar.dart';
 import 'package:k2k/common/widgets/custom_card.dart';
 import 'package:k2k/common/widgets/gradient_icon_button.dart';
 import 'package:k2k/konkrete_klinkers/master_data/projects/model/projects.dart';

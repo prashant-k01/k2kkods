@@ -103,7 +103,7 @@ class JobOrderResponse {
 class JobOrderModel {
   final String? workOrderNumber;
   final String salesOrderNumber;
-  final int batchNumber;
+  final DateTime? batchDate;
   final List<JobOrderItem> jobOrders;
   final DateRange date;
   final String jobOrderId;
@@ -119,7 +119,7 @@ class JobOrderModel {
   JobOrderModel({
     this.workOrderNumber,
     required this.salesOrderNumber,
-    required this.batchNumber,
+    this.batchDate,
     required this.jobOrders,
     this.client,
     this.uom,
@@ -178,7 +178,9 @@ class JobOrderModel {
       ClientModel? clientModel;
       if (json['client'] != null && json['client'] is Map<String, dynamic>) {
         try {
-          clientModel = ClientModel.fromJson(json['client'] as Map<String, dynamic>);
+          clientModel = ClientModel.fromJson(
+            json['client'] as Map<String, dynamic>,
+          );
         } catch (e) {
           print('Error parsing client: $e');
         }
@@ -186,9 +188,12 @@ class JobOrderModel {
 
       // Parse work order details
       WorkOrderDetails? workOrderDetailsModel;
-      if (json['work_order_details'] != null && json['work_order_details'] is Map<String, dynamic>) {
+      if (json['work_order_details'] != null &&
+          json['work_order_details'] is Map<String, dynamic>) {
         try {
-          workOrderDetailsModel = WorkOrderDetails.fromJson(json['work_order_details'] as Map<String, dynamic>);
+          workOrderDetailsModel = WorkOrderDetails.fromJson(
+            json['work_order_details'] as Map<String, dynamic>,
+          );
         } catch (e) {
           print('Error parsing work_order_details: $e');
         }
@@ -197,13 +202,22 @@ class JobOrderModel {
       return JobOrderModel(
         workOrderNumber: _getStringValue(json['work_order_number']),
         salesOrderNumber: _getStringValue(json['sales_order_number']) ?? '',
-        batchNumber: _getIntValue(json['batch_number'], 'batch_number') ?? 0,
+        batchDate: json['batch_date'] != null
+            ? DateTime.parse(json['batch_date'] as String)
+            : null,
+
         jobOrders: jobOrderItems,
         date: DateRange.fromJson(json['date'] ?? {}),
         uom: _getStringValue(json['uom']),
-        jobOrderId: _getStringValue(json['job_order_id']) ?? _getStringValue(json['_id']) ?? '',
+        jobOrderId:
+            _getStringValue(json['job_order_id']) ??
+            _getStringValue(json['_id']) ??
+            '',
         mongoId: _getStringValue(json['_id']) ?? '',
-        status: _getStringValue(json['status']) ?? _getStringValue(json['job_order_status']) ?? 'Unknown',
+        status:
+            _getStringValue(json['status']) ??
+            _getStringValue(json['job_order_status']) ??
+            'Unknown',
         projectName: _getStringValue(json['project_name']) ?? 'N/A',
         createdBy: _extractUsername(json['created_by']),
         createdAt: _getStringValue(json['createdAt']),
@@ -223,27 +237,6 @@ class JobOrderModel {
       return value['\$oid']?.toString();
     }
     return value.toString();
-  }
-
-  static int? _getIntValue(dynamic value, String fieldName) {
-    if (value == null) {
-      print('Warning: $fieldName is null');
-      return 0;
-    }
-    if (value is int) return value;
-    if (value is double) return value.toInt();
-    if (value is String) {
-      try {
-        return int.parse(value);
-      } catch (e) {
-        print(
-          'Error parsing integer from string for $fieldName: $value, error: $e',
-        );
-        return 0;
-      }
-    }
-    print('Invalid type for $fieldName: $value (type: ${value.runtimeType})');
-    return 0;
   }
 
   // Extract username from created_by field (handles both string and object formats)
@@ -271,7 +264,7 @@ class JobOrderModel {
     return {
       'work_order_number': workOrderNumber,
       'sales_order_number': salesOrderNumber,
-      'batch_number': batchNumber,
+      'batch_number': batchDate,
       'products': jobOrders.map((item) => item.toJson()).toList(),
       'date': date.toJson(),
       'job_order_id': jobOrderId,
@@ -441,10 +434,7 @@ class ClientModel {
   final String? name;
   final String? address;
 
-  ClientModel({
-    this.name,
-    this.address,
-  });
+  ClientModel({this.name, this.address});
 
   factory ClientModel.fromJson(Map<String, dynamic> json) {
     return ClientModel(
@@ -454,10 +444,7 @@ class ClientModel {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'address': address,
-    };
+    return {'name': name, 'address': address};
   }
 }
 
@@ -496,4 +483,69 @@ class WorkOrderDetails {
       'created_by': createdBy,
     };
   }
+}
+
+// To parse this JSON data, do:
+//
+//     final machineResponse = machineResponseFromJson(jsonString);
+
+MachineResponse machineResponseFromJson(String str) =>
+    MachineResponse.fromJson(json.decode(str));
+
+String machineResponseToJson(MachineResponse data) =>
+    json.encode(data.toJson());
+
+class MachineResponse {
+  final bool success;
+  final List<Machine> data;
+  final String message;
+
+  MachineResponse({
+    required this.success,
+    required this.data,
+    required this.message,
+  });
+
+  factory MachineResponse.fromJson(Map<String, dynamic> json) =>
+      MachineResponse(
+        success: json["success"] ?? false,
+        data: json["data"] != null
+            ? List<Machine>.from(json["data"].map((x) => Machine.fromJson(x)))
+            : [],
+        message: json["message"] ?? "",
+      );
+
+  Map<String, dynamic> toJson() => {
+    "success": success,
+    "data": List<dynamic>.from(data.map((x) => x.toJson())),
+    "message": message,
+  };
+}
+
+class Machine {
+  final String id;
+  final String name;
+  final String uom;
+  final String productId;
+
+  Machine({
+    required this.id,
+    required this.name,
+    required this.uom,
+    required this.productId,
+  });
+
+  factory Machine.fromJson(Map<String, dynamic> json) => Machine(
+    id: json["_id"] ?? "",
+    name: json["name"] ?? "",
+    uom: json["uom"] ?? "",
+    productId: json["product_id"] ?? "",
+  );
+
+  Map<String, dynamic> toJson() => {
+    "_id": id,
+    "name": name,
+    "uom": uom,
+    "product_id": productId,
+  };
 }

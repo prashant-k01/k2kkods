@@ -4,10 +4,11 @@ import 'package:http/http.dart' as http;
 import 'package:k2k/common/constant/app_url.dart';
 import 'package:k2k/konkrete_klinkers/qc_check/model/qc_check.dart';
 import 'package:k2k/core/shared_preference/shared_preference.dart';
+import 'package:k2k/konkrete_klinkers/qc_check/model/qc_check_detail_model.dart';
 
 class QcCheckRepository {
   Future<Map<String, String>> get headers async {
-    final token = SessionManager.getAccessToken();
+    final token = await SessionManager.getAccessToken();
     return {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
@@ -103,9 +104,7 @@ class QcCheckRepository {
   ) async {
     try {
       final authHeaders = await headers;
-      final uri = Uri.parse(
-        'https://k2k.kods.work/api/konkreteKlinkers/qc-check/products?id=$jobOrderId',
-      );
+      final uri = Uri.parse('${AppUrl.getWorkOrderAndProducts}$jobOrderId');
 
       print('Fetching work order and products from: $uri');
       final response = await http
@@ -144,6 +143,8 @@ class QcCheckRepository {
                 (item) => {
                   '_id': item['_id'].toString(),
                   'material_code': item['material_code'].toString(),
+                  'prod_id': item["prod_id"].toString(),
+                  'description': item['description'].toString(),
                 },
               )
               .toList();
@@ -224,6 +225,37 @@ class QcCheckRepository {
       }
     } on SocketException {
       throw Exception('No internet connection.');
+    }
+  }
+
+  Future<QcCheckDetailResponse> getQcCheckById(String id) async {
+    try {
+      final authHeaders = await headers; // your method to get auth headers
+      final uri = Uri.parse('${AppUrl.getKKqcCheckData}/$id');
+
+      final response = await http
+          .get(uri, headers: authHeaders)
+          .timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        final responseBody = response.body;
+        if (responseBody.isEmpty) {
+          throw Exception('QC check data is empty.');
+        }
+
+        final jsonData = json.decode(responseBody);
+        return QcCheckDetailResponse.fromJson(jsonData);
+      } else if (response.statusCode == 404) {
+        throw Exception('QC check not found.');
+      } else {
+        throw Exception(
+          'Failed to load QC check: ${response.statusCode} - ${response.reasonPhrase}',
+        );
+      }
+    } on SocketException {
+      throw Exception('No internet connection.');
+    } on FormatException {
+      throw Exception('Invalid response format.');
     }
   }
 
@@ -359,11 +391,6 @@ class QcCheckRepository {
     Map<String, dynamic> qcCheckData,
   ) async {
     try {
-      if (qcCheckData['product_id'] is! String ||
-          qcCheckData['product_id'].isEmpty) {
-        throw Exception('Invalid or missing product_id in payload.');
-      }
-
       final authHeaders = await headers;
       final uri = Uri.parse('${AppUrl.createKKQcCheckUrl}/$id');
 

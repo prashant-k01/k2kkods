@@ -6,7 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/title.dart';
-import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/app_bar.dart';
 import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
@@ -68,40 +68,6 @@ class _AddPackingFormScreenState extends State<AddPackingFormScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildLogoAndTitle() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'Add Packing',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF334155),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBackButton() {
-    return Builder(
-      builder: (BuildContext context) {
-        return IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios,
-            size: 24.sp,
-            color: const Color(0xFF334155),
-          ),
-          onPressed: () {
-            context.go(RouteNames.packing);
-          },
-          tooltip: 'Back',
-        );
-      },
     );
   }
 
@@ -229,6 +195,7 @@ class _AddPackingFormScreenState extends State<AddPackingFormScreen> {
                       hintText: 'Enter total quantity',
                       prefixIcon: Icons.format_list_numbered,
                       keyboardType: TextInputType.number,
+                      controller: provider.totalQuantityController,
                       validators: [
                         FormBuilderValidators.required(
                           errorText: 'Please enter total quantity',
@@ -336,20 +303,29 @@ class _AddPackingFormScreenState extends State<AddPackingFormScreen> {
                       SizedBox(height: 8.h),
                       FormBuilder(
                         key: _qrFormKey,
-                        child: CustomTextFormField(
-                          name: 'qr_code',
-                          labelText: 'Bundle QR Code',
-                          hintText: 'Enter QR code',
-                          prefixIcon: Icons.qr_code,
-                          validators: [
-                            FormBuilderValidators.required(
-                              errorText: 'Please enter a QR code',
+                        child: Column(
+                          children: List.generate(
+                            provider.qrControllers.length,
+                            (index) => Padding(
+                              padding: EdgeInsets.only(bottom: 16.h),
+                              child: CustomTextFormField(
+                                name: 'qr_code',
+                                labelText: 'Bundle QR Code${index + 1}',
+                                hintText: 'Enter QR code',
+                                prefixIcon: Icons.qr_code,
+                                controller: provider.qrControllers[index],
+                                validators: [
+                                  FormBuilderValidators.required(
+                                    errorText: 'Please enter a QR code',
+                                  ),
+                                ],
+                                fillColor: const Color(0xFFF8FAFC),
+                                borderColor: Colors.grey.shade300,
+                                focusedBorderColor: const Color(0xFF3B82F6),
+                                borderRadius: 12.r,
+                              ),
                             ),
-                          ],
-                          fillColor: const Color(0xFFF8FAFC),
-                          borderColor: Colors.grey.shade300,
-                          focusedBorderColor: const Color(0xFF3B82F6),
-                          borderRadius: 12.r,
+                          ),
                         ),
                       ),
                     ],
@@ -372,6 +348,20 @@ class _AddPackingFormScreenState extends State<AddPackingFormScreen> {
                                     if (_qrFormKey.currentState
                                             ?.saveAndValidate() ??
                                         false) {
+                                      final formData =
+                                          _formKey.currentState!.value;
+
+                                      // 👇 Compute these locally
+                                      final totalQty =
+                                          int.tryParse(
+                                            formData['product_quantity']
+                                                .toString(),
+                                          ) ??
+                                          0;
+                                      final bundleSize =
+                                          provider.bundleSize ?? 0;
+                                      final numberOfBundles =
+                                          (totalQty / bundleSize).ceil();
                                       final qrCode = _qrFormKey
                                           .currentState!
                                           .value['qr_code'];
@@ -382,7 +372,7 @@ class _AddPackingFormScreenState extends State<AddPackingFormScreen> {
                                         );
                                         if (provider.error == null) {
                                           context.showSuccessSnackbar(
-                                            'QR code submitted successfully!',
+                                            'Packing added successfully!',
                                           );
                                           context.go(RouteNames.packing);
                                         } else {
@@ -428,7 +418,17 @@ class _AddPackingFormScreenState extends State<AddPackingFormScreen> {
                                         );
                                         if (provider.error == null) {
                                           context.showSuccessSnackbar(
-                                            'Packing added successfully!',
+                                            'Bundles generated successfully!',
+                                          );
+                                          final totalQty =
+                                              packingData['product_quantity'];
+                                          final bundleSize =
+                                              packingData['bundle_size'];
+                                          final numberOfBundles =
+                                              (totalQty / bundleSize).ceil();
+
+                                          provider.generateQrControllers(
+                                            numberOfBundles,
                                           );
                                         } else {
                                           context.showErrorSnackbar('Error');
@@ -466,8 +466,8 @@ class _AddPackingFormScreenState extends State<AddPackingFormScreen> {
                                 )
                               : Text(
                                   provider.showQrSection
-                                      ? 'Submit QR Code'
-                                      : 'Add Packing',
+                                      ? 'Add Packing'
+                                      : 'Generate Bundles',
                                   style: TextStyle(
                                     fontSize: 16.sp,
                                     fontWeight: FontWeight.w600,

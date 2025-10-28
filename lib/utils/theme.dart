@@ -376,7 +376,7 @@ class GradientButton extends StatelessWidget {
   final Widget? icon;
 
   const GradientButton({
-    Key? key,
+    super.key,
     required this.text,
     required this.onPressed,
     this.padding,
@@ -386,7 +386,7 @@ class GradientButton extends StatelessWidget {
     this.gradient,
     this.borderRadius,
     this.icon,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -446,13 +446,13 @@ class GradientCard extends StatelessWidget {
   final List<BoxShadow>? boxShadow;
 
   const GradientCard({
-    Key? key,
+    super.key,
     required this.child,
     this.padding,
     this.gradient,
     this.borderRadius,
     this.boxShadow,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -1,10 +1,12 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
-import 'package:k2k/api_services/api_services.dart';
+import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/common/constant/app_url.dart';
 import 'package:k2k/login/model/login.dart';
-import 'package:k2k/api_services/shared_preference/shared_preference.dart';
+import 'package:k2k/core/shared_preference/shared_preference.dart';
 
 class LoginProvider with ChangeNotifier {
   LoginModel _loginModel = LoginModel(
@@ -63,7 +65,7 @@ class LoginProvider with ChangeNotifier {
           print("Access Token: $accessToken");
           final refreshToken = responseData.data?.refreshToken;
           if (accessToken != null) {
-            await storeUserData(accessToken, refreshToken ?? '', true);
+            SessionManager.storeUserData(accessToken, refreshToken ?? '', true);
           }
           notifyListeners();
           return response.statusCode;
@@ -80,6 +82,33 @@ class LoginProvider with ChangeNotifier {
       return 0;
     } finally {
       setLoginLoading(false); // Stop loading
+    }
+  }
+
+  Future<void> confirmLogout(BuildContext context) async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Confirm Logout"),
+        content: const Text("Are you sure you want to log out?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text("Logout"),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true) {
+      await SessionManager.clearUserData();
+      if (context.mounted) {
+        context.go(RouteNames.login);
+      }
     }
   }
 }

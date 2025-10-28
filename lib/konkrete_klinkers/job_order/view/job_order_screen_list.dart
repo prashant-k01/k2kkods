@@ -5,7 +5,7 @@ import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
 import 'package:k2k/common/list_helper/shimmer.dart';
 import 'package:k2k/common/list_helper/title.dart';
-import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/app_bar.dart';
 import 'package:k2k/common/widgets/custom_card.dart';
 import 'package:k2k/common/widgets/gradient_icon_button.dart';
 import 'package:k2k/konkrete_klinkers/job_order/model/job_order.dart';
@@ -15,6 +15,7 @@ import 'package:k2k/utils/sreen_util.dart';
 import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+
 
 class JobOrderListView extends StatefulWidget {
   const JobOrderListView({super.key});
@@ -66,14 +67,17 @@ class _JobOrderListViewState extends State<JobOrderListView> {
   }
 
   Widget _buildJobOrderCard(JobOrderModel jobOrder) {
-    final mangoId = jobOrder.mongoId;
-    final batchNumber = jobOrder.batchNumber.toString();
+    final batchDate = jobOrder.batchDate != null
+        ? jobOrder.batchDate!.toIso8601String().split('T')[0]
+        : 'N/A'; // or any default string
+    print('🔹 Batch Date for UI: $batchDate'); // <-- debug print
+
     final fromDate = DateTime.tryParse(jobOrder.date.from);
     final toDate = DateTime.tryParse(jobOrder.date.to);
 
     return CustomCard(
       margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-      title: 'Job Order NO: ${jobOrder.jobOrderId}',
+      title: 'WorkOrder NO: ${jobOrder.workOrderNumber}',
       titleColor: AppColors.background,
       subtitle: 'Project: ${jobOrder.projectName}',
       subtitleColor: const Color(0xFF64748B),
@@ -88,8 +92,7 @@ class _JobOrderListViewState extends State<JobOrderListView> {
       onTap: () {
         context.goNamed(
           RouteNames.jobOrderView,
-          pathParameters: {'mongoId': mangoId},
-          extra: jobOrder,
+          pathParameters: {'mongoId': jobOrder.mongoId},
         );
       },
       menuItems: [
@@ -113,26 +116,7 @@ class _JobOrderListViewState extends State<JobOrderListView> {
             ],
           ),
         ),
-        PopupMenuItem<String>(
-          value: 'view',
-          child: Row(
-            children: [
-              Icon(
-                Icons.visibility_outlined,
-                size: 20.sp,
-                color: const Color(0xFF3B82F6),
-              ),
-              SizedBox(width: 8.w),
-              Text(
-                'View',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  color: const Color(0xFF334155),
-                ),
-              ),
-            ],
-          ),
-        ),
+
         PopupMenuItem<String>(
           value: 'delete',
           child: Row(
@@ -156,20 +140,14 @@ class _JobOrderListViewState extends State<JobOrderListView> {
       ],
       onMenuSelected: (value) {
         if (value == 'edit') {
-          _editJobOrder(mangoId);
+          _editJobOrder(jobOrder.mongoId);
         } else if (value == 'delete') {
           print('🔍 DEBUG - mongoId being passed: ${jobOrder.mongoId}');
-          print('🔍 DEBUG - batchNumber being passed: $batchNumber');
+          print('🔍 DEBUG - batchNumber being passed: $batchDate');
           JobOrderDeleteHandler.deleteJoborder(
             context,
             jobOrder.mongoId,
-            batchNumber.toString(),
-          );
-        } else if (value == 'view') {
-          context.goNamed(
-            RouteNames.jobOrderView,
-            pathParameters: {'mongoId': mangoId},
-            extra: jobOrder,
+            batchDate,
           );
         }
       },
@@ -182,8 +160,9 @@ class _JobOrderListViewState extends State<JobOrderListView> {
               color: const Color(0xFF64748B),
             ),
             SizedBox(width: 8.w),
+
             Text(
-              'Batch No: $batchNumber',
+              'Batch Date: $batchDate',
               style: TextStyle(fontSize: 13.sp, color: const Color(0xFF64748B)),
             ),
           ],
@@ -323,60 +302,6 @@ class _JobOrderListViewState extends State<JobOrderListView> {
     );
   }
 
-  Widget _buildLogoAndTitle() {
-    return Row(
-      children: [
-        SizedBox(width: 8.w),
-        Text(
-          'Job Orders',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF334155),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBackButton() {
-    return IconButton(
-      icon: Icon(
-        Icons.arrow_back_ios,
-        size: 24.sp,
-        color: const Color(0xFF334155),
-      ),
-      onPressed: () {
-        context.go(RouteNames.homeScreen);
-      },
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Padding(
-      padding: EdgeInsets.only(right: 16.w),
-      child: TextButton(
-        onPressed: () {
-          context.goNamed(RouteNames.joborderadd);
-        },
-        child: Row(
-          children: [
-            Icon(Icons.add, size: 20.sp, color: const Color(0xFF3B82F6)),
-            SizedBox(width: 4.w),
-            Text(
-              'Add Job Order',
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF3B82F6),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -450,76 +375,80 @@ class _JobOrderListViewState extends State<JobOrderListView> {
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
             icon: Icons.add,
           ),
-          body: Consumer<JobOrderProvider>(
-            builder: (context, provider, child) {
-              if (provider.error != null) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 64.sp,
-                        color: const Color(0xFFF43F5E),
-                      ),
-                      SizedBox(height: 16.h),
-                      Text(
-                        'Error Loading Job Orders',
-                        style: TextStyle(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF334155),
+          body: SafeArea(
+            child: Consumer<JobOrderProvider>(
+              builder: (context, provider, child) {
+                if (provider.error != null) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 64.sp,
+                          color: const Color(0xFFF43F5E),
                         ),
-                      ),
-                      SizedBox(height: 8.h),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 24.w),
-                        child: Text(
-                          provider.error!,
-                          textAlign: TextAlign.center,
+                        SizedBox(height: 16.h),
+                        Text(
+                          'Error Loading Job Orders',
                           style: TextStyle(
-                            fontSize: 14.sp,
-                            color: const Color(0xFF64748B),
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF334155),
                           ),
                         ),
-                      ),
-                      SizedBox(height: 16.h),
-                      RefreshButton(
-                        text: 'Retry',
-                        icon: Icons.refresh,
-                        onTap: () {
-                          provider.error;
-                          provider.loadAllJobOrders(refresh: true);
-                        },
-                      ),
-                    ],
-                  ),
-                );
-              }
+                        SizedBox(height: 8.h),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 24.w),
+                          child: Text(
+                            provider.error!,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              color: const Color(0xFF64748B),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 16.h),
+                        RefreshButton(
+                          text: 'Retry',
+                          icon: Icons.refresh,
+                          onTap: () {
+                            provider.error;
+                            provider.loadAllJobOrders(refresh: true);
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                }
 
-              return RefreshIndicator(
-                onRefresh: () async {
-                  await provider.loadAllJobOrders(refresh: true);
-                },
-                color: const Color(0xFF3B82F6),
-                backgroundColor: Colors.white,
-                child: provider.isLoading && provider.jobOrders.isEmpty
-                    ? ListView.builder(
-                        itemCount: 5,
-                        itemBuilder: (context, index) => ShimmerCard(),
-                      )
-                    : provider.jobOrders.isEmpty
-                    ? _buildEmptyState()
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: EdgeInsets.only(bottom: 16.h),
-                        itemCount: provider.jobOrders.length,
-                        itemBuilder: (context, index) {
-                          return _buildJobOrderCard(provider.jobOrders[index]);
-                        },
-                      ),
-              );
-            },
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    await provider.loadAllJobOrders(refresh: true);
+                  },
+                  color: const Color(0xFF3B82F6),
+                  backgroundColor: Colors.white,
+                  child: provider.isLoading && provider.jobOrders.isEmpty
+                      ? ListView.builder(
+                          itemCount: 5,
+                          itemBuilder: (context, index) => ShimmerCard(),
+                        )
+                      : provider.jobOrders.isEmpty
+                      ? _buildEmptyState()
+                      : ListView.builder(
+                          controller: _scrollController,
+                          padding: EdgeInsets.only(bottom: 16.h),
+                          itemCount: provider.jobOrders.length,
+                          itemBuilder: (context, index) {
+                            return _buildJobOrderCard(
+                              provider.jobOrders[index],
+                            );
+                          },
+                        ),
+                );
+              },
+            ),
           ),
         ),
       ),

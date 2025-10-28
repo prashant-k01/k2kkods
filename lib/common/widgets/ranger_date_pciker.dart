@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+
 class CustomRangeDatePicker extends StatelessWidget {
   final String name;
   final String labelText;
@@ -21,7 +22,7 @@ class CustomRangeDatePicker extends StatelessWidget {
     return FormBuilderDateRangePicker(
       name: name,
       initialValue: initialValue,
-      firstDate: DateTime(2000),
+      firstDate: DateTime.now(),
       lastDate: DateTime(2100),
       format: DateFormat('yyyy-MM-dd'),
       style: TextStyle(
@@ -51,10 +52,7 @@ class CustomRangeDatePicker extends StatelessWidget {
           borderRadius: BorderRadius.circular(12.r),
           borderSide: const BorderSide(color: Color(0xFF3B82F6)),
         ),
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: 16.w,
-          vertical: 12.h,
-        ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
         labelStyle: TextStyle(
           fontSize: 16.sp,
           color: const Color(0xFF334155),
