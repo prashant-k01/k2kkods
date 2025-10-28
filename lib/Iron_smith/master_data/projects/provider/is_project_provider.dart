@@ -7,7 +7,7 @@ class IsProjectProvider with ChangeNotifier {
   final ProjectsRepository _repository = ProjectsRepository();
 
   // ---------------- PROJECT STATE ----------------
-  List<IsProject> _projects = [];
+  final List<IsProject> _projects = [];
   bool _isLoading = false;
   String? _error;
 

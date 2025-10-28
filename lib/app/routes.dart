@@ -6,7 +6,6 @@ import 'package:k2k/Iron_smith/job_order/view/joborder_add_screen.dart';
 import 'package:k2k/Iron_smith/master_data/clients/view/is_client_add_screen.dart';
 import 'package:k2k/Iron_smith/master_data/clients/view/is_client_edit_screen.dart';
 import 'package:k2k/Iron_smith/master_data/clients/view/is_client_list_screen.dart';
-import 'package:k2k/Iron_smith/master_data/machines/model/machines.dart';
 import 'package:k2k/Iron_smith/master_data/machines/view/machine_add.dart';
 import 'package:k2k/Iron_smith/master_data/machines/view/machine_edit.dart';
 import 'package:k2k/Iron_smith/master_data/machines/view/machine_list.dart';
@@ -26,9 +25,9 @@ import 'package:k2k/dashboard/view/dashboard_screen.dart';
 import 'package:k2k/konkrete_klinkers/dispatch/view/dispatch_add_screen.dart';
 import 'package:k2k/konkrete_klinkers/dispatch/view/dispatch_edit_screen.dart';
 import 'package:k2k/konkrete_klinkers/dispatch/view/dispatch_list_screen.dart';
+import 'package:k2k/konkrete_klinkers/dispatch/view/dispatch_view_screen.dart';
 import 'package:k2k/konkrete_klinkers/inventory/view/inventory_detailscreen.dart';
 import 'package:k2k/konkrete_klinkers/inventory/view/inventory_list.dart';
-import 'package:k2k/konkrete_klinkers/job_order/model/job_order.dart';
 import 'package:k2k/konkrete_klinkers/job_order/view/job_order_add.dart';
 import 'package:k2k/konkrete_klinkers/job_order/view/job_order_edit_screen.dart';
 import 'package:k2k/konkrete_klinkers/job_order/view/job_order_screen_list.dart';
@@ -122,6 +121,7 @@ class AppRoutes {
           return QcCheckFormScreen();
         },
       ),
+
       GoRoute(
         path: RouteNames.products,
         name: RouteNames.products,
@@ -232,6 +232,12 @@ class AppRoutes {
         ),
       ),
       GoRoute(
+        path: '/dispatch/:dispatchId',
+        name: RouteNames.dispatchView,
+        builder: (context, state) =>
+            DispatchViewScreen(dispatchId: state.pathParameters['dispatchId']!),
+      ),
+      GoRoute(
         path: RouteNames.production,
         name: RouteNames.production,
         builder: (BuildContext context, GoRouterState state) {
@@ -246,6 +252,7 @@ class AppRoutes {
           return DowntimeScreen(
             productId: extra['productId'],
             jobOrder: extra['jobOrder'],
+            prodId: extra['prodId'],
           );
         },
       ),
@@ -397,22 +404,29 @@ class AppRoutes {
         },
       ),
       GoRoute(
-        path: RouteNames.jobOrderedit, // '/plants/edit/:plantId'
+        path: '/job-order/edit/:mongoId',
         name: RouteNames.jobOrderedit,
         builder: (context, state) {
           final mongoId = state.pathParameters['mongoId'];
-          if (mongoId == null) {
+          debugPrint('JobOrderEditFormScreen: mongoId from route = $mongoId');
+
+          if (mongoId == null || mongoId.isEmpty) {
+            debugPrint(
+              'mongoId is null or empty, redirecting to JobOrderListView',
+            );
             return const JobOrderListView();
           }
+
           return JobOrderEditFormScreen(mongoId: mongoId);
         },
       ),
+
       GoRoute(
         name: RouteNames.jobOrderView,
         path: '/job-order/view/:mongoId',
         builder: (context, state) {
-          final jobOrder = state.extra as JobOrderModel;
-          return JobOrderViewScreen(jobOrder: jobOrder);
+          final mongoId = state.pathParameters['mongoId']!;
+          return JobOrderViewScreen(jobOrderId: mongoId);
         },
       ),
       GoRoute(

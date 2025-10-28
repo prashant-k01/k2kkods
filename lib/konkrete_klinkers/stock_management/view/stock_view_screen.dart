@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/title.dart';
-import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/app_bar.dart';
 import 'package:k2k/common/widgets/custom_card.dart';
 import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:provider/provider.dart';

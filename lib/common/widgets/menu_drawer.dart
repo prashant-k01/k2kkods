@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:k2k/api_services/shared_preference/shared_preference.dart';
 import 'package:k2k/app/routes_name.dart';
+import 'package:k2k/login/provider/login_provider.dart';
+import 'package:provider/provider.dart';
 
 class MenuItem {
   final String title;
@@ -491,7 +492,11 @@ class _EnhancedMenuDrawerState extends State<EnhancedMenuDrawer>
                     color: Colors.transparent,
                     child: InkWell(
                       onTap: () async {
-                        confirmLogout(context);
+                        final provider = Provider.of<LoginProvider>(
+                          context,
+                          listen: false,
+                        );
+                        await provider.confirmLogout(context);
                       },
                       borderRadius: BorderRadius.circular(16.r),
                       child: Container(

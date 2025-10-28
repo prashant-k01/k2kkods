@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:k2k/api_services/api_services.dart';
+import 'package:k2k/common/constant/app_url.dart';
 import 'package:k2k/konkrete_klinkers/qc_check/model/qc_check.dart';
-import 'package:k2k/api_services/shared_preference/shared_preference.dart';
+import 'package:k2k/core/shared_preference/shared_preference.dart';
 
 class QcCheckRepository {
   Future<Map<String, String>> get headers async {
-    final token = await fetchAccessToken();
+    final token = SessionManager.getAccessToken();
     return {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
@@ -20,10 +20,6 @@ class QcCheckRepository {
 
   Future<List<Map<String, String>>> getJobOrders() async {
     try {
-      final token = await fetchAccessToken();
-      if (token == null || token.isEmpty) {
-        throw Exception('Authentication token not found. Please login again.');
-      }
       final authHeaders = await headers;
       final uri = Uri.parse(AppUrl.getDropdownJobOrder);
 
@@ -106,11 +102,6 @@ class QcCheckRepository {
     String jobOrderId,
   ) async {
     try {
-      final token = await fetchAccessToken();
-      if (token == null || token.isEmpty) {
-        throw Exception('Authentication token not found. Please login again.');
-      }
-
       final authHeaders = await headers;
       final uri = Uri.parse(
         'https://k2k.kods.work/api/konkreteKlinkers/qc-check/products?id=$jobOrderId',
@@ -198,11 +189,6 @@ class QcCheckRepository {
 
   Future<List<QcCheckModel>> getQcChecks({String? search}) async {
     try {
-      final token = await fetchAccessToken();
-      if (token == null || token.isEmpty) {
-        throw Exception('Authentication token not found.');
-      }
-
       final authHeaders = await headers;
       final uri = Uri.parse(AppUrl.getKKqcCheckData);
 
@@ -243,11 +229,6 @@ class QcCheckRepository {
 
   Future<QcCheckModel> createQcCheck(Map<String, dynamic> qcCheckData) async {
     try {
-      final token = await fetchAccessToken();
-      if (token == null || token.isEmpty) {
-        throw Exception('Authentication token not found. Please login again.');
-      }
-
       final authHeaders = await headers;
       final uri = Uri.parse(AppUrl.createKKQcCheckUrl);
 
@@ -306,89 +287,78 @@ class QcCheckRepository {
     }
   }
 
-Future<bool> deleteQcCheck(String id) async {
-  try {
-    final token = await fetchAccessToken();
-    if (token == null || token.isEmpty) {
-      throw Exception('Authentication token not found. Please login again.');
-    }
+  Future<bool> deleteQcCheck(String id) async {
+    try {
+      final authHeaders = await headers;
+      // Don't add the ID to the URL path - use the endpoint as-is
+      final uri = Uri.parse(AppUrl.deleteQcCheck);
 
-    final authHeaders = await headers;
-    // Don't add the ID to the URL path - use the endpoint as-is
-    final uri = Uri.parse(AppUrl.deleteQcCheck);
+      // Send the ID in the request body as 'ids' array (API expects plural)
+      final requestBody = json.encode({
+        'ids': [id], // API expects an array of IDs
+      });
 
-    // Send the ID in the request body as 'ids' array (API expects plural)
-    final requestBody = json.encode({
-      'ids': [id], // API expects an array of IDs
-    });
+      print('Deleting QC check at: $uri');
+      print('Request body: $requestBody');
 
-    print('Deleting QC check at: $uri');
-    print('Request body: $requestBody');
-    
-    final response = await http
-        .delete(
-          uri, 
-          headers: authHeaders, 
-          body: requestBody,
-        )
-        .timeout(const Duration(seconds: 30));
+      final response = await http
+          .delete(uri, headers: authHeaders, body: requestBody)
+          .timeout(const Duration(seconds: 30));
 
-    print('Delete QC check response status: ${response.statusCode}');
-    print('Delete QC check response body: ${response.body}');
+      print('Delete QC check response status: ${response.statusCode}');
+      print('Delete QC check response body: ${response.body}');
 
-    if (response.statusCode == 200 || response.statusCode == 204) {
-      print('QC check deleted successfully: $id');
-      return true;
-    } else if (response.statusCode == 401) {
-      throw Exception('Authentication failed. Please login again.');
-    } else if (response.statusCode == 403) {
-      throw Exception(
-        'Access denied. You don\'t have permission to delete QC checks.',
-      );
-    } else if (response.statusCode == 404) {
-      throw Exception('QC check not found or already deleted.');
-    } else if (response.statusCode >= 500) {
-      throw Exception(
-        'Server error (${response.statusCode}). Please try again later.',
-      );
-    } else {
-      // Parse error message from response if available
-      try {
-        final responseBody = response.body;
-        if (responseBody.isNotEmpty && !responseBody.contains('<!DOCTYPE html>')) {
-          final errorData = json.decode(responseBody);
-          final errorMessage = errorData['message'] ?? errorData['error'] ?? 'Unknown error';
-          throw Exception('Failed to delete QC check: $errorMessage');
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        print('QC check deleted successfully: $id');
+        return true;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication failed. Please login again.');
+      } else if (response.statusCode == 403) {
+        throw Exception(
+          'Access denied. You don\'t have permission to delete QC checks.',
+        );
+      } else if (response.statusCode == 404) {
+        throw Exception('QC check not found or already deleted.');
+      } else if (response.statusCode >= 500) {
+        throw Exception(
+          'Server error (${response.statusCode}). Please try again later.',
+        );
+      } else {
+        // Parse error message from response if available
+        try {
+          final responseBody = response.body;
+          if (responseBody.isNotEmpty &&
+              !responseBody.contains('<!DOCTYPE html>')) {
+            final errorData = json.decode(responseBody);
+            final errorMessage =
+                errorData['message'] ?? errorData['error'] ?? 'Unknown error';
+            throw Exception('Failed to delete QC check: $errorMessage');
+          }
+        } catch (e) {
+          // If JSON parsing fails, use default error message
+          print('JSON parsing error: $e');
         }
-      } catch (e) {
-        // If JSON parsing fails, use default error message
-        print('JSON parsing error: $e');
+        throw Exception(
+          'Failed to delete QC check: ${response.statusCode} - ${response.reasonPhrase}',
+        );
       }
-      throw Exception(
-        'Failed to delete QC check: ${response.statusCode} - ${response.reasonPhrase}',
-      );
+    } on SocketException catch (e) {
+      print('Socket exception: $e');
+      throw Exception('No internet connection. Please check your network.');
+    } on HttpException catch (e) {
+      print('HTTP exception: $e');
+      throw Exception('Network error: $e');
+    } on FormatException catch (e) {
+      print('Format exception: $e');
+      throw Exception('Invalid response format. Please contact support.');
     }
-  } on SocketException catch (e) {
-    print('Socket exception: $e');
-    throw Exception('No internet connection. Please check your network.');
-  } on HttpException catch (e) {
-    print('HTTP exception: $e');
-    throw Exception('Network error: $e');
-  } on FormatException catch (e) {
-    print('Format exception: $e');
-    throw Exception('Invalid response format. Please contact support.');
   }
-}
+
   Future<QcCheckModel> updateQcCheck(
     String id,
     Map<String, dynamic> qcCheckData,
   ) async {
     try {
-      final token = await fetchAccessToken();
-      if (token == null || token.isEmpty) {
-        throw Exception('Authentication token not found. Please login again.');
-      }
-
       if (qcCheckData['product_id'] is! String ||
           qcCheckData['product_id'].isEmpty) {
         throw Exception('Invalid or missing product_id in payload.');

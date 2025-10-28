@@ -2,15 +2,13 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:k2k/Iron_smith/workorder/model/iron_workorder_detail.dart';
 import 'package:k2k/Iron_smith/workorder/model/iron_workorder_model.dart';
-import 'package:k2k/api_services/api_services.dart';
-import 'package:k2k/api_services/shared_preference/shared_preference.dart';
+import 'package:k2k/common/constant/app_url.dart';
+import 'package:k2k/core/shared_preference/shared_preference.dart';
 
 class IronWorkOrderRepository {
   Future<Map<String, String>> get headers async {
-    final token = await fetchAccessToken();
-    if (token == null || token.isEmpty) {
-      throw Exception('Authentication token is missing');
-    }
+    final token = await SessionManager.getAccessToken();
+
     final headers = {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
@@ -148,23 +146,41 @@ class IronWorkOrderRepository {
 
   Future<IronWorkOrder> fetchWorkOrders() async {
     final url = Uri.parse(AppUrl.getAllWorkOrder);
+    print("📡 Fetching work orders from: $url");
 
     try {
       final headers = await this.headers;
+      print("📝 Request headers: $headers");
 
-      final response = await http.get(url, headers: headers);
+      final response = await http
+          .get(url, headers: headers)
+          .timeout(Duration(seconds: 10));
+      print("📥 Response status: ${response.statusCode}");
+      print("📦 Response body: ${response.body}");
 
       if (response.statusCode == 200) {
         final decodedBody = json.decode(response.body);
+        print("🔍 Decoded JSON: $decodedBody");
 
+        // If API returns a list of work orders:
+        // return (decodedBody as List).map((json) => IronWorkOrder.fromJson(json)).toList();
+
+        // If API returns a single object:
         return IronWorkOrder.fromJson(decodedBody);
       } else {
+        print("❌ Error response: ${response.statusCode} - ${response.body}");
         throw Exception(
           "Failed to load work orders: ${response.statusCode} - ${response.body}",
         );
       }
+      // } on HandshakeException catch (e) {
+      //   print("⚠️ HandshakeException: $e");
+      //   throw Exception('SSL Handshake failed. Check your server certificate.');
+      // } on TimeoutException catch (e) {
+      // print("⚠️ TimeoutException: $e");
+      // throw Exception('Request timed out. Please try again.');
     } catch (e) {
-      if (e.toString().contains('HandshakeException')) {}
+      print("⚠️ Network or parsing error: $e");
       throw Exception('Network error: $e');
     }
   }

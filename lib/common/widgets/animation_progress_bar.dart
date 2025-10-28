@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:k2k/utils/theme.dart';
 
 class AnimatedProgressBar extends StatelessWidget {
   final double progress; // from 0.0 to 1.0

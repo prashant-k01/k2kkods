@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart';
+
 enum Status { PENDING, IN_PROGRESS, PAUSED, PENDING_QC, COMPLETED }
 
 final statusValues = EnumValues({
@@ -101,17 +103,26 @@ class Downtime {
   static DateTime? _parseDateTime(dynamic value, {DateTime? referenceDate}) {
     if (value == null) return null;
     try {
-      if (value is String && value.contains(':') && !value.contains('T')) {
-        final parts = value.split(":");
-        return DateTime(
-          referenceDate?.year ?? DateTime.now().year,
-          referenceDate?.month ?? DateTime.now().month,
-          referenceDate?.day ?? DateTime.now().day,
-          int.parse(parts[0]),
-          int.parse(parts[1]),
-        );
+      if (value is String) {
+        // Case 1: "HH:mm" (e.g., "03:50")
+        if (value.contains(":") &&
+            !value.contains("T") &&
+            !value.contains(RegExp(r'AM|PM'))) {
+          final parts = value.split(":");
+          return DateTime(
+            referenceDate?.year ?? DateTime.now().year,
+            referenceDate?.month ?? DateTime.now().month,
+            referenceDate?.day ?? DateTime.now().day,
+            int.parse(parts[0]),
+            int.parse(parts[1]),
+          );
+        }
+        // Case 2: "yyyy-MM-dd h:mm a" (e.g., "2025-09-23 3:50 AM")
+        final formatter12h = DateFormat('yyyy-MM-dd h:mm a');
+        return formatter12h.parse(value);
       }
-      return DateTime.parse(value);
+      // Fallback for ISO strings
+      return DateTime.parse(value.toString());
     } catch (_) {
       return null;
     }

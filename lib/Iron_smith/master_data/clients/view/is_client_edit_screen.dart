@@ -8,7 +8,7 @@ import 'package:k2k/Iron_smith/master_data/clients/provider/is_client_provider.d
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/title.dart';
-import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/app_bar.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
 import 'package:k2k/utils/theme.dart';
@@ -65,36 +65,6 @@ class _IsClientEditScreenState extends State<IsClientEditScreen> {
       (c) => c.id == widget.clientId,
       orElse: () => IsClient(name: '', isDeleted: false, v: 0),
     );
-
-    if (client == null) {
-      return FutureBuilder<void>(
-        future: provider.getClientById(widget.clientId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-          if (snapshot.hasError || provider.selectedClient == null) {
-            return Scaffold(
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text('Error: ${provider.error ?? "Client not found"}'),
-                    ElevatedButton(
-                      onPressed: () => context.go(RouteNames.isclients),
-                      child: const Text('Go Back'),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-          return _buildScaffold(context, provider.selectedClient!);
-        },
-      );
-    }
 
     return _buildScaffold(context, client);
   }

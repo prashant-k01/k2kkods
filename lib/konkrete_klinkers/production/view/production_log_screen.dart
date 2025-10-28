@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
-import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/app_bar.dart';
 import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/konkrete_klinkers/production/model/production_logs_model.dart';
 import 'package:k2k/konkrete_klinkers/production/provider/production_provider.dart';

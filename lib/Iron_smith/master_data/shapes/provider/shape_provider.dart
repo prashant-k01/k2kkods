@@ -43,7 +43,6 @@ class ShapesProvider with ChangeNotifier {
       _error = null;
     } catch (e) {
       _error = e.toString();
-      print('Error fetching dimensions: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -65,10 +64,11 @@ class ShapesProvider with ChangeNotifier {
     notifyListeners();
     try {
       final newShapes = await _repository.fetchAllShapes();
-      if (newShapes.isEmpty)
+      if (newShapes.isEmpty) {
         _hasMore = false;
-      else
+      } else {
         _shapes.addAll(newShapes);
+      }
       _error = null;
     } catch (e) {
       _error = e.toString();
@@ -86,19 +86,10 @@ class ShapesProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      print('FetchShapeById: Fetching shape with ID: $id');
       final shape = await _repository.fetchShapeById(id);
-      if (shape == null) {
-        print('FetchShapeById: Shape not found for ID: $id');
-        _error = 'Shape not found';
-        context.showErrorSnackbar('Shape not found for ID: $id');
-        return null;
-      }
-      print('FetchShapeById: Successfully fetched shape: ${shape.toJson()}');
       _error = null;
       return shape;
     } catch (e) {
-      print('FetchShapeById: Error fetching shape with ID $id: $e');
       _error = e.toString();
       context.showErrorSnackbar('Failed to fetch shape: $_error');
       return null;
@@ -109,7 +100,6 @@ class ShapesProvider with ChangeNotifier {
   }
 
   void initializeEditForm(Shape shape) {
-    print('InitializeEditForm: Initializing form for shape ID: ${shape.id}');
     _selectedDimensionId = shape.dimension?.id;
     _descriptionController.text = shape.description ?? '';
     _shapeCodeController.text = shape.shapeCode ?? '';
@@ -144,11 +134,9 @@ class ShapesProvider with ChangeNotifier {
       final pickedFile = await picker.pickImage(source: ImageSource.gallery);
       if (pickedFile != null) {
         _selectedImage = pickedFile.path;
-        print('ShapesProvider: Picked image: $_selectedImage');
         notifyListeners();
       }
     } catch (e) {
-      print('ShapesProvider: Error picking image: $e');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error picking image: $e')));
@@ -203,10 +191,11 @@ class ShapesProvider with ChangeNotifier {
     try {
       await _repository.editShape(id, shape, imageFile: _selectedImage);
       final index = _shapes.indexWhere((s) => s.id == id);
-      if (index != -1)
+      if (index != -1) {
         _shapes[index] = shape;
-      else
+      } else {
         _shapes.insert(0, shape);
+      }
       _clearForm();
       context.showSuccessSnackbar('Shape updated successfully!!');
       context.go(RouteNames.allshapes);

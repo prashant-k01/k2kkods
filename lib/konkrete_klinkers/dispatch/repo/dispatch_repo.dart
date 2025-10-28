@@ -1,13 +1,17 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
-import 'package:k2k/api_services/api_services.dart';
+import 'package:k2k/common/constant/app_url.dart';
+import 'package:k2k/core/network/network_api_services.dart';
 import 'package:k2k/konkrete_klinkers/dispatch/model/dispatch.dart';
-import 'package:k2k/api_services/shared_preference/shared_preference.dart';
+import 'package:k2k/core/shared_preference/shared_preference.dart';
+import 'package:k2k/konkrete_klinkers/dispatch/model/dispatch_detail.dart';
 
 class DispatchRepository {
+  final NetworkApiServices _repository = NetworkApiServices();
   Future<Map<String, String>> get headers async {
-    final token = await fetchAccessToken();
+    final token = await SessionManager.getAccessToken();
     return {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
@@ -16,11 +20,6 @@ class DispatchRepository {
 
   Future<List<Map<String, String>>> getWorkOrders() async {
     try {
-      final token = await fetchAccessToken();
-      if (token == null || token.isEmpty) {
-        throw Exception('Authentication token not found.');
-      }
-
       final authHeaders = await headers;
       final uri = Uri.parse(AppUrl.fetchWorkOrderDetailsUrl);
 
@@ -31,7 +30,7 @@ class DispatchRepository {
       if (response.statusCode == 200) {
         final responseBody = response.body;
         if (responseBody.isEmpty) return [];
-        
+
         final jsonData = json.decode(responseBody);
         List<dynamic> rawList = jsonData['data'] ?? [];
         return rawList
@@ -53,11 +52,6 @@ class DispatchRepository {
 
   Future<List<DispatchModel>> getDispatches() async {
     try {
-      final token = await fetchAccessToken();
-      if (token == null || token.isEmpty) {
-        throw Exception('Authentication token not found.');
-      }
-
       final authHeaders = await headers;
       final uri = Uri.parse(AppUrl.kkdispatch);
 
@@ -105,11 +99,6 @@ class DispatchRepository {
 
   Future<Map<String, dynamic>?> fetchQrScanData(String qrId) async {
     try {
-      final token = await fetchAccessToken();
-      if (token == null || token.isEmpty) {
-        throw Exception('Authentication token not found.');
-      }
-
       final authHeaders = await headers;
       final uri = Uri.parse('${AppUrl.qrScanUrl}?id=$qrId');
 
@@ -142,13 +131,8 @@ class DispatchRepository {
     }
   }
 
-  Future<DispatchModel> fetchDispatchById(String dispatchId) async {
+  Future<DispatchDetailResponse> fetchDispatchById(String dispatchId) async {
     try {
-      final token = await fetchAccessToken();
-      if (token == null || token.isEmpty) {
-        throw Exception('Authentication token not found.');
-      }
-
       final authHeaders = await headers;
       final uri = Uri.parse('${AppUrl.kkdispatch}/$dispatchId');
 
@@ -164,7 +148,7 @@ class DispatchRepository {
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         if (jsonData['success'] == true) {
-          return DispatchModel.fromJson(jsonData['data']);
+          return DispatchDetailResponse.fromJson(jsonData);
         } else {
           throw Exception(
             'Failed to fetch dispatch: ${jsonData['errors']?.toString() ?? 'Unknown error'}',
@@ -185,145 +169,41 @@ class DispatchRepository {
     required String workOrder,
     required String invoiceOrSto,
     required String vehicleNumber,
-    required List<String> qrCodes,
     required String date,
     required File invoiceFile,
+    required List<String> qrCodes,
   }) async {
-    print('  - workOrder: "$workOrder"');
-    print('  - invoiceOrSto: "$invoiceOrSto"');
-    print('  - vehicleNumber: "$vehicleNumber"');
-    print('  - qrCodes: $qrCodes');
-    print('  - qrCodes length: ${qrCodes.length}');
-    print('  - qrCodes JSON: ${jsonEncode(qrCodes)}');
-    print('  - date: "$date"');
-    print('  - invoiceFile: ${invoiceFile.path}');
-    print('  - file exists: ${await invoiceFile.exists()}');
-    print('  - file size: ${await invoiceFile.length()} bytes');
+    // Convert invoice file to PlatformFile (binary upload)
+    final invoiceBytes = await invoiceFile.readAsBytes();
+    final invoicePlatformFile = PlatformFile(
+      name: invoiceFile.path.split('/').last,
+      size: invoiceBytes.length,
+      bytes: invoiceBytes,
+    );
 
-    try {
-      print('🔐 Fetching access token...');
-      final token = await fetchAccessToken();
-      if (token == null || token.isEmpty) {
-        print('❌ No access token found');
-        throw Exception('Authentication token not found.');
-      }
-      print('✅ Access token obtained: ${token.substring(0, 20)}...');
+    // Prepare body (QR codes as JSON array)
+    final body = {
+      'work_order': workOrder,
+      'invoice_or_sto': invoiceOrSto,
+      'vehicle_number': vehicleNumber,
+      'qr_codes': jsonEncode(qrCodes),
+      'date': date,
+    };
 
-      final uri = Uri.parse(AppUrl.createdispatch);
-      print('🌐 Request URL: $uri');
+    final files = {'invoice_file': invoicePlatformFile};
 
-      var request = http.MultipartRequest('POST', uri);
-      request.headers['Authorization'] = 'Bearer $token';
-      request.headers['Content-Type'] = 'multipart/form-data';
+    final response = await _repository.postApiResponse(
+      AppUrl.createdispatch,
+      body,
+      files: files,
+    );
 
-      print('📦 Setting form fields...');
-
-      request.fields['work_order'] = workOrder;
-      request.fields['invoice_or_sto'] = invoiceOrSto;
-      request.fields['vehicle_number'] = vehicleNumber;
-
-      String qrCodesJson = jsonEncode(qrCodes);
-      request.fields['qr_codes'] = qrCodesJson;
-      request.fields['date'] = date;
-
-      print('📋 Final request fields:');
-      request.fields.forEach((key, value) {
-        print('  - $key: "$value"');
-      });
-
-      if (qrCodes.isEmpty) {
-        print('❌ ERROR: QR codes array is empty!');
-        throw Exception('At least one QR code is required');
-      }
-
-      print('📎 Adding invoice file...');
-      try {
-        final multipartFile = await http.MultipartFile.fromPath(
-          'invoice_file',
-          invoiceFile.path,
-        );
-        request.files.add(multipartFile);
-        print('✅ Invoice file added successfully');
-        print('  - Field name: invoice_file');
-        print('  - File name: ${multipartFile.filename}');
-        print('  - File size: ${multipartFile.length} bytes');
-        print('  - Content type: ${multipartFile.contentType}');
-      } catch (e) {
-        print('❌ Error adding file: $e');
-        throw Exception('Failed to add invoice file: $e');
-      }
-
-      final response = await request.send().timeout(
-        const Duration(seconds: 30),
-        onTimeout: () {
-          print('⏰ Request timeout after 30 seconds');
-          throw Exception('Request timeout. Please try again.');
-        },
-      );
-
-      print('📨 Response received:');
-      print('  - Status Code: ${response.statusCode}');
-      print('  - Headers: ${response.headers}');
-
-      final responseBody = await response.stream.bytesToString();
-      print('📄 Response Body: $responseBody');
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        print('✅ Success status code received');
-
-        try {
-          final jsonData = json.decode(responseBody);
-          print('📊 Parsed JSON: $jsonData');
-
-          if (jsonData['success'] == true) {
-            print('🎉 Dispatch created successfully!');
-            return;
-          } else {
-            final errorMsg =
-                'Server returned success=false: ${jsonData['message'] ?? jsonData['errors']?.toString() ?? 'Unknown error'}';
-            print('❌ $errorMsg');
-            throw Exception(errorMsg);
-          }
-        } catch (jsonError) {
-          if (jsonError is Exception &&
-              jsonError.toString().contains('success=false')) {
-            rethrow;
-          }
-          print('❌ JSON parsing error: $jsonError');
-          print('📄 Raw response: $responseBody');
-          throw Exception('Invalid response format from server');
-        }
-      } else {
-        String errorMsg = 'HTTP ${response.statusCode}';
-
-        try {
-          final jsonData = json.decode(responseBody);
-          print('❌ ERROR RESPONSE PARSED: $jsonData');
-
-          if (jsonData is Map<String, dynamic>) {
-            if (jsonData.containsKey('message')) {
-              errorMsg = jsonData['message'].toString();
-            } else if (jsonData.containsKey('error')) {
-              errorMsg = jsonData['error'].toString();
-            } else if (jsonData.containsKey('errors')) {
-              errorMsg = jsonData['errors'].toString();
-            }
-          }
-        } catch (e) {
-          print('⚠️ Could not parse error response: $e');
-          errorMsg = 'HTTP ${response.statusCode}: $responseBody';
-        }
-
-        print('❌ Server error: $errorMsg');
-        throw Exception(errorMsg);
-      }
-    } on SocketException catch (e) {
-      print('❌ Network error: $e');
-      throw Exception('No internet connection.');
-    } catch (e) {
-      print('❌ Unexpected error in createDispatch: $e');
-      print('❌ Error type: ${e.runtimeType}');
-      rethrow;
+    if (response['success'] != true) {
+      final errorMsg =
+          response['message'] ??
+          response['errors']?.toString() ??
+          'Unknown error';
+      throw Exception('Failed to create dispatch: $errorMsg');
     }
   }
 
@@ -341,13 +221,6 @@ class DispatchRepository {
     print('  - date: "$date"');
 
     try {
-      final token = await fetchAccessToken();
-      if (token == null || token.isEmpty) {
-        print('❌ No access token found');
-        throw Exception('Authentication token not found.');
-      }
-      print('✅ Access token obtained: ${token.substring(0, 20)}...');
-
       final uri = Uri.parse('${AppUrl.kkdispatch}/$dispatchId');
       print('🌐 Request URL: $uri');
 

@@ -227,7 +227,7 @@ class CustomSearchableDropdownFormField<T> extends StatelessWidget {
                   ),
                   child: Text(
                     field.value != null
-                        ? optionLabel?.call(field.value!) ??
+                        ? optionLabel?.call(field.value as T) ??
                               field.value.toString()
                         : hintText ?? 'Select option',
                     style:

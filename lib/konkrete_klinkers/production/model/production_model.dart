@@ -80,11 +80,14 @@ class PastDpr {
   final String? jobOrder;
   final String? jobOrderId;
   final String? productId;
+  final String? prodId;
+
   final String? plantName;
   final String? machineName;
   final String? materialCode;
   final String? description;
   final int poQuantity;
+  final int quantityInNos;
   final int plannedQuantity;
   final DateTime scheduledDate;
   final int achievedQuantity;
@@ -110,11 +113,13 @@ class PastDpr {
     this.jobOrder,
     this.jobOrderId,
     this.productId,
+    this.prodId,
     this.plantName,
     this.machineName,
     this.materialCode,
     this.description,
     required this.poQuantity,
+    required this.quantityInNos,
     required this.plannedQuantity,
     required this.scheduledDate,
     required this.achievedQuantity,
@@ -168,11 +173,13 @@ class PastDpr {
       jobOrder: json["job_order"]?.toString(),
       jobOrderId: json["job_order_id"]?.toString(),
       productId: json["product_id"]?.toString(),
+      prodId: json["prodId"]?.toString(),
       plantName: json["plant_name"]?.toString(),
       machineName: json["machine_name"]?.toString(),
       materialCode: json["material_code"]?.toString(),
       description: json["description"]?.toString(),
       poQuantity: json["po_quantity"] ?? 0,
+      quantityInNos: json["qty_in_nos"] ?? 0,
       plannedQuantity: json["planned_quantity"] ?? 0,
       scheduledDate: DateTime.parse(
         json["scheduled_date"] ?? DateTime.now().toIso8601String(),

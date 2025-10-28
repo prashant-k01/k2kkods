@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/title.dart';
-import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/app_bar.dart';
 import 'package:k2k/common/widgets/custom_card.dart';
 import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/konkrete_klinkers/inventory/model/inventory.dart';
@@ -38,6 +38,8 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
         ? item.description
         : 'No Description';
     final balanceQuantity = item.balanceQuantity;
+    final totalProducedQuantity = item.totalProducedQuantity;
+    final totalPoQuantity = item.totalPoQuantity;
     final uom = item.uom.isNotEmpty ? item.uom : '';
     final status = item.status.isNotEmpty ? item.status : 'Unknown';
     final isActive = status.toLowerCase() == 'active';
@@ -120,7 +122,12 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
         SizedBox(height: 6.h),
         _buildInfoRow(Icons.straighten, 'UOM: $uom'),
         SizedBox(height: 6.h),
-        _buildInfoRow(Icons.info_outline, 'Status: $status'),
+        _buildInfoRow(
+          Icons.info_outline,
+          'Produced Quantity: $totalProducedQuantity',
+        ),
+        SizedBox(height: 6.h),
+        _buildInfoRow(Icons.info_outline, 'PO Quantity: $totalPoQuantity'),
       ],
     );
   }

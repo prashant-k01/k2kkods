@@ -35,7 +35,7 @@ class CustomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    Theme.of(context);
     final primaryColor = backgroundColor ?? const Color(0xFF3B82F6);
     final disabledColor = const Color(0xFFCBD5E1);
     final effectiveTextColor = textColor ?? Colors.white;

@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:k2k/api_services/api_services.dart';
+import 'package:k2k/common/constant/app_url.dart';
 import 'package:k2k/konkrete_klinkers/master_data/plants/model/plants_model.dart';
-import 'package:k2k/api_services/shared_preference/shared_preference.dart';
+import 'package:k2k/core/shared_preference/shared_preference.dart';
 
 class PlantRepository {
   Future<Map<String, String>> get headers async {
-    final token = await fetchAccessToken();
+    final token = await SessionManager.getAccessToken();
     return {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
@@ -18,18 +18,12 @@ class PlantRepository {
   PlantModel? _lastCreatedPlant;
   PlantModel? get lastCreatedPlant => _lastCreatedPlant;
 
-  Future<List<PlantModel>> getPlants({
-    required int skip,
-    required int limit,
-    String? search,
-  }) async {
+  Future<List<PlantModel>> getPlants({String? search}) async {
     try {
       final authHeaders = await headers;
       print('Headers: $authHeaders'); // Debug
       final uri = Uri.parse(AppUrl.allPlantsUrl).replace(
         queryParameters: {
-          'skip': skip.toString(),
-          'limit': limit.toString(),
           if (search != null && search.isNotEmpty) 'search': search,
         },
       );
@@ -70,7 +64,7 @@ class PlantRepository {
         }
 
         final plants = plantsJson
-            .where((item) => item is Map<String, dynamic>)
+            .whereType<Map<String, dynamic>>()
             .cast<Map<String, dynamic>>()
             .map((plantJson) {
               print('Parsing plant: $plantJson');
