@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -5,7 +7,7 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:k2k/app/routes_name.dart';
-import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/app_bar.dart';
 import 'package:k2k/common/widgets/dropdown.dart';
 import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
@@ -28,6 +30,12 @@ class AddWorkOrderScreen extends StatefulWidget {
 }
 
 class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
+  final uomBackendMap = {
+    'Meter/No': 'meter',
+    'Nos': 'nos',
+    'Square Meter/No': 'sqmt',
+  };
+
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
   final Map<String, FocusNode> _focusNodes = {
     'no_of_pieces_per_punch': FocusNode(),
@@ -44,6 +52,9 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
         context,
         listen: false,
       );
+      workOrderProvider.resetUploadState();
+      workOrderProvider.resetFormState();
+
       workOrderProvider.loadAllClients();
       workOrderProvider.loadAllProducts();
     });
@@ -52,6 +63,7 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
   @override
   void dispose() {
     _focusNodes.forEach((_, node) => node.dispose());
+    Provider.of<WorkOrderProvider>(context, listen: false).resetFormState();
     super.dispose();
   }
 
@@ -61,7 +73,7 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
       canPop: false,
       onPopInvoked: (didPop) {
         if (!didPop) {
-          context.go(RouteNames.homeScreen);
+          context.go(RouteNames.workorders);
         }
       },
       child: Consumer<WorkOrderProvider>(
@@ -73,8 +85,24 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
               resizeToAvoidBottomInset: true,
               backgroundColor: AppColors.transparent,
               appBar: AppBars(
-                title: _buildLogoAndTitle(),
-                leading: _buildBackButton(),
+                title: const Text(
+                  'Add Work Order',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF334155),
+                  ),
+                ),
+                leading: IconButton(
+                  icon: Icon(
+                    Icons.arrow_back_ios,
+                    size: 20.sp,
+                    color: const Color(0xFF334155),
+                  ),
+                  onPressed: () {
+                    context.go(RouteNames.workorders);
+                  },
+                ),
                 action: _buildAppBarActions(),
               ),
               body: SafeArea(
@@ -98,39 +126,6 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
           );
         },
       ),
-    );
-  }
-
-  Widget _buildLogoAndTitle() {
-    return Row(
-      children: [
-        SizedBox(width: 8.w),
-        Expanded(
-          child: Text(
-            'Create Work Order',
-            style: TextStyle(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF334155),
-              overflow: TextOverflow.ellipsis,
-            ),
-            maxLines: 1,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBackButton() {
-    return IconButton(
-      icon: Icon(
-        Icons.arrow_back_ios,
-        size: 20.sp,
-        color: const Color(0xFF334155),
-      ),
-      onPressed: () {
-        context.go(RouteNames.workorders);
-      },
     );
   }
 
@@ -186,6 +181,8 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
       ),
       child: FormBuilder(
         key: _formKey,
+        autovalidateMode: AutovalidateMode.disabled,
+
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -617,12 +614,26 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
                                   value: "Nos",
                                   child: Text("Nos"),
                                 ),
-                                ...uomItems.map(
-                                  (item) => DropdownMenuItem<String>(
-                                    value: item,
-                                    child: Text(item),
-                                  ),
-                                ),
+                                ...uomItems.where((uom) => uom != "nos").map((
+                                  backendUom,
+                                ) {
+                                  String displayValue;
+                                  switch (backendUom) {
+                                    case "meter":
+                                      displayValue = "Meter/No";
+                                      break;
+                                    case "sqmt":
+                                      displayValue = "Square Meter/No";
+                                      break;
+
+                                    default:
+                                      displayValue = backendUom;
+                                  }
+                                  return DropdownMenuItem<String>(
+                                    value: displayValue,
+                                    child: Text(displayValue),
+                                  );
+                                }),
                               ],
                               hintText: 'Select UOM',
                               prefixIcon: Icons.workspaces,
@@ -1135,8 +1146,85 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
     BuildContext context,
     WorkOrderProvider provider,
   ) async {
+    // Validate product forms & uploaded files using provider
+    print('🔹 Checking product forms validity...');
+    print('areAllProductsValid: ${provider.areAllProductsValid}');
+    print('validateUploads: ${provider.validateUploads()}');
+
+    if (!provider.areAllProductsValid || !provider.validateUploads()) {
+      if (!provider.areAllProductsValid) {
+        print('⚠️ Product forms are invalid');
+      }
+      if (!provider.validateUploads()) {
+        print('⚠️ File upload validation failed');
+      }
+
+      context.showWarningSnackbar(
+        'Please fill in all required fields and upload files correctly.',
+      );
+      return;
+    }
+
+    if (!(_formKey.currentState?.saveAndValidate() ?? false)) {
+      context.showWarningSnackbar(
+        'Please fill in all required fields correctly.',
+      );
+      return;
+    }
+
+    final formData = _formKey.currentState!.value;
+
+    final selectedClient = formData['client_id'] != null
+        ? provider.clients.firstWhere(
+            (client) =>
+                client.name == (formData['client_id'] as ClientModel).name,
+          )
+        : null;
+
+    final selectedProject = formData['project_id'] != null
+        ? provider.projects.firstWhere(
+            (project) => project.name == (formData['project_id'] as TId).name,
+          )
+        : null;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(
+        child: Container(
+          padding: EdgeInsets.all(20.w),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12.r),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10.r,
+                offset: Offset(0, 5.h),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GradientLoader(),
+              SizedBox(height: 12.h),
+              Text(
+                'Creating Work Order...',
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF334155),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
     bool allFormsValid = true;
-    List<Product> validatedProducts = [];
+    List<Map<String, dynamic>> validatedProducts = [];
 
     for (var product in provider.products) {
       final formKey = product['formKey'] as GlobalKey<FormBuilderState>;
@@ -1171,21 +1259,13 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
           continue;
         }
 
-        final qtyInNosInt = provider.getCalculatedQtyInNos(
-          formKey: formKey,
-          index: index,
-        );
-
-        validatedProducts.add(
-          Product(
-            productId: selectedProduct.id,
-            uom: uomValues.map[selectedUom] ?? Uom.nos,
-            poQuantity: poQuantityDouble.toInt(),
-            qtyInNos: qtyInNosInt,
-            deliveryDate: deliveryDate,
-            id: '',
-          ),
-        );
+        validatedProducts.add({
+          'product_id': selectedProduct.id,
+          'uom': uomBackendMap[selectedUom] ?? 'nos',
+          'po_quantity': poQuantityDouble.toInt(),
+          'delivery_date': deliveryDate.toIso8601String().split('T')[0],
+          'plant_code': formData['plant_code_$index'],
+        });
       } else {
         allFormsValid = false;
       }
@@ -1197,96 +1277,34 @@ class _AddWorkOrderScreenState extends State<AddWorkOrderScreen> {
       );
       return;
     }
-    if (!provider.validateUploads()) {
-      return; // prevent submission
-    }
-    if (_formKey.currentState?.saveAndValidate() ?? false) {
-      final formData = _formKey.currentState!.value;
-      final selectedClient = formData['client_id'] != null
-          ? provider.clients.firstWhere(
-              (client) =>
-                  client.name == (formData['client_id'] as ClientModel).name,
-            )
-          : null;
-      final selectedProject = formData['project_id'] != null
-          ? provider.projects.firstWhere(
-              (project) => project.name == (formData['project_id'] as TId).name,
-            )
-          : null;
 
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => Center(
-          child: Container(
-            padding: EdgeInsets.all(20.w),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12.r),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10.r,
-                  offset: Offset(0, 5.h),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GradientLoader(),
-                SizedBox(height: 12.h),
-                Text(
-                  'Creating Work Order...',
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF334155),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
+    // Pass raw File objects to provider for multipart upload
+    final filesForBackend = provider.uploadedFiles
+        .map((file) => File(file.fileUrl)) // ✅ local file path
+        .toList();
 
-      final filesForBackend = provider.uploadedFiles.map((file) {
-        return FileElement(
-          fileName: file.fileName,
-          fileUrl: file.fileUrl,
-          id: file.id,
-          uploadedAt: file.uploadedAt,
-        );
-      }).toList();
+    final success = await provider.createWorkOrder(
+      workOrderNumber: formData['work_order_number'] as String,
+      clientId: !provider.isBufferStockEnabled ? selectedClient?.id : null,
+      projectId: !provider.isBufferStockEnabled ? selectedProject?.id : null,
+      date: !provider.isBufferStockEnabled
+          ? (formData['work_order_date'] as DateTime?)
+          : null,
+      bufferStock: provider.isBufferStockEnabled,
+      products: validatedProducts,
+      files: filesForBackend,
+      status: Status.PENDING,
+    );
 
-      final success = await provider.createWorkOrder(
-        workOrderNumber: formData['work_order_number'] as String,
-        clientId: !provider.isBufferStockEnabled ? selectedClient?.id : null,
-        projectId: !provider.isBufferStockEnabled ? selectedProject?.id : null,
-        date: !provider.isBufferStockEnabled
-            ? (formData['work_order_date'] as DateTime?)
-            : null,
-        bufferStock: provider.isBufferStockEnabled,
-        products: validatedProducts,
-        files: filesForBackend,
-        status: Status.PENDING,
-      );
+    Navigator.of(context).pop();
 
-      Navigator.of(context).pop();
-
-      if (success && context.mounted) {
-        await provider.loadAllWorkOrders(refresh: true);
-        context.showSuccessSnackbar('Work Order created successfully!');
-
-        context.go(RouteNames.workorders);
-      } else {
-        context.showErrorSnackbar(
-          'Failed to create work order. Please check your input and try again.',
-        );
-      }
+    if (success && context.mounted) {
+      await provider.loadAllWorkOrders(refresh: true);
+      context.showSuccessSnackbar('Work Order created successfully!');
+      context.go(RouteNames.workorders);
     } else {
-      context.showWarningSnackbar(
-        'Please fill in all required fields correctly.',
+      context.showErrorSnackbar(
+        'Failed to create work order. Please check your input and try again.',
       );
     }
   }

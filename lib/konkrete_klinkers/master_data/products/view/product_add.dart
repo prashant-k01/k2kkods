@@ -6,9 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/title.dart';
-import 'package:k2k/common/widgets/appbar/app_bar.dart';
-import 'package:k2k/common/widgets/dropdown.dart';
+import 'package:k2k/common/widgets/app_bar.dart';
 import 'package:k2k/common/widgets/gradient_loader.dart';
+import 'package:k2k/common/widgets/multiselect_dropdown.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
@@ -55,25 +55,6 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
         }
       });
     });
-  }
-
-  double? _calculateArea(String description) {
-    try {
-      final RegExp dimensionRegex = RegExp(
-        r'(\d+)X(\d+)X(\d+)MM',
-        caseSensitive: false,
-      );
-      final match = dimensionRegex.firstMatch(description);
-
-      if (match != null) {
-        final length = double.parse(match.group(1)!);
-        final width = double.parse(match.group(2)!);
-        return (length / 1000) * (width / 1000);
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
   }
 
   void _scrollToFocusedField(BuildContext context, FocusNode focusNode) {
@@ -258,7 +239,7 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
               borderRadius: 12.r,
               onChanged: (value) {
                 if (value != null && productProvider.showAreaPerUnit) {
-                  final area = _calculateArea(value);
+                  final area = productProvider.calculateArea(value);
                   if (area != null) {
                     _formKey.currentState?.fields['area_per_unit']?.didChange(
                       area.toStringAsFixed(4),
@@ -295,27 +276,25 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
               ),
             ),
             SizedBox(height: 18.h),
-            CustomDropdownFormField<String>(
+            CustomMultiSelectFormField<String>(
               name: 'uom',
               labelText: 'UOM',
-              initialValue: 'Square Meter/No',
-              items: ["Square Meter/No", "Meter/No"]
-                  .map(
-                    (item) => DropdownMenuItem<String>(
-                      value: item,
-                      child: Text(item),
-                    ),
-                  )
-                  .toList(),
-              hintText: 'Select UOM',
-              prefixIcon: Icons.workspaces,
+              options: ["Square Meter/No", "Meter/No"],
+              initialValue: const ["Square Meter/No"],
               validators: [FormBuilderValidators.required()],
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
               focusedBorderColor: const Color(0xFF3B82F6),
               borderRadius: 12.r,
-              onChanged: (value) {
-                productProvider.setShowAreaPerUnit(value == "Square Meter/No");
+              onChanged: (values) {
+                // values is a List<String>
+                final selected = values ?? [];
+
+                /// Example logic from your current dropdown:
+                productProvider.setShowAreaPerUnit(
+                  selected.contains("Square Meter/No"),
+                );
+
                 if (!productProvider.showAreaPerUnit) {
                   _formKey.currentState?.fields['area_per_unit']?.didChange('');
                 } else {
@@ -332,6 +311,7 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
                 }
               },
             ),
+
             SizedBox(height: 18.h),
             if (context.select<ProductProvider, bool>(
               (provider) => provider.showAreaPerUnit,
@@ -583,17 +563,34 @@ class _AddProductFormScreenState extends State<AddProductFormScreen> {
           ),
         ),
       );
+      final List<String> selectedUoms = List<String>.from(
+        formData['uom'] ?? [],
+      );
+
+      final areas = <String, double>{};
+      for (var uom in selectedUoms) {
+        if (uom == 'Square Meter/No') {
+          // Directly from form
+          areas[uom] = double.tryParse(formData['area_per_unit'] ?? '0') ?? 0.0;
+        } else if (uom == 'Meter/No') {
+          // Your custom logic for Meter/No
+          areas[uom] =
+              provider.calculateMeterPerNo(formData['description'] ?? '') ??
+              0.0; // implement this function
+        } else {
+          areas[uom] = 0.0; // fallback if any new UOM appears
+        }
+      }
 
       // Create the product
       final success = await provider.createProduct(
         plantId: selectedPlant['id']!,
         materialCode: formData['material_code'],
         description: formData['description'],
-        uom: [formData['uom']],
-        areas: {
-          formData['uom']:
-              double.tryParse(formData['area_per_unit'] ?? '0') ?? 0.0,
-        },
+
+        uom: selectedUoms, // array for backend
+        areas: areas, // map with keys as strings
+
         noOfPiecesPerPunch:
             int.tryParse(formData['no_of_pieces_per_punch'] ?? '0') ?? 0,
         qtyInBundle: int.tryParse(formData['qty_in_bundle'] ?? '0') ?? 0,

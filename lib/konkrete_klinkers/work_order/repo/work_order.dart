@@ -3,23 +3,18 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:k2k/api_services/api_services.dart';
-import 'package:k2k/api_services/shared_preference/shared_preference.dart';
+import 'package:intl/intl.dart';
+import 'package:k2k/common/constant/app_url.dart';
+import 'package:k2k/core/shared_preference/shared_preference.dart';
 import 'package:k2k/konkrete_klinkers/work_order/model/client_model.dart';
 import 'package:k2k/konkrete_klinkers/work_order/model/work_order_detail_model.dart';
 import 'package:k2k/konkrete_klinkers/work_order/model/work_order_model.dart';
 
 class WorkOrderRepository {
-  bool isAddWorkOrderLoading = false;
-  Datum? _lastCreatedWorkOrder;
-  Datum? get lastCreatedWorkOrder => _lastCreatedWorkOrder;
-
   Future<Map<String, String>> get headers async {
     try {
-      final String? token = await fetchAccessToken();
-      if (token == null || token.isEmpty) {
-        throw Exception('Authentication token is missing or invalid');
-      }
+      final String? token = await SessionManager.getAccessToken();
+
       return {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
@@ -84,7 +79,7 @@ class WorkOrderRepository {
     }
   }
 
-  Future<List<Datum>> getAllWorkOrders({
+  Future<WorkOrderModel> getAllWorkOrders({
     int skip = 0,
     int limit = 10,
     String? search,
@@ -109,15 +104,9 @@ class WorkOrderRepository {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonData = json.decode(response.body);
-        if (jsonData.containsKey('data') && jsonData['data'] is List) {
-          return (jsonData['data'] as List<dynamic>)
-              .map((x) => Datum.fromJson(x as Map<String, dynamic>))
-              .toList();
-        } else {
-          throw Exception(
-            'Unexpected response structure: ${jsonData['message'] ?? 'No data'}',
-          );
-        }
+
+        // Return the full response object
+        return WorkOrderModel.fromJson(jsonData);
       } else {
         throw Exception(
           'Failed to load work orders: ${response.statusCode} - ${response.body}',
@@ -186,7 +175,7 @@ class WorkOrderRepository {
     }
   }
 
-  Future<Datum?> getWorkOrder(String id) async {
+  Future<WorkOrder?> getWorkOrder(String id) async {
     try {
       final Map<String, String> authHeaders = await headers;
       final Uri uri = Uri.parse('${AppUrl.fetchWorkOrderDetailsUrl}/$id');
@@ -284,73 +273,64 @@ class WorkOrderRepository {
     }
   }
 
-  Future<Datum> createWorkOrder({
-    required String workOrderNumber,
-    String? clientId,
-    String? projectId,
-    DateTime? date,
-    required bool bufferStock,
-    int? bufferStockQuantity,
-    required List<Product> products,
-    required List<FileElement> files,
-    required Status status,
-  }) async {
-    isAddWorkOrderLoading = true;
+  Future<WorkOrder> createWorkOrder(Map<String, dynamic> payload) async {
     try {
       final Map<String, String> authHeaders = await headers;
       final String url = AppUrl.createWorkOrderUrl;
-      final Map<String, dynamic> body = {
-        'work_order_number': workOrderNumber,
-        if (clientId != null) 'client_id': clientId,
-        if (projectId != null) 'project_id': projectId,
-        if (date != null) 'date': date.toIso8601String(),
-        'buffer_stock': bufferStock,
-        if (bufferStock && bufferStockQuantity != null)
-          'buffer_stock_quantity': bufferStockQuantity,
-        'products': products.map((product) => product.toJson()).toList(),
-        'files': files.map((file) => file.toJson()).toList(),
-        'status': statusValues.reverse[status]!,
-      };
+      print('📤 [Repo] Sending multipart request to $url');
 
-      print('📤 Creating work order: $url');
-      print('📤 Payload: ${json.encode(body)}');
+      final request = http.MultipartRequest('POST', Uri.parse(url));
+      request.headers.addAll(authHeaders);
 
-      final http.Response response = await http
-          .post(Uri.parse(url), headers: authHeaders, body: json.encode(body))
-          .timeout(const Duration(seconds: 30));
+      // Handle normal fields
+      for (final entry in payload.entries) {
+        final key = entry.key;
+        final value = entry.value;
 
-      print(
-        '📦 Create work order response: ${response.statusCode} - ${response.body}',
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final Map<String, dynamic> responseData = json.decode(response.body);
-
-        if (responseData.containsKey('data') &&
-            responseData['data'] is Map<String, dynamic>) {
-          final createdWorkOrder = Datum.fromJson(responseData['data']);
-          _lastCreatedWorkOrder = createdWorkOrder;
-          return createdWorkOrder;
-        } else {
-          throw Exception(
-            'Unexpected response structure: ${responseData['message'] ?? response.body}',
-          );
-        }
-      } else {
-        throw Exception(
-          'Failed to create work order: ${response.statusCode}  ?? response.body}',
-        );
+        if (key == 'files' || key == 'products') continue; // handled separately
+        request.fields[key] = value.toString();
+        print('   ➡️ field: $key = ${request.fields[key]}');
       }
-    } on SocketException {
-      throw Exception('No internet connection. Please check your network.');
-    } on HttpException catch (e) {
-      throw Exception('Network error occurred: $e');
-    } on FormatException {
-      throw Exception('Invalid server response format. Please try again.');
+
+      // Handle products array
+      if (payload['products'] != null) {
+        final products = payload['products'] as List<Map<String, dynamic>>;
+        for (int i = 0; i < products.length; i++) {
+          final p = products[i];
+          request.fields['products[$i][product_id]'] = p['product_id'];
+          request.fields['products[$i][uom]'] = p['uom'];
+          request.fields['products[$i][po_quantity]'] = p['po_quantity']
+              .toString();
+          request.fields['products[$i][delivery_date]'] = p['delivery_date'];
+          request.fields['products[$i][plant_code]'] = p['plant_code'];
+        }
+      }
+
+      // Handle files
+      if (payload['files'] != null) {
+        for (var f in payload['files'] as List<File>) {
+          print('   📎 Attaching file: ${f.path}');
+          request.files.add(await http.MultipartFile.fromPath('files', f.path));
+        }
+      }
+
+      // Send request
+      final streamedResponse = await request.send().timeout(
+        const Duration(seconds: 30),
+      );
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('📦 [Repo] Response: ${response.statusCode} ${response.body}');
+
+      if (response.statusCode == 201) {
+        final Map<String, dynamic> jsonRes = json.decode(response.body);
+        return WorkOrder.fromJson(jsonRes['data']);
+      } else {
+        throw Exception('❌ Failed: ${response.statusCode} ${response.body}');
+      }
     } catch (e) {
-      throw Exception('Failed to create work order: $e');
-    } finally {
-      isAddWorkOrderLoading = false;
+      print('❌ [Repo] Error: $e');
+      rethrow;
     }
   }
 
@@ -362,42 +342,99 @@ class WorkOrderRepository {
     DateTime? date,
     required bool bufferStock,
     int? bufferStockQuantity,
-    required List<Product> products,
-    required List<FileElement> files,
+    required List<Map<String, dynamic>> products,
+    required List<File> files,
     required Status status,
   }) async {
     try {
       final Map<String, String> authHeaders = await headers;
       final String updateUrl = '${AppUrl.updateWorkOrderDetailsUrl}/$id';
 
-      final Map<String, dynamic> body = {
-        'work_order_number': workOrderNumber,
-        if (clientId != null) 'client_id': clientId,
-        if (projectId != null) 'project_id': projectId,
-        if (date != null) 'date': date.toIso8601String(),
-        'buffer_stock': bufferStock,
-        if (bufferStock && bufferStockQuantity != null)
-          'buffer_stock_quantity': bufferStockQuantity,
-        'products': products.map((product) => product.toJson()).toList(),
-        'files': files.map((file) => file.toJson()).toList(),
-        'status': statusValues.reverse[status]!,
-      };
+      final request = http.MultipartRequest('PUT', Uri.parse(updateUrl));
+      request.headers.addAll(authHeaders);
 
-      final http.Response response = await http
-          .put(
-            Uri.parse(updateUrl),
-            headers: authHeaders,
-            body: json.encode(body),
-          )
-          .timeout(const Duration(seconds: 30));
+      // Add normal fields
+      request.fields['work_order_number'] = workOrderNumber;
+      if (clientId != null) request.fields['client_id'] = clientId;
+      if (projectId != null) request.fields['project_id'] = projectId;
 
-      final responseData = json.decode(response.body);
+      if (date != null) {
+        // ✅ Format to yyyy-MM-dd instead of ISO (most APIs expect this)
+        final formattedDate = DateFormat('yyyy-MM-dd').format(date);
+        request.fields['date'] = formattedDate;
+      }
+
+      request.fields['buffer_stock'] = bufferStock ? 'true' : 'false';
+      if (bufferStock && bufferStockQuantity != null) {
+        request.fields['buffer_stock_quantity'] = bufferStockQuantity
+            .toString();
+      }
+
+      request.fields['status'] = statusValues.reverse[status]!;
+
+      // Add products
+      if (products.isNotEmpty) {
+        for (int i = 0; i < products.length; i++) {
+          final p = products[i];
+          request.fields['products[$i][product_id]'] = p['product_id']
+              .toString();
+          request.fields['products[$i][uom]'] = p['uom'].toString();
+          request.fields['products[$i][po_quantity]'] = p['po_quantity']
+              .toString();
+          request.fields['products[$i][delivery_date]'] = p['delivery_date']
+              .toString();
+          request.fields['products[$i][plant_code]'] = p['plant_code']
+              .toString();
+        }
+      }
+
+      // Add files
+      for (var f in files) {
+        print('📎 Preparing file: ${f.path}');
+        if (await f.exists()) {
+          request.files.add(await http.MultipartFile.fromPath('files', f.path));
+        } else {
+          print('⚠️ File does not exist locally: ${f.path}');
+        }
+      }
+      // 🔎 Debug: print headers + fields before sending
+      print('🔐 Headers: $authHeaders');
+      print('🌐 URL: $updateUrl');
+      print('📝 Fields being sent:');
+      request.fields.forEach((k, v) => print('   • $k = $v'));
+
+      // Send request
+      final streamedResponse = await request.send().timeout(
+        const Duration(seconds: 30),
+      );
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('📦 [Update WorkOrder] Status: ${response.statusCode}');
+      print('📦 [Update WorkOrder] Body: ${response.body}');
+
+      try {
+        final decoded = json.decode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          if (decoded.containsKey('success')) {
+            print('✅ success field = ${decoded['success']}');
+          }
+          if (decoded.containsKey('message')) {
+            print('ℹ️ message field = ${decoded['message']}');
+          }
+          if (decoded.containsKey('errors')) {
+            print('❌ errors field = ${decoded['errors']}');
+          }
+        }
+      } catch (e) {
+        print('⚠️ Could not parse response JSON: $e');
+      }
 
       if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
         return responseData['success'] == true;
       } else {
         throw Exception(
-          'Server error: ${response.statusCode} - ${responseData['message'] ?? 'Unknown error'}',
+          'Server error: ${response.statusCode} - ${response.body}',
         );
       }
     } on SocketException {

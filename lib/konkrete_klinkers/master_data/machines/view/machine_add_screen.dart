@@ -5,13 +5,14 @@ import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/title.dart';
-import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/app_bar.dart';
 import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
-import 'package:k2k/konkrete_klinkers/master_data/machines/model/machines_model.dart';
 import 'package:k2k/konkrete_klinkers/master_data/machines/provider/machine_provider.dart';
+import 'package:k2k/konkrete_klinkers/master_data/plants/model/plants_model.dart';
+import 'package:k2k/konkrete_klinkers/master_data/plants/provider/plants_provider.dart';
 import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -30,46 +31,10 @@ class _MachineAddScreenState extends State<MachineAddScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final machineProvider = Provider.of<MachinesProvider>(
-        context,
-        listen: false,
-      );
+      final plantProvider = Provider.of<PlantProvider>(context, listen: false);
       print('MachineAddScreen: Loading plants');
-      machineProvider.ensurePlantsLoaded();
+      plantProvider.loadAllPlantsForDropdown();
     });
-  }
-
-  Widget _buildLogoAndTitle() {
-    return Row(
-      children: [
-        SizedBox(width: 8.w),
-        Expanded(
-          child: Text(
-            'Add Machine',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 18.sp,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF334155),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBackButton() {
-    return IconButton(
-      icon: Icon(
-        Icons.arrow_back_ios,
-        size: 24.sp,
-        color: const Color(0xFF334155),
-      ),
-      onPressed: () {
-        context.go(RouteNames.machines);
-      },
-    );
   }
 
   @override
@@ -147,46 +112,50 @@ class _MachineAddScreenState extends State<MachineAddScreen> {
               style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
             ),
             SizedBox(height: 24.h),
-            Consumer<MachinesProvider>(
-              builder: (context, provider, _) {
+            Consumer2<MachinesProvider, PlantProvider>(
+              builder: (context, machineProvider, plantProvider, child) {
                 print(
-                  'Building Plant Dropdown: plants=${provider.plant.length}, isLoading=${provider.isAllPlantsLoading}, error=${provider.error}',
+                  'Building Plant Dropdown: plants=${plantProvider.plants.length}, isLoading=${plantProvider.isAllPlantsLoading}, error=${plantProvider.error}',
                 );
-                if (provider.isAllPlantsLoading) {
+
+                if (plantProvider.isAllPlantsLoading) {
                   return const Center(child: GradientLoader());
                 }
-                if (provider.error != null) {
+
+                if (plantProvider.error != null) {
                   return Column(
                     children: [
                       Text(
-                        'Error loading plants: ${provider.error}',
+                        'Error loading plants: ${plantProvider.error}',
                         style: TextStyle(fontSize: 14.sp, color: Colors.red),
                       ),
                       SizedBox(height: 8.h),
                       ElevatedButton(
                         onPressed: () {
                           print('Retrying to load plants');
-                          provider.clearError();
-                          provider.ensurePlantsLoaded(refresh: true);
+                          plantProvider.clearError();
+                          plantProvider.loadAllPlantsForDropdown(refresh: true);
                         },
                         child: Text('Retry', style: TextStyle(fontSize: 14.sp)),
                       ),
                     ],
                   );
                 }
-                if (provider.plant.isEmpty) {
+
+                if (plantProvider.allPlants.isEmpty) {
                   return Text(
                     'No plants found. Please add a plant first.',
                     style: TextStyle(fontSize: 14.sp, color: Colors.red),
                   );
                 }
-                return CustomSearchableDropdownFormField<PlantId>(
+
+                return CustomSearchableDropdownFormField<PlantModel>(
                   name: 'plant',
                   labelText: 'Plant Name',
                   hintText: 'Select Plant Name',
                   fillColor: Colors.white,
                   prefixIcon: Icons.factory_outlined,
-                  options: provider.plant,
+                  options: plantProvider.allPlants,
                   optionLabel: (plant) => plant.plantName,
                   validators: [
                     FormBuilderValidators.required(
@@ -197,6 +166,7 @@ class _MachineAddScreenState extends State<MachineAddScreen> {
                 );
               },
             ),
+
             SizedBox(height: 24.h),
             CustomTextFormField(
               name: 'machine_name',
@@ -246,12 +216,12 @@ class _MachineAddScreenState extends State<MachineAddScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: provider.isAddMachineLoading
+          onTap: provider.isAddLoading
               ? null
               : () => _submitForm(context, provider),
           borderRadius: BorderRadius.circular(12.r),
           child: Center(
-            child: provider.isAddMachineLoading
+            child: provider.isAddLoading
                 ? Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -294,7 +264,7 @@ class _MachineAddScreenState extends State<MachineAddScreen> {
   ) async {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       final formData = _formKey.currentState!.value;
-      final plant = formData['plant'] as PlantId?;
+      final plant = formData['plant'];
       final machineName = formData['machine_name'] as String;
 
       if (plant == null) {
@@ -342,7 +312,7 @@ class _MachineAddScreenState extends State<MachineAddScreen> {
         ),
       );
 
-      final success = await provider.createMachine(machineName, plant.id);
+      final success = await provider.createMachine(machineName, plant.id!);
 
       if (context.mounted) {
         Navigator.of(context).pop();
@@ -350,7 +320,7 @@ class _MachineAddScreenState extends State<MachineAddScreen> {
 
       if (success && context.mounted) {
         context.showSuccessSnackbar('Machine created successfully!');
-        await provider.loadAllMachines(refresh: true);
+        await provider.loadMachines(refresh: true);
 
         context.go(RouteNames.machines);
       } else {

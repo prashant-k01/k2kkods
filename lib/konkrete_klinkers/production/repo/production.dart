@@ -1,17 +1,17 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:k2k/api_services/api_services.dart';
+import 'package:k2k/common/constant/app_url.dart';
 import 'package:k2k/konkrete_klinkers/production/model/common_model.dart';
 import 'package:k2k/konkrete_klinkers/production/model/production_logs_model.dart';
 import 'package:k2k/konkrete_klinkers/production/model/production_model.dart';
-import 'package:k2k/api_services/shared_preference/shared_preference.dart';
+import 'package:k2k/core/shared_preference/shared_preference.dart';
 import 'package:intl/intl.dart';
 
 class ProductionRepository {
   Future<Map<String, String>> get headers async {
     try {
-      final token = await fetchAccessToken();
+      final token = await SessionManager.getAccessToken();
       return {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
@@ -64,6 +64,7 @@ class ProductionRepository {
   Future<bool> addDownTime(
     String productId,
     String jobOrder,
+    String prodId,
     Map<String, dynamic> downtimeData,
   ) async {
     try {
@@ -90,11 +91,12 @@ class ProductionRepository {
   Future<List<Downtime>> fetchDownTimeLogs(
     String productId,
     String jobOrder,
+    String prodId,
   ) async {
     try {
       final authHeaders = await headers;
       final uri = Uri.parse(
-        '${AppUrl.fetchDownTimeLogs}$productId&job_order=$jobOrder',
+        '${AppUrl.fetchDownTimeLogs}$productId&job_order=$jobOrder&prodId=$prodId',
       );
       final response = await http
           .get(uri, headers: authHeaders)
@@ -166,6 +168,7 @@ class ProductionRepository {
   }
 
   Future<PastDpr?> performAction({
+    required String prodId,
     required String jobOrder,
     required String productId,
     required String action,
@@ -176,6 +179,7 @@ class ProductionRepository {
       final body = {
         "action": action,
         "job_order": jobOrder,
+        "prodId": prodId,
         "product_id": productId,
       };
 
@@ -227,11 +231,19 @@ class ProductionRepository {
     }
   }
 
-  Future<bool> updateProduction(String productId, String jobOrder) async {
+  Future<bool> updateProduction(
+    String productId,
+    String jobOrder,
+    String prodId,
+  ) async {
     try {
       final authHeaders = await headers;
       final uri = Uri.parse(AppUrl.updatedProduction).replace(
-        queryParameters: {'product_id': productId, 'job_order': jobOrder},
+        queryParameters: {
+          'product_id': productId,
+          'job_order': jobOrder,
+          'prodId': prodId,
+        },
       );
 
       print('PUT URL: $uri');

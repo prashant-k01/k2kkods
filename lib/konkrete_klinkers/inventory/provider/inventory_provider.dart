@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:k2k/konkrete_klinkers/inventory/model/inventory.dart';
+import 'package:k2k/konkrete_klinkers/inventory/model/inventory_detail.dart';
 import 'package:k2k/konkrete_klinkers/inventory/repo/inventory_repo.dart';
 
 class InventoryProvider with ChangeNotifier {
@@ -16,8 +17,8 @@ class InventoryProvider with ChangeNotifier {
   String? get error => _error;
 
   // Product detail related state
-  List<dynamic> _productDetails = [];
-  List<dynamic> get productDetails => _productDetails;
+  InventoryData _productDetails = InventoryData(productDetails: []);
+  InventoryData get productDetails => _productDetails;
 
   bool _isDetailLoading = false;
   bool get isDetailLoading => _isDetailLoading;
@@ -64,16 +65,18 @@ class InventoryProvider with ChangeNotifier {
 
     try {
       final details = await _repository.getProductDetails(productId);
-      _productDetails = details;
-      if (_productDetails.isNotEmpty) {
+      _productDetails = details.data ?? InventoryData(productDetails: []);
+      final detailsList = _productDetails.productDetails ?? [];
+
+      if (detailsList.isNotEmpty) {
         _tabController = TabController(
-          length: _productDetails.length,
+          length: detailsList.length,
           vsync: vsync,
         );
         _isDataLoaded = true;
       }
     } catch (e) {
-      _productDetails = [];
+      _productDetails = InventoryData(productDetails: []);
       _detailError = e.toString();
       _isDataLoaded = false;
     } finally {
@@ -84,7 +87,7 @@ class InventoryProvider with ChangeNotifier {
 
   // Method to clear product details and tab controller
   void clearProductDetails() {
-    _productDetails = [];
+    _productDetails = InventoryData(productDetails: []);
     _detailError = null;
     _isDetailLoading = false;
     _isDataLoaded = false;

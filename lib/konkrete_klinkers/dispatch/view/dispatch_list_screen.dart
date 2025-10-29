@@ -6,9 +6,10 @@ import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
 import 'package:k2k/common/list_helper/shimmer.dart';
 import 'package:k2k/common/list_helper/title.dart';
-import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/app_bar.dart';
 import 'package:k2k/common/widgets/custom_card.dart';
 import 'package:k2k/common/widgets/gradient_icon_button.dart';
+import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/konkrete_klinkers/dispatch/model/dispatch.dart';
 import 'package:k2k/konkrete_klinkers/dispatch/provider/dispatch_provider.dart';
 import 'package:k2k/utils/sreen_util.dart';
@@ -69,7 +70,16 @@ class _DispatchListViewState extends State<DispatchListView> {
     return CustomCard(
       margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
       title: 'Work Order: $workOrderNumber',
-
+      onTap: () {
+        if (dispatchId.isEmpty) {
+          context.showErrorSnackbar('Invalid Dispatch No');
+          return;
+        }
+        context.goNamed(
+          RouteNames.dispatchView,
+          pathParameters: {'dispatchId': dispatchId},
+        );
+      },
       titleColor: AppColors.background,
       leading: SizedBox.shrink(), // Empty leading widget as original had none
       headerGradient: AppTheme.cardGradientList,

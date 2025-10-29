@@ -6,7 +6,7 @@ class ProjectProvider with ChangeNotifier {
   final ProjectRepository _repository = ProjectRepository();
 
   // Project list state
-  List<ProjectModel> _projects = [];
+  final List<ProjectModel> _projects = [];
   bool _isLoading = false;
   String? _error;
   bool _hasMore = true;

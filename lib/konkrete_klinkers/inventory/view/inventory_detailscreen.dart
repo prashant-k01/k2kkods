@@ -4,8 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/title.dart';
-import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/app_bar.dart';
 import 'package:k2k/common/widgets/gradient_loader.dart';
+import 'package:k2k/konkrete_klinkers/inventory/model/inventory_detail.dart';
 import 'package:k2k/konkrete_klinkers/inventory/provider/inventory_provider.dart';
 import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
@@ -214,7 +215,7 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen>
     );
   }
 
-  Widget _buildProductHeader(Map<String, dynamic> detail) {
+  Widget _buildProductHeader(ProductDetail detail) {
     return Container(
       margin: EdgeInsets.only(bottom: 20.h),
       decoration: BoxDecoration(
@@ -241,7 +242,7 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        detail['material_code']?.toString() ?? 'N/A',
+                        detail.materialCode?.toString() ?? 'N/A',
                         style: TextStyle(
                           fontSize: 20.sp,
                           fontWeight: FontWeight.bold,
@@ -250,7 +251,7 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen>
                       ),
                       SizedBox(height: 4.h),
                       Text(
-                        detail['description']?.toString() ?? 'No Description',
+                        detail.description?.toString() ?? 'No Description',
                         style: TextStyle(
                           fontSize: 14.sp,
                           color: Colors.white.withOpacity(0.9),
@@ -281,7 +282,7 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen>
                 borderRadius: BorderRadius.circular(8.r),
               ),
               child: Text(
-                'UOM: ${detail['uom']?.toString() ?? 'N/A'}',
+                'UOM: ${detail.uom?.toString() ?? 'N/A'}',
                 style: TextStyle(
                   fontSize: 12.sp,
                   color: Colors.white,
@@ -295,7 +296,7 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen>
     );
   }
 
-  Widget _buildQuantitiesGrid(Map<String, dynamic> detail) {
+  Widget _buildQuantitiesGrid(ProductDetail detail) {
     return Container(
       margin: EdgeInsets.only(bottom: 20.h),
       child: Column(
@@ -323,29 +324,29 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen>
             children: [
               _buildQuantityCard(
                 title: 'PO Quantity',
-                value: detail['po_quantity']?.toString() ?? '0',
-                unit: detail['uom']?.toString() ?? '',
+                value: detail.poQuantity?.toString() ?? '0',
+                unit: detail.uom?.toString() ?? '',
                 icon: Icons.assignment,
                 color: const Color(0xFF3B82F6),
               ),
               _buildQuantityCard(
                 title: 'Produced',
-                value: detail['produced_quantity']?.toString() ?? '0',
-                unit: detail['uom']?.toString() ?? '',
+                value: detail.producedQuantity?.toString() ?? '0',
+                unit: detail.uom?.toString() ?? '',
                 icon: Icons.precision_manufacturing,
                 color: const Color(0xFF10B981),
               ),
               _buildQuantityCard(
                 title: 'Packed',
-                value: detail['packed_quantity']?.toString() ?? '0',
-                unit: detail['uom']?.toString() ?? '',
+                value: detail.packedQuantity?.toString() ?? '0',
+                unit: detail.uom?.toString() ?? '',
                 icon: Icons.inventory,
                 color: const Color(0xFFF59E0B),
               ),
               _buildQuantityCard(
                 title: 'Dispatched',
-                value: detail['dispatched_quantity']?.toString() ?? '0',
-                unit: detail['uom']?.toString() ?? '',
+                value: detail.dispatchedQuantity?.toString() ?? '0',
+                unit: detail.uom?.toString() ?? '',
                 icon: Icons.local_shipping,
                 color: const Color(0xFF8B5CF6),
               ),
@@ -357,8 +358,8 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen>
               Expanded(
                 child: _buildQuantityCard(
                   title: 'Available Stock',
-                  value: detail['available_stock']?.toString() ?? '0',
-                  unit: detail['uom']?.toString() ?? '',
+                  value: detail.availableStock?.toString() ?? '0',
+                  unit: detail.uom?.toString() ?? '',
                   icon: Icons.store,
                   color: const Color(0xFF059669),
                 ),
@@ -367,8 +368,8 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen>
               Expanded(
                 child: _buildQuantityCard(
                   title: 'Balance',
-                  value: detail['balance_quantity']?.toString() ?? '0',
-                  unit: detail['uom']?.toString() ?? '',
+                  value: detail.balanceQuantity?.toString() ?? '0',
+                  unit: detail.uom?.toString() ?? '',
                   icon: Icons.account_balance,
                   color: const Color(0xFFDC2626),
                 ),
@@ -390,10 +391,10 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen>
     }
   }
 
-  Widget _buildProductDetailCard(Map<String, dynamic> detail) {
-    final workOrder = detail['work_order'] ?? {};
-    final client = detail['client'] ?? {};
-    final project = detail['project'] ?? {};
+  Widget _buildProductDetailCard(ProductDetail detail) {
+    final workOrder = detail.workOrder;
+    final client = detail.client;
+    final project = detail.project;
 
     return SingleChildScrollView(
       padding: EdgeInsets.all(24.w),
@@ -407,18 +408,18 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen>
             children: [
               _buildDetailRow(
                 'WO Number:',
-                workOrder['work_order_number']?.toString() ?? 'N/A',
+                workOrder?.workOrderNumber?.toString() ?? 'N/A',
               ),
               _buildDetailRow(
                 'Status:',
                 '',
                 trailing: _buildStatusChip(
-                  workOrder['status']?.toString() ?? 'Unknown',
+                  workOrder?.status?.toString() ?? 'Unknown',
                 ),
               ),
               _buildDetailRow(
                 'Created:',
-                _formatDate(workOrder['created_at']?.toString()),
+                _formatDate(workOrder?.createdAt?.toString()),
               ),
             ],
           ),
@@ -426,55 +427,23 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen>
             title: 'Client Information',
             icon: Icons.business,
             children: [
-              _buildDetailRow('Name:', client['name']?.toString() ?? 'N/A'),
-              _buildDetailRow(
-                'Address:',
-                client['address']?.toString() ?? 'N/A',
-              ),
+              _buildDetailRow('Name:', client?.name?.toString() ?? 'N/A'),
+              _buildDetailRow('Address:', client?.address?.toString() ?? 'N/A'),
             ],
           ),
           _buildInfoSection(
             title: 'Project Details',
             icon: Icons.construction,
             children: [
-              _buildDetailRow('Name:', project['name']?.toString() ?? 'N/A'),
+              _buildDetailRow('Name:', project?.name?.toString() ?? 'N/A'),
               _buildDetailRow(
                 'Address:',
-                project['address']?.toString() ?? 'N/A',
+                project?.address?.toString() ?? 'N/A',
               ),
             ],
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildLogoAndTitle() {
-    return Row(
-      children: [
-        SizedBox(width: 8.w),
-        Text(
-          'Product Details',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF334155),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBackButton() {
-    return IconButton(
-      icon: Icon(
-        Icons.arrow_back_ios,
-        size: 24.sp,
-        color: const Color(0xFF334155),
-      ),
-      onPressed: () {
-        context.go(RouteNames.inventory);
-      },
     );
   }
 
@@ -500,6 +469,8 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen>
         ),
         body: Consumer<InventoryProvider>(
           builder: (context, provider, _) {
+            final productList = provider.productDetails.productDetails ?? [];
+
             if (provider.isDetailLoading) {
               return Center(
                 child: Column(
@@ -561,7 +532,7 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen>
               );
             }
 
-            if (provider.productDetails.isEmpty) {
+            if (productList.isEmpty) {
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -644,7 +615,7 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen>
                       fontWeight: FontWeight.w500,
                     ),
                     tabs: List.generate(
-                      provider.productDetails.length,
+                      productList.length,
                       (index) => Tab(text: 'Product ${index + 1}'),
                     ),
                   ),
@@ -652,7 +623,7 @@ class _InventoryDetailScreenState extends State<InventoryDetailScreen>
                 Expanded(
                   child: TabBarView(
                     controller: provider.tabController,
-                    children: provider.productDetails
+                    children: productList
                         .map((detail) => _buildProductDetailCard(detail))
                         .toList(),
                   ),

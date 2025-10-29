@@ -46,7 +46,7 @@ class JobOrderDeleteHandler {
           ],
         ),
         content: Text(
-          'Are you sure you want to delete "$productName"?\n\ ID: $mongoId', // Show MongoDB ID for debugging
+          'Are you sure you want to delete "$productName"?\n ID: $mongoId', // Show MongoDB ID for debugging
           style: TextStyle(fontSize: 14.sp, color: const Color(0xFF64748B)),
         ),
         actions: [

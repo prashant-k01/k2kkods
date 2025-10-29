@@ -5,9 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/title.dart';
-import 'package:k2k/common/widgets/appbar/app_bar.dart';
-import 'package:k2k/common/widgets/dropdown.dart';
+import 'package:k2k/common/widgets/app_bar.dart';
 import 'package:k2k/common/widgets/gradient_loader.dart';
+import 'package:k2k/common/widgets/multiselect_dropdown.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
@@ -16,104 +16,104 @@ import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class EditProductFormScreen extends StatelessWidget {
+class EditProductFormScreen extends StatefulWidget {
   final String productId;
 
   const EditProductFormScreen({super.key, required this.productId});
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ProductProvider()..initializeEditForm(productId),
-      child: Consumer<ProductProvider>(
-        builder: (context, provider, _) {
-          return _EditProductFormContent(productId: productId);
-        },
-      ),
-    );
-  }
+  State<EditProductFormScreen> createState() => _EditProductFormScreenState();
 }
 
-class _EditProductFormContent extends StatelessWidget {
-  final String productId;
+class _EditProductFormScreenState extends State<EditProductFormScreen> {
   final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
   final ScrollController _scrollController = ScrollController();
+  final Map<String, FocusNode> _focusNodes = {
+    'plant': FocusNode(),
+    'material_code': FocusNode(),
+    'description': FocusNode(),
+    'no_of_pieces_per_punch': FocusNode(),
+    'uom': FocusNode(),
+    'area_per_unit': FocusNode(),
+    'qty_in_bundle': FocusNode(),
+  };
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final productProvider = Provider.of<ProductProvider>(
+        context,
+        listen: false,
+      );
+      productProvider.initializeEditForm(widget.productId);
+    });
+  }
 
-  _EditProductFormContent({required this.productId});
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _focusNodes.forEach((_, node) => node.dispose());
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final productProvider = Provider.of<ProductProvider>(context);
-
-    if (!productProvider.isInitialized) {
-      return const Scaffold(
-        backgroundColor: Color(0xFFF8FAFC),
-        body: Center(child: GradientLoader()),
-      );
-    }
-
-    if (productProvider.errorMessage != null) {
-      return _buildErrorScreen(context, productProvider.errorMessage!);
-    }
-
-    // Validate and adjust initial values for 'uom'
-    final initialValues = Map<String, dynamic>.from(
-      productProvider.initialValues,
-    );
-
-    // FIXED: Use consistent UOM values (same as add form)
-    const validUomValues = ["Square Meter/No", "Meter/No"];
-    if (initialValues['uom'] != null &&
-        !validUomValues.contains(initialValues['uom'])) {
-      // Map common variations to the correct values
-      if (initialValues['uom'].toString().contains('Square M')) {
-        initialValues['uom'] = "Square Meter/No";
-      } else if (initialValues['uom'].toString().contains('Meter')) {
-        initialValues['uom'] = "Meter/No";
-      } else {
-        initialValues['uom'] =
-            validUomValues[0]; // Default to first valid value
-      }
-    }
-
-    return PopScope(
-      canPop: false,
-      onPopInvoked: (didPop) {
-        if (!didPop) {
-          context.go(RouteNames.products);
+    return Consumer<ProductProvider>(
+      builder: (context, provider, _) {
+        if (!provider.isInitialized) {
+          return const Scaffold(
+            backgroundColor: Color(0xFFF8FAFC),
+            body: Center(child: GradientLoader()),
+          );
         }
-      },
-      child: Container(
-        decoration: BoxDecoration(gradient: AppTheme.backgroundGradient),
-        child: Scaffold(
-          backgroundColor: AppColors.transparent,
-          resizeToAvoidBottomInset: true,
-          appBar: AppBars(
-            title: TitleText(title: 'Edit Product'),
-            leading: CustomBackButton(
-              onPressed: () {
-                context.go(RouteNames.products);
-              },
-            ),
-            action: [],
-          ),
-          body: SafeArea(
-            child: GestureDetector(
-              onTap: () => FocusScope.of(context).unfocus(),
-              behavior: HitTestBehavior.opaque,
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: EdgeInsets.all(24.w).copyWith(
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
+
+        if (provider.errorMessage != null) {
+          return _buildErrorScreen(context, provider.errorMessage!);
+        }
+
+        // Validate and adjust initial values for 'uom'
+        final initialValues = Map<String, dynamic>.from(provider.initialValues);
+
+        return PopScope(
+          canPop: false,
+          onPopInvoked: (didPop) {
+            if (!didPop) {
+              context.go(RouteNames.products);
+            }
+          },
+          child: Container(
+            decoration: BoxDecoration(gradient: AppTheme.backgroundGradient),
+            child: Scaffold(
+              backgroundColor: AppColors.transparent,
+              resizeToAvoidBottomInset: true,
+              appBar: AppBars(
+                title: TitleText(title: 'Edit Product'),
+                leading: CustomBackButton(
+                  onPressed: () {
+                    context.go(RouteNames.products);
+                  },
                 ),
-                itemCount: 1,
-                itemBuilder: (context, index) =>
-                    _buildFormCard(context, productProvider, initialValues),
+                action: [],
+              ),
+              body: SafeArea(
+                child: GestureDetector(
+                  onTap: () => FocusScope.of(context).unfocus(),
+                  behavior: HitTestBehavior.opaque,
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    padding: EdgeInsets.all(24.w).copyWith(
+                      bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
+                    ),
+                    itemCount: 1,
+                    itemBuilder: (context, index) =>
+                        _buildFormCard(context, provider, initialValues),
+                  ),
+                ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -169,7 +169,7 @@ class _EditProductFormContent extends StatelessWidget {
                 Provider.of<ProductProvider>(
                   context,
                   listen: false,
-                ).initializeEditForm(productId);
+                ).initializeEditForm(widget.productId);
               },
               child: Text('Retry', style: TextStyle(fontSize: 16.sp)),
             ),
@@ -329,33 +329,25 @@ class _EditProductFormContent extends StatelessWidget {
             ),
             SizedBox(height: 18.h),
             // FIXED: Use consistent UOM values
-            CustomDropdownFormField<String>(
+            CustomMultiSelectFormField<String>(
               name: 'uom',
               labelText: 'UOM',
-              initialValue: initialValues['uom'] ?? "Square Meter/No",
-              items:
-                  [
-                        "Square Meter/No",
-                        "Meter/No",
-                      ] // FIXED: Consistent with add form
-                      .map(
-                        (item) => DropdownMenuItem<String>(
-                          value: item,
-                          child: Text(item),
-                        ),
-                      )
-                      .toList(),
-              hintText: 'Select UOM',
-              prefixIcon: Icons.workspaces,
-              validators: [FormBuilderValidators.required()],
+              options: ["Square Meter/No", "Meter/No"],
+              initialValue: productProvider.product?.uom is List<String>
+                  ? List<String>.from(productProvider.product!.uom)
+                  : ['Square Meter/No'],
+
               fillColor: const Color(0xFFF8FAFC),
               borderColor: Colors.grey.shade300,
               focusedBorderColor: const Color(0xFF3B82F6),
               borderRadius: 12.r,
-              onChanged: (value) {
+              onChanged: (values) {
+                final selected = values ?? [];
+
                 productProvider.setShowAreaPerUnit(
-                  value == "Square Meter/No",
-                ); // FIXED: Consistent check
+                  selected.contains("Square Meter/No"),
+                );
+
                 if (!productProvider.showAreaPerUnit) {
                   _formKey.currentState?.fields['area_per_unit']?.didChange('');
                 } else {
@@ -372,6 +364,7 @@ class _EditProductFormContent extends StatelessWidget {
                 }
               },
             ),
+
             SizedBox(height: 18.h),
             if (productProvider.showAreaPerUnit)
               CustomTextFormField(
@@ -536,7 +529,7 @@ class _EditProductFormContent extends StatelessWidget {
         // Try to reload plants if all IDs are empty
         try {
           context.showInfoSnackbar("Refreshing plant data...");
-          await provider.initializeEditForm(productId); // Reload plants
+          await provider.initializeEditForm(widget.productId); // Reload plants
 
           if (provider.plants.isEmpty ||
               provider.plants.every((plant) => plant['id']!.isEmpty)) {
@@ -607,17 +600,33 @@ class _EditProductFormContent extends StatelessWidget {
         ),
       );
 
+      final List<String> selectedUoms = List<String>.from(
+        formData['uom'] ?? [],
+      );
+
+      final areas = <String, double>{};
+      for (var uom in selectedUoms) {
+        if (uom == 'Square Meter/No') {
+          // Directly from form
+          areas[uom] = double.tryParse(formData['area_per_unit'] ?? '0') ?? 0.0;
+        } else if (uom == 'Meter/No') {
+          // Your custom logic for Meter/No
+          areas[uom] =
+              provider.calculateMeterPerNo(formData['description'] ?? '') ??
+              0.0; // implement this function
+        } else {
+          areas[uom] = 0.0; // fallback if any new UOM appears
+        }
+      }
+
       // Update the product
       final success = await provider.updateProduct(
-        productId: productId,
+        productId: widget.productId,
         plantId: selectedPlant['id']!,
         materialCode: formData['material_code'],
         description: formData['description'],
-        uom: [formData['uom']],
-        areas: {
-          formData['uom']:
-              double.tryParse(formData['area_per_unit'] ?? '0') ?? 0.0,
-        },
+        uom: selectedUoms,
+        areas: areas,
         noOfPiecesPerPunch:
             int.tryParse(formData['no_of_pieces_per_punch'] ?? '0') ?? 0,
         qtyInBundle: int.tryParse(formData['qty_in_bundle'] ?? '0') ?? 0,

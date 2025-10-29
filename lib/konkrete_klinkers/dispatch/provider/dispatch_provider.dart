@@ -1,40 +1,45 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:k2k/konkrete_klinkers/dispatch/model/dispatch.dart';
+import 'package:k2k/konkrete_klinkers/dispatch/model/dispatch_detail.dart';
 import 'package:k2k/konkrete_klinkers/dispatch/repo/dispatch_repo.dart';
 
 class DispatchProvider with ChangeNotifier {
   final DispatchRepository _repository = DispatchRepository();
 
+  // Dispatch List State
   List<DispatchModel> _dispatches = [];
   bool _isLoading = false;
   String? _error;
   bool _hasMore = true;
-  List<String> qrCodes = [];
-  DispatchModel? _selectedDispatch;
+  DispatchData? _selectedDispatch;
 
+  // Work Orders State
   List<Map<String, String>> _workOrders = [];
   bool _isLoadingWorkOrders = false;
   String? _workOrderError;
 
-  Map<String, dynamic>? _qrScanData;
-  bool _isLoadingQrScan = false;
+  // QR Scan State
+  Map<String, dynamic>? _scannedQrData;
+  bool _isScanning = false;
   String? _qrScanError;
 
+  // ========= Getters =========
   List<DispatchModel> get dispatches => _dispatches;
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get hasMore => _hasMore;
-  DispatchModel? get selectedDispatch => _selectedDispatch;
+  DispatchData? get selectedDispatch => _selectedDispatch;
 
   List<Map<String, String>> get workOrders => _workOrders;
   bool get isLoadingWorkOrders => _isLoadingWorkOrders;
   String? get workOrderError => _workOrderError;
 
-  Map<String, dynamic>? get qrScanData => _qrScanData;
-  bool get isLoadingQrScan => _isLoadingQrScan;
+  Map<String, dynamic>? get qrScan => _scannedQrData;
+  bool get isScanning => _isScanning;
   String? get qrScanError => _qrScanError;
 
+  // ========= Error & Reset =========
   void clearError() {
     _error = null;
     _workOrderError = null;
@@ -47,16 +52,21 @@ class DispatchProvider with ChangeNotifier {
     _isLoading = false;
     _error = null;
     _hasMore = true;
+
     _workOrders = [];
     _isLoadingWorkOrders = false;
     _workOrderError = null;
-    _qrScanData = null;
-    _isLoadingQrScan = false;
-    _qrScanError = null;
+
     _selectedDispatch = null;
+
+    _scannedQrData = null;
+    _isScanning = false;
+    _qrScanError = null;
+
     notifyListeners();
   }
 
+  // ========= Dispatch List =========
   Future<void> loadDispatches({bool refresh = false}) async {
     if (_isLoading || (!_hasMore && !refresh)) return;
 
@@ -82,6 +92,25 @@ class DispatchProvider with ChangeNotifier {
     }
   }
 
+  Future<void> fetchDispatchById(String dispatchId) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final dispatch = await _repository.fetchDispatchById(dispatchId);
+      _selectedDispatch = dispatch.data;
+      _error = null;
+    } catch (e) {
+      _error = _getErrorMessage(e);
+      _selectedDispatch = null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // ========= Work Orders =========
   Future<void> loadWorkOrders({bool refresh = false}) async {
     if (_isLoadingWorkOrders) return;
 
@@ -102,131 +131,91 @@ class DispatchProvider with ChangeNotifier {
     }
   }
 
-  Future<void> scanQrCode(String qrId) async {
-    if (_isLoadingQrScan) return;
+  // ========= QR Scan =========
+  Future<void> fetchQrDetails(String qrId) async {
+    if (_isScanning) return;
 
-    _isLoadingQrScan = true;
+    _isScanning = true;
     _qrScanError = null;
     notifyListeners();
 
     try {
       final qrData = await _repository.fetchQrScanData(qrId);
-      _qrScanData = qrData;
+
+      if (qrData != null) {
+        _scannedQrData = qrData;
+      }
       _qrScanError = null;
+      notifyListeners();
     } catch (e) {
       _qrScanError = _getErrorMessage(e);
-      _qrScanData = null;
+      _scannedQrData = null;
+      notifyListeners();
     } finally {
-      _isLoadingQrScan = false;
+      _isScanning = false;
       notifyListeners();
     }
   }
 
-  Future<void> fetchDispatchById(String dispatchId) async {
-    _isLoading = true;
-    _error = null;
+  void setScannedQr(Map<String, dynamic>? data) {
+    _scannedQrData = data;
+    _qrScanError = null; // clear any previous error
+
     notifyListeners();
-
-    try {
-      final dispatch = await _repository.fetchDispatchById(dispatchId);
-      _selectedDispatch = dispatch;
-      _error = null;
-    } catch (e) {
-      _error = _getErrorMessage(e);
-      _selectedDispatch = null;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
   }
 
+  // Reset
+  void resetScannedQr() {
+    _scannedQrData = null;
+    _qrScanError = null; // clear any previous error
+
+    notifyListeners();
+  }
+
+  void setScanning(bool value) {
+    _isScanning = value;
+    notifyListeners();
+  }
+
+  // ========= Create / Update Dispatch =========
   Future<void> createDispatch({
     required String workOrder,
     required String invoiceOrSto,
     required String vehicleNumber,
-    required List<String> qrCodes,
     required String date,
     required File invoiceFile,
+    required List<String> qrCodes,
   }) async {
-    print('🔄 DispatchProvider: Starting createDispatch...');
-    print('📋 Parameters received:');
-    print('  - workOrder: "$workOrder"');
-    print('  - invoiceOrSto: "$invoiceOrSto"');
-    print('  - vehicleNumber: "$vehicleNumber"');
-    print('  - qrCodes: $qrCodes');
-    print('  - date: "$date"');
-    print('  - invoiceFile path: "${invoiceFile.path}"');
-    print('  - invoiceFile exists: ${await invoiceFile.exists()}');
-
-    if (workOrder.isEmpty) {
-      _error = 'Work order is required';
-      print('❌ Error: Work order is empty');
-      notifyListeners();
-      throw Exception('Work order is required');
-    }
-
-    if (invoiceOrSto.isEmpty) {
-      _error = 'Invoice/STO is required';
-      print('❌ Error: Invoice/STO is empty');
-      notifyListeners();
-      throw Exception('Invoice/STO is required');
-    }
-
-    if (vehicleNumber.isEmpty) {
-      _error = 'Vehicle number is required';
-      print('❌ Error: Vehicle number is empty');
-      notifyListeners();
-      throw Exception('Vehicle number is required');
-    }
-
-    if (date.isEmpty) {
-      _error = 'Dispatch date is required';
-      print('❌ Error: Date is empty');
-      notifyListeners();
-      throw Exception('Dispatch date is required');
-    }
-
+    // Validate inputs
+    if (workOrder.isEmpty) throw Exception('Work order is required');
+    if (invoiceOrSto.isEmpty) throw Exception('Invoice/STO is required');
+    if (vehicleNumber.isEmpty) throw Exception('Vehicle number is required');
+    if (date.isEmpty) throw Exception('Dispatch date is required');
     if (!await invoiceFile.exists()) {
-      _error = 'Invoice file does not exist';
-      print(
-        '❌ Error: Invoice file does not exist at path: ${invoiceFile.path}',
-      );
-      notifyListeners();
       throw Exception('Invoice file does not exist');
     }
+    if (qrCodes.isEmpty) throw Exception('At least one QR code is required');
 
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      print('🚀 Calling repository.createDispatch...');
-
+      // Call repository method (repository handles API/network logic)
       await _repository.createDispatch(
         workOrder: workOrder,
         invoiceOrSto: invoiceOrSto,
         vehicleNumber: vehicleNumber,
-        qrCodes: qrCodes,
         date: date,
         invoiceFile: invoiceFile,
+        qrCodes: qrCodes,
       );
-
-      print('✅ DispatchProvider: Dispatch created successfully!');
       _error = null;
     } catch (e) {
-      print('❌ DispatchProvider: Error in createDispatch: $e');
-      print('🔍 Error type: ${e.runtimeType}');
-      print('📝 Error details: ${e.toString()}');
-
       _error = _getErrorMessage(e);
-      print('🚨 Formatted error message: $_error');
-
       rethrow;
     } finally {
       _isLoading = false;
-      print(
-        '🏁 DispatchProvider: createDispatch completed, loading: $_isLoading',
-      );
       notifyListeners();
     }
   }
@@ -237,90 +226,43 @@ class DispatchProvider with ChangeNotifier {
     required String vehicleNumber,
     required String date,
   }) async {
-    print('🔄 DispatchProvider: Starting updateDispatch...');
-    print('📋 Parameters received:');
-    print('  - dispatchId: "$dispatchId"');
-    print('  - invoiceOrSto: "$invoiceOrSto"');
-    print('  - vehicleNumber: "$vehicleNumber"');
-    print('  - date: "$date"');
-
-    if (invoiceOrSto.isEmpty) {
-      _error = 'Invoice/STO is required';
-      print('❌ Error: Invoice/STO is empty');
-      notifyListeners();
-      throw Exception('Invoice/STO is required');
-    }
-
-    if (vehicleNumber.isEmpty) {
-      _error = 'Vehicle number is required';
-      print('❌ Error: Vehicle number is empty');
-      notifyListeners();
-      throw Exception('Vehicle number is required');
-    }
-
-    if (date.isEmpty) {
-      _error = 'Dispatch date is required';
-      print('❌ Error: Date is empty');
-      notifyListeners();
-      throw Exception('Dispatch date is required');
-    }
+    if (invoiceOrSto.isEmpty) throw Exception('Invoice/STO is required');
+    if (vehicleNumber.isEmpty) throw Exception('Vehicle number is required');
+    if (date.isEmpty) throw Exception('Dispatch date is required');
 
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      print('🚀 Calling repository.updateDispatch...');
-
       await _repository.updateDispatch(
         dispatchId: dispatchId,
         invoiceOrSto: invoiceOrSto,
         vehicleNumber: vehicleNumber,
         date: date,
       );
-
-      print('✅ DispatchProvider: Dispatch updated successfully!');
       _error = null;
     } catch (e) {
-      print('❌ DispatchProvider: Error in updateDispatch: $e');
-      print('🔍 Error type: ${e.runtimeType}');
-      print('📝 Error details: ${e.toString()}');
-
       _error = _getErrorMessage(e);
-      print('🚨 Formatted error message: $_error');
-
       rethrow;
     } finally {
       _isLoading = false;
-      print(
-        '🏁 DispatchProvider: updateDispatch completed, loading: $_isLoading',
-      );
       notifyListeners();
     }
   }
 
+  // ========= Error Handling =========
   String _getErrorMessage(Object error) {
-    print('🔍 _getErrorMessage called with: $error');
-    print('🔍 Error type: ${error.runtimeType}');
-
-    String message;
-
     if (error is SocketException) {
-      message = 'No internet connection. Please check your network.';
+      return 'No internet connection. Please check your network.';
     } else if (error is HttpException) {
-      message = 'Network error: ${error.message}';
+      return 'Network error: ${error.message}';
     } else if (error is Exception) {
-      String errorString = error.toString();
-      if (errorString.startsWith('Exception: ')) {
-        message = errorString.substring(11);
-      } else {
-        message = errorString;
-      }
+      String msg = error.toString();
+      if (msg.startsWith('Exception: ')) msg = msg.substring(11);
+      return msg;
     } else {
-      message = error.toString();
+      return error.toString();
     }
-
-    print('🚨 Final error message: $message');
-    return message;
   }
 }

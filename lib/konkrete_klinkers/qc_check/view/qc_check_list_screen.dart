@@ -6,13 +6,15 @@ import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
 import 'package:k2k/common/list_helper/shimmer.dart';
 import 'package:k2k/common/list_helper/title.dart';
-import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/app_bar.dart';
 import 'package:k2k/common/widgets/custom_card.dart';
 import 'package:k2k/common/widgets/gradient_icon_button.dart';
 import 'package:k2k/common/widgets/gradient_loader.dart';
+import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/konkrete_klinkers/qc_check/model/qc_check.dart';
 import 'package:k2k/konkrete_klinkers/qc_check/provider/qc_check_provider.dart';
 import 'package:k2k/konkrete_klinkers/qc_check/view/qc_check_delete.dart';
+import 'package:k2k/konkrete_klinkers/qc_check/view/qc_check_view_screen.dart';
 import 'package:k2k/utils/sreen_util.dart';
 import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
@@ -70,6 +72,19 @@ class _QcCheckListViewState extends State<QcCheckListView> {
     return CustomCard(
       margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
       title: 'Work Order: $workOrderNumber',
+      onTap: () {
+        if (qcCheckId.isEmpty) {
+          context.showErrorSnackbar('Invalid Dispatch No');
+          return;
+        }
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => QcCheckViewScreen(qcCheckId: qcCheckId),
+          ),
+        );
+      },
 
       titleColor: AppColors.background,
       leading: SizedBox.shrink(), // No leading icon in original

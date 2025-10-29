@@ -7,13 +7,11 @@ import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/date_picker.dart';
 import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/title.dart';
-import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/app_bar.dart';
 import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/ranger_date_pciker.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
-import 'package:k2k/common/widgets/dropdown.dart';
 import 'package:k2k/common/widgets/textfield.dart';
-import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/konkrete_klinkers/job_order/provider/job_order_provider.dart';
 import 'package:k2k/utils/theme.dart';
 import 'package:provider/provider.dart';
@@ -171,33 +169,30 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
               ),
             ),
             SizedBox(height: 18.h),
-            CustomTextFormField(
+            ReusableDateFormField(
               name: 'batch_number',
-              labelText: 'Batch Number',
-              hintText: 'Enter Batch Number',
-              focusNode: provider.getFocusNode('batch_number'),
-              prefixIcon: Icons.numbers,
-              keyboardType: TextInputType.number,
+              labelText: 'Batch Date',
+              hintText: 'Select Batch Date',
+              fillColor: AppTheme.lightGray,
+              initialValue:
+                  provider.batchDate, // pass your existing value if any
+              prefixIcon: Icons.calendar_today_outlined,
+              firstDate: DateTime(2000),
+              lastDate: DateTime(2100),
               validators: [
-                FormBuilderValidators.required(),
-                FormBuilderValidators.numeric(
-                  errorText: 'Batch number must be a number',
-                ),
-                FormBuilderValidators.min(
-                  1,
-                  errorText: 'Batch number must be positive',
-                ),
+                (value) {
+                  if (value == null) return 'Batch date is required';
+                  // Additional custom validation if needed
+                  return null;
+                },
               ],
-              fillColor: const Color(0xFFF8FAFC),
-              borderColor: Colors.grey.shade300,
-              focusedBorderColor: const Color(0xFF3B82F6),
-              borderRadius: 12.r,
-              onTap: () => provider.scrollToFocusedField(
-                context,
-                _scrollController,
-                'batch_number',
-              ),
+              onChanged: (value) {
+                provider.setBatchDate(
+                  value,
+                ); // Update provider with selected date
+              },
             ),
+
             SizedBox(height: 18.h),
             CustomRangeDatePicker(
               name: 'date_range',
@@ -208,7 +203,7 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
             ...provider.products.asMap().entries.map((entry) {
               final index = entry.key;
               return _buildProductSection(context, index, provider);
-            }).toList(),
+            }),
             SizedBox(height: 18.h),
             _buildAddProductButton(provider),
             SizedBox(height: 40.h),
@@ -443,31 +438,19 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
           SizedBox(height: 18.h),
           _buildMachineDropdown(context, index, provider),
           SizedBox(height: 18.h),
-          CustomDropdownFormField<String>(
+          CustomTextFormField(
             name: 'uom_$index',
             labelText: 'UOM',
             enabled: false,
-            items: ['Square Meter/No', 'Meter/No']
-                .map(
-                  (item) =>
-                      DropdownMenuItem<String>(value: item, child: Text(item)),
-                )
-                .toList(),
-            hintText: 'Select UOM',
+            hintText: 'Selected UOM',
             prefixIcon: Icons.workspaces,
             fillColor: const Color(0xFFF8FAFC),
             borderColor: Colors.grey.shade300,
             focusedBorderColor: const Color(0xFF3B82F6),
             borderRadius: 12.r,
-            initialValue:
-                provider.products.length > index &&
-                    provider.products[index]['uom'] != null
-                ? (provider.products[index]['uom'] == 'sqmt'
-                      ? 'Square Meter/No'
-                      : provider.products[index]['uom'] == 'meter'
-                      ? 'Meter/No'
-                      : null)
-                : null,
+            // initialValue: provider.machines.length > index
+            //     ? provider.machines[index].uom
+            //     : 'Select a machine first',
           ),
           SizedBox(height: 18.h),
           CustomTextFormField(
@@ -509,89 +492,24 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
             borderColor: Colors.grey.shade300,
             focusedBorderColor: const Color(0xFF3B82F6),
             borderRadius: 12.r,
+            enabled:
+                (_formKey.currentState?.fields['date_range']?.value
+                    as DateTimeRange?) !=
+                null,
+            firstDate:
+                (_formKey.currentState?.fields['date_range']?.value
+                        as DateTimeRange?)
+                    ?.start,
+            lastDate:
+                (_formKey.currentState?.fields['date_range']?.value
+                        as DateTimeRange?)
+                    ?.end,
             validators: [
               FormBuilderValidators.required(
                 errorText:
                     'Please select a schedule date for product ${index + 1}',
               ),
-              (value) {
-                if (value == null) return null;
-                final dateRange =
-                    _formKey.currentState?.fields['date_range']?.value
-                        as DateTimeRange?;
-                if (dateRange == null) {
-                  return 'Please select a date range first';
-                }
-                final selectedDate = value is DateTime
-                    ? value
-                    : DateTime.tryParse(value.toString());
-                if (selectedDate == null) {
-                  return 'Invalid date format for product ${index + 1}';
-                }
-                final selectedDateOnly = DateTime(
-                  selectedDate.year,
-                  selectedDate.month,
-                  selectedDate.day,
-                );
-                final startDateOnly = DateTime(
-                  dateRange.start.year,
-                  dateRange.start.month,
-                  dateRange.start.day,
-                );
-                final endDateOnly = DateTime(
-                  dateRange.end.year,
-                  dateRange.end.month,
-                  dateRange.end.day,
-                );
-                if (selectedDateOnly.isBefore(startDateOnly) ||
-                    selectedDateOnly.isAfter(endDateOnly)) {
-                  return 'Schedule date for product ${index + 1} must be between ${startDateOnly.day}/${startDateOnly.month}/${startDateOnly.year} and ${endDateOnly.day}/${endDateOnly.month}/${endDateOnly.year}';
-                }
-                return null;
-              },
             ],
-            onChanged: (value) {
-              if (value == null) return;
-              final dateRange =
-                  _formKey.currentState?.fields['date_range']?.value
-                      as DateTimeRange?;
-              if (dateRange == null) {
-                context.showWarningSnackbar(
-                  'Please select a date range first.',
-                );
-                return;
-              }
-              final selectedDate = value is DateTime
-                  ? value
-                  : DateTime.tryParse(value.toString());
-              if (selectedDate == null) {
-                context.showWarningSnackbar(
-                  'Invalid date format for product ${index + 1}.',
-                );
-                return;
-              }
-              final selectedDateOnly = DateTime(
-                selectedDate.year,
-                selectedDate.month,
-                selectedDate.day,
-              );
-              final startDateOnly = DateTime(
-                dateRange.start.year,
-                dateRange.start.month,
-                dateRange.start.day,
-              );
-              final endDateOnly = DateTime(
-                dateRange.end.year,
-                dateRange.end.month,
-                dateRange.end.day,
-              );
-              if (selectedDateOnly.isBefore(startDateOnly) ||
-                  selectedDateOnly.isAfter(endDateOnly)) {
-                context.showWarningSnackbar(
-                  'Schedule date for product ${index + 1} must be between ${startDateOnly.day}/${startDateOnly.month}/${startDateOnly.year} and ${endDateOnly.day}/${endDateOnly.month}/${endDateOnly.year}.',
-                );
-              }
-            },
           ),
         ],
       ),
@@ -699,8 +617,9 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
                   final workOrderId =
                       selectedWO['id']?.toString() ??
                       selectedWO['_id']?.toString();
-                  if (workOrderId != null)
+                  if (workOrderId != null) {
                     provider.loadProductsByWorkOrder(workOrderId);
+                  }
                 }
               },
               icon: Icon(Icons.refresh, size: 16.sp),
@@ -844,8 +763,9 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
                 final productId = provider.products.length > index
                     ? provider.products[index]['product_id']?.toString()
                     : null;
-                if (productId != null)
+                if (productId != null) {
                   provider.loadMachineNamesByProductId(index, productId);
+                }
               },
               icon: Icon(Icons.refresh, size: 16.sp),
               label: const Text('Retry'),
@@ -898,6 +818,9 @@ class _JobOrdersFormScreenState extends State<JobOrdersFormScreen> {
       validators: [
         FormBuilderValidators.required(errorText: 'Please select a machine'),
       ],
+      onChanged: (value) {
+        provider.handleMachineSelection(index, value, _formKey); // Add this
+      },
     );
   }
 

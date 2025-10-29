@@ -1,16 +1,13 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:k2k/Iron_smith/master_data/machines/model/machines.dart';
-import 'package:k2k/api_services/api_services.dart';
-import 'package:k2k/api_services/shared_preference/shared_preference.dart';
+import 'package:k2k/common/constant/app_url.dart';
+import 'package:k2k/core/shared_preference/shared_preference.dart';
 
 class MachinesRepository {
   Future<Map<String, String>> get headers async {
-    final token = await fetchAccessToken();
-    if (token == null || token.isEmpty) {
-      print('Authentication token is missing');
-      throw Exception('Authentication token is missing');
-    }
+    final token = await SessionManager.getAccessToken();
+
     return {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',

@@ -12,7 +12,6 @@ class PlantProvider with ChangeNotifier {
   bool _isAllPlantsLoading = false;
   String? _error;
   bool _hasMore = true;
-  int _skip = 0;
   final int _limit = 10;
   String _searchQuery = '';
   bool _isAddPlantLoading = false;
@@ -41,12 +40,9 @@ class PlantProvider with ChangeNotifier {
     if (_isLoading || (!_hasMore && !refresh)) return;
 
     if (refresh) {
-      _skip = 0;
       _plants.clear();
       _hasMore = true;
-    } else {
-      _skip += _limit;
-    }
+    } else {}
 
     _isLoading = true;
     _error = null;
@@ -54,8 +50,6 @@ class PlantProvider with ChangeNotifier {
 
     try {
       final newPlants = await _repository.getPlants(
-        skip: _skip,
-        limit: _limit,
         search: _searchQuery.isNotEmpty ? _searchQuery : null,
       );
 
@@ -88,8 +82,6 @@ class PlantProvider with ChangeNotifier {
 
     try {
       final plants = await _repository.getPlants(
-        skip: 0,
-        limit: 100,
         search: _searchQuery.isNotEmpty ? _searchQuery : null,
       );
 
@@ -111,7 +103,6 @@ class PlantProvider with ChangeNotifier {
     try {
       final newPlant = await _repository.createPlant(plantCode, plantName);
       if (newPlant.id.isNotEmpty) {
-        _skip = 0;
         await loadPlants(refresh: true);
         await loadAllPlantsForDropdown(refresh: true);
         return true;
@@ -224,14 +215,12 @@ class PlantProvider with ChangeNotifier {
 
   Future<void> searchPlants(String query) async {
     _searchQuery = query;
-    _skip = 0;
     _hasMore = true;
     await loadPlants(refresh: true);
   }
 
   Future<void> clearSearch() async {
     _searchQuery = '';
-    _skip = 0;
     _hasMore = true;
     await loadPlants(refresh: true);
   }

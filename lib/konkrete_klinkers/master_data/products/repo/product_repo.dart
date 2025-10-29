@@ -1,13 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:k2k/api_services/api_services.dart';
+import 'package:k2k/common/constant/app_url.dart';
 import 'package:k2k/konkrete_klinkers/master_data/products/model/product.dart';
-import 'package:k2k/api_services/shared_preference/shared_preference.dart';
+import 'package:k2k/core/shared_preference/shared_preference.dart';
 
 class ProductRepository {
   Future<Map<String, String>> get headers async {
-    final token = await fetchAccessToken();
+    final token = await SessionManager.getAccessToken();
+    print("🔑 Using Access Token: $token"); // Debug print
+
     return {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
@@ -106,53 +108,63 @@ class ProductRepository {
     }
   }
 
-// Fixed getPlantsForDropdown method in ProductRepository
+  // Fixed getPlantsForDropdown method in ProductRepository
 
-Future<List<Map<String, String>>> getPlantsForDropdown() async {
-  try {
-    final authHeaders = await headers;
-    final uri = Uri.parse(AppUrl.allPlantsUrl);
-    final response = await http
-        .get(uri, headers: authHeaders)
-        .timeout(const Duration(seconds: 30));
+  Future<List<Map<String, String>>> getPlantsForDropdown() async {
+    try {
+      final authHeaders = await headers;
+      final uri = Uri.parse(AppUrl.allPlantsUrl);
+      final response = await http
+          .get(uri, headers: authHeaders)
+          .timeout(const Duration(seconds: 30));
 
-    print('Plants API Response: ${response.statusCode} - ${response.body}');
+      print('Plants API Response: ${response.statusCode} - ${response.body}');
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> responseData = json.decode(response.body);
-      final List<dynamic> data = responseData['data'] ?? [];
-      
-      print('Raw plant data: $data'); // Debug: See the actual structure
-      
-      return data.map((plant) {
-        // Try multiple possible ID field names
-        final id = plant['_id']?.toString() ?? 
-                  plant['id']?.toString() ?? 
-                  plant['plantId']?.toString() ?? 
-                  plant['plant_id']?.toString() ?? '';
-        
-        final plantName = plant['plant_name']?.toString() ?? 'Unknown';
-        final plantCode = plant['plant_code']?.toString() ?? '';
-        final display = '$plantName-$plantCode';
-        
-        print('Plant mapping - ID: "$id", Name: "$plantName", Code: "$plantCode", Display: "$display"');
-        
-        if (id.isEmpty) {
-          print('Warning: Plant with display $display has no ID. Raw plant data: $plant');
-        }
-        
-        return {'id': id, 'display': display};
-      }).where((plant) => plant['id']!.isNotEmpty).toList(); // Filter out plants without IDs
-    } else {
-      throw Exception(
-        'Failed to fetch plants: ${response.statusCode} - ${response.body}',
-      );
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = json.decode(response.body);
+        final List<dynamic> data = responseData['data'] ?? [];
+
+        print('Raw plant data: $data'); // Debug: See the actual structure
+
+        return data
+            .map((plant) {
+              // Try multiple possible ID field names
+              final id =
+                  plant['_id']?.toString() ??
+                  plant['id']?.toString() ??
+                  plant['plantId']?.toString() ??
+                  plant['plant_id']?.toString() ??
+                  '';
+
+              final plantName = plant['plant_name']?.toString() ?? 'Unknown';
+              final plantCode = plant['plant_code']?.toString() ?? '';
+              final display = '$plantName-$plantCode';
+
+              print(
+                'Plant mapping - ID: "$id", Name: "$plantName", Code: "$plantCode", Display: "$display"',
+              );
+
+              if (id.isEmpty) {
+                print(
+                  'Warning: Plant with display $display has no ID. Raw plant data: $plant',
+                );
+              }
+
+              return {'id': id, 'display': display};
+            })
+            .where((plant) => plant['id']!.isNotEmpty)
+            .toList(); // Filter out plants without IDs
+      } else {
+        throw Exception(
+          'Failed to fetch plants: ${response.statusCode} - ${response.body}',
+        );
+      }
+    } catch (e) {
+      print('Error in getPlantsForDropdown: $e');
+      throw Exception('Failed to load plants: $e');
     }
-  } catch (e) {
-    print('Error in getPlantsForDropdown: $e');
-    throw Exception('Failed to load plants: $e');
   }
-}
+
   Future<ProductModel?> getProduct(String productId) async {
     try {
       final authHeaders = await headers;

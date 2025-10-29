@@ -113,7 +113,7 @@ class WODData {
         : null,
     v: json["__v"] ?? 0,
     packings:
-        (json["packings"] as List<dynamic>?)
+        (json["Packings"] as List<dynamic>?)
             ?.map((x) => WODPacking.fromJson(x))
             .toList() ??
         [],

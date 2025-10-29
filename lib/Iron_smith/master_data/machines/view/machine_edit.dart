@@ -8,7 +8,7 @@ import 'package:k2k/Iron_smith/master_data/machines/provider/machine_provider.da
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/title.dart';
-import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/app_bar.dart';
 import 'package:k2k/common/widgets/snackbar.dart';
 import 'package:k2k/common/widgets/textfield.dart';
 import 'package:k2k/utils/theme.dart';
@@ -68,36 +68,6 @@ class _IsMachineEditScreenState extends State<IsMachineEditScreen> {
       (m) => m.id?.oid == widget.machineId,
       orElse: () => Machines(name: '', role: '', isDeleted: false, v: 0),
     );
-
-    if (machine == null) {
-      return FutureBuilder<void>(
-        future: provider.getMachineById(widget.machineId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-          if (snapshot.hasError || provider.selectedMachine == null) {
-            return Scaffold(
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text('Error: ${provider.error ?? "Machine not found"}'),
-                    ElevatedButton(
-                      onPressed: () => context.go(RouteNames.ismachine),
-                      child: const Text('Go Back'),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-          return _buildScaffold(context, provider.selectedMachine!);
-        },
-      );
-    }
 
     return _buildScaffold(context, machine);
   }

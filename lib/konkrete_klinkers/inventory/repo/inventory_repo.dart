@@ -1,13 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:k2k/api_services/api_services.dart'; // Ensure this has the inventory URL constants
+import 'package:k2k/common/constant/app_url.dart'; // Ensure this has the inventory URL constants
+import 'package:k2k/core/shared_preference/shared_preference.dart';
 import 'package:k2k/konkrete_klinkers/inventory/model/inventory.dart';
-import 'package:k2k/api_services/shared_preference/shared_preference.dart';
+import 'package:k2k/konkrete_klinkers/inventory/model/inventory_detail.dart';
 
 class InventoryRepository {
   Future<Map<String, String>> get headers async {
-    final token = await fetchAccessToken();
+    final token = await SessionManager.getAccessToken();
     return {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
@@ -68,11 +69,10 @@ class InventoryRepository {
       rethrow;
     }
   }
-  Future<List<dynamic>> getProductDetails(String productId) async {
+
+  Future<InventoryDetailResponse> getProductDetails(String productId) async {
     final authHeaders = await headers;
-    final uri = Uri.parse(
-      'http://3.6.6.231/api/konkreteKlinkers/inventory/product?product_id=$productId',
-    );
+    final uri = Uri.parse("${AppUrl.getinventoriesbyid}$productId");
 
     try {
       final response = await http
@@ -85,7 +85,7 @@ class InventoryRepository {
         if (data['success'] == true &&
             data['data'] != null &&
             data['data']['product_details'] != null) {
-          return data['data']['product_details'] as List<dynamic>;
+          return InventoryDetailResponse.fromJson(data);
         } else {
           throw Exception('Invalid data received');
         }

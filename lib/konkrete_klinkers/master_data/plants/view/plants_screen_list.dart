@@ -8,7 +8,7 @@ import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
 import 'package:k2k/common/list_helper/shimmer.dart';
 import 'package:k2k/common/list_helper/title.dart';
-import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/app_bar.dart';
 import 'package:k2k/common/widgets/custom_card.dart';
 import 'package:k2k/common/widgets/gradient_icon_button.dart';
 import 'package:k2k/common/widgets/gradient_loader.dart';
@@ -324,7 +324,7 @@ class _PlantsListViewState extends State<PlantsListView> {
 
               return RefreshIndicator(
                 onRefresh: () async {
-                  await context.read<PlantProvider>().loadPlants(refresh: true);
+                  await provider.loadPlants(refresh: true);
                 },
                 color: const Color(0xFF3B82F6),
                 backgroundColor: Colors.white,

@@ -18,20 +18,20 @@ class JobOrderProviderIS with ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
-  bool _hasMoreData = true;
+  final bool _hasMoreData = true;
   bool get hasMoreData => _hasMoreData;
 
   String? _error;
   String? get error => _error;
-  bool _isLoadingMachines = false;
+  final bool _isLoadingMachines = false;
   bool get isLoadingMachines => _isLoadingMachines;
 
   IronWorkOrderData? _selectedWorkOrder;
   String? _salesOrderNumber;
   DateTimeRange? _dateRange;
   String? _selectedMachine;
-  List<Map<String, dynamic>> _products = [];
-  List<String> _machines = [];
+  final List<Map<String, dynamic>> _products = [];
+  final List<String> _machines = [];
 
   JoData? _jobOrder;
   JoData? get jobOrder => _jobOrder;

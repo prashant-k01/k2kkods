@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -6,7 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/date_picker.dart';
-import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/app_bar.dart';
 import 'package:k2k/common/widgets/dropdown.dart';
 import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
@@ -32,19 +34,17 @@ class EditWorkOrderScreen extends StatefulWidget {
 }
 
 class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
-  String? mapStringToUom(String? uomString) {
-    if (uomString == null) return null;
-    switch (uomString.toLowerCase()) {
-      case 'nos':
-        return 'nos';
-      case 'Meter':
-        return 'meter';
-      case 'Square Meter':
-        return 'sqmt';
-      default:
-        return 'Nos';
-    }
-  }
+  final uomBackendMap = {
+    'sqmt': 'Square Meter/No',
+    'meter': 'Meter/No',
+    'nos': 'Nos',
+  };
+
+  final Map<String, FocusNode> _focusNodes = {
+    'no_of_pieces_per_punch': FocusNode(),
+    'area_per_unit': FocusNode(),
+    'qty_in_bundle': FocusNode(),
+  };
 
   @override
   void initState() {
@@ -58,6 +58,12 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
       workOrderProvider.loadAllClients();
       workOrderProvider.loadAllProducts();
     });
+  }
+
+  @override
+  void dispose() {
+    _focusNodes.forEach((_, node) => node.dispose());
+    super.dispose();
   }
 
   @override
@@ -420,7 +426,7 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
           Map<String, dynamic> product = entry.value;
           final uomItems = workOrderProvider.uomListPerIndex[index] ?? [];
           // Create a new GlobalKey for each product form
-          final formKey = GlobalKey<FormBuilderState>();
+          final formKey = product['formKey'] as GlobalKey<FormBuilderState>;
           final qtyNotifier = product['qtyNotifier'] as ValueNotifier<int>;
           final qtyController =
               product['qtyController'] as TextEditingController;
@@ -584,30 +590,26 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
                             CustomDropdownFormField<String>(
                               name: 'uom_$index',
                               labelText: 'UOM',
-                              initialValue: () {
-                                if (productData?.uom != null) {
-                                  return mapStringToUom(productData!.uom) ??
-                                      "Nos";
-                                }
-                                return "Nos"; // fallback default
-                              }(),
-                              items: [
-                                const DropdownMenuItem<String>(
-                                  value: "Nos",
-                                  child: Text("Nos"),
-                                ),
-                                ...uomItems.map(
-                                  (item) => DropdownMenuItem<String>(
-                                    value: item,
-                                    child: Text(item),
-                                  ),
-                                ),
-                              ],
+                              initialValue: productData?.uom != null
+                                  ? uomBackendMap[productData!.uom]
+                                  : 'Nos', // default
+                              items: uomBackendMap.values
+                                  .map(
+                                    (displayValue) => DropdownMenuItem<String>(
+                                      value: displayValue,
+                                      child: Text(displayValue),
+                                    ),
+                                  )
+                                  .toList(),
+
                               hintText: uomItems.isEmpty
                                   ? 'Select a product first'
                                   : 'Select UOM',
                               prefixIcon: Icons.workspaces,
-                              textStyle: TextStyle(fontSize: 14.sp),
+                              textStyle: TextStyle(
+                                fontSize: 14.sp,
+                                color: AppTheme.darkGray,
+                              ),
                               labelStyle: TextStyle(fontSize: 14.sp),
                               hintStyle: TextStyle(
                                 fontSize: 14.sp,
@@ -1021,13 +1023,8 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
                       .mapStringToUom(productData!.uom)
                       .toLowerCase()
                 : null,
-          );
-          // Reset UOM field to ensure valid initial value
-          formKey.currentState?.fields['uom_$index']?.reset();
-          formKey.currentState?.fields['uom_$index']?.didChange(
-            workOrderProvider.uomListPerIndex[index]?.isNotEmpty == true
-                ? workOrderProvider.uomListPerIndex[index]!.first
-                : 'nos',
+
+            // Reset UOM field to ensure valid initial value
           );
           workOrderProvider.updateQuantity(
             index: index,
@@ -1093,6 +1090,19 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
     BuildContext context,
     WorkOrderProvider workOrderProvider,
   ) {
+    // Combine existing edit files and newly uploaded files
+    final allFiles = [
+      ...workOrderProvider.uploadedEditFiles.map(
+        (e) => FileElement(
+          fileName: e.fileName,
+          fileUrl: e.fileUrl,
+          id: e.id,
+          uploadedAt: e.uploadedAt ?? DateTime.now(),
+        ),
+      ),
+      ...workOrderProvider.uploadedFiles,
+    ];
+
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 12.w),
       padding: EdgeInsets.all(12.w),
@@ -1180,12 +1190,16 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
               ),
             ),
           ),
-          if (workOrderProvider.uploadedFiles.isNotEmpty) ...[
+          if (allFiles.isNotEmpty) ...[
             SizedBox(height: 12.h),
             Wrap(
               spacing: 6.w,
               runSpacing: 6.h,
-              children: workOrderProvider.uploadedFiles.map((file) {
+              children: allFiles.map((file) {
+                final isEditFile = workOrderProvider.uploadedEditFiles.contains(
+                  file,
+                );
+
                 return Chip(
                   label: Text(
                     file.fileName,
@@ -1197,7 +1211,15 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
                     size: 16.sp,
                     color: const Color(0xFFEF4444),
                   ),
-                  onDeleted: () => workOrderProvider.removeUploadedFile(file),
+                  onDeleted: () {
+                    if (isEditFile) {
+                      workOrderProvider.removeUploadedEditFile(
+                        file as WODFileElement,
+                      );
+                    } else {
+                      workOrderProvider.removeUploadedFile(file);
+                    }
+                  },
                   backgroundColor: const Color(0xFFF1F5F9),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(6.r),
@@ -1282,7 +1304,7 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
     WorkOrderProvider provider,
   ) async {
     bool allFormsValid = true;
-    List<Product> validatedProducts = [];
+    List<Map<String, dynamic>> validatedProducts = [];
 
     for (var product in provider.products) {
       final formKey = product['formKey'] as GlobalKey<FormBuilderState>;
@@ -1316,22 +1338,31 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
           allFormsValid = false;
           continue;
         }
+        final String uomForBackend = (() {
+          final u = selectedUom.toLowerCase().trim();
 
-        final qtyInNosInt = provider.getCalculatedQtyInNos(
-          formKey: formKey,
-          index: index,
-        );
+          switch (u) {
+            case 'square metre':
+            case 'sqmt':
+            case 'square meter':
+              return 'sqmt';
+            case 'meter/no':
+              return 'meter';
+            case 'nos':
+              return 'nos';
+            default:
+              return 'nos'; // fallback
+          }
+        })();
 
-        validatedProducts.add(
-          Product(
-            productId: selectedProduct.id,
-            uom: uomValues.map[selectedUom] ?? Uom.nos,
-            poQuantity: poQuantityDouble.toInt(),
-            qtyInNos: qtyInNosInt,
-            deliveryDate: deliveryDate,
-            id: '',
-          ),
-        );
+        validatedProducts.add({
+          'product_id': selectedProduct.id,
+          'uom': uomForBackend,
+
+          'po_quantity': poQuantityDouble.toInt(),
+          'delivery_date': deliveryDate.toIso8601String().split('T')[0],
+          'plant_code': formData['plant_code_$index'] ?? '',
+        });
       } else {
         allFormsValid = false;
       }
@@ -1395,15 +1426,9 @@ class _EditWorkOrderScreenState extends State<EditWorkOrderScreen> {
           ),
         ),
       );
-
-      final filesForBackend = provider.uploadedFiles.map((file) {
-        return FileElement(
-          fileName: file.fileName,
-          fileUrl: file.fileUrl,
-          id: file.id,
-          uploadedAt: file.uploadedAt,
-        );
-      }).toList();
+      final filesForBackend = provider.uploadedEditFiles
+          .map((file) => File(file.fileUrl)) // ✅ local file path
+          .toList();
 
       final success = await provider.updateWorkOrder(
         id: widget.workOrderId,

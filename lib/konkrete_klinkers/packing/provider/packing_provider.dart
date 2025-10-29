@@ -13,6 +13,9 @@ class PackingProvider with ChangeNotifier {
   List<Map<String, dynamic>> _packingDetails = [];
   bool _isLoading = false;
   String? _error;
+  String? _selectedProductTotal;
+  final TextEditingController totalQuantityController = TextEditingController();
+
   bool _hasMore = true;
   String? _selectedWorkOrderId;
   String? _selectedProductId;
@@ -33,6 +36,7 @@ class PackingProvider with ChangeNotifier {
   int? get bundleSize => _bundleSize;
   String? get packingId => _packingId;
   bool get showQrSection => _showQrSection;
+  String? get selectedProductTotal => _selectedProductTotal;
 
   void clearError() {
     _error = null;
@@ -53,6 +57,19 @@ class PackingProvider with ChangeNotifier {
     _packingId = null;
     _showQrSection = false;
     notifyListeners();
+  }
+
+  bool bundlesGenerated = false;
+
+  void setBundlesGenerated(bool value) {
+    bundlesGenerated = value;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    totalQuantityController.dispose();
+    super.dispose();
   }
 
   Future<void> loadWorkOrdersAndProducts() async {
@@ -94,7 +111,10 @@ class PackingProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      _packingDetails = await _repository.getPackingDetails(workOrderId, productId);
+      _packingDetails = await _repository.getPackingDetails(
+        workOrderId,
+        productId,
+      );
       print('Loaded packing details: $_packingDetails');
       print('Number of packing details loaded: ${_packingDetails.length}');
       _error = null;
@@ -291,11 +311,14 @@ class PackingProvider with ChangeNotifier {
         (product) => product['name'] == value,
         orElse: () {
           print('No product found with name: $value');
-          return {'id': '', 'name': ''};
+          return {'id': '', 'name': '', 'total': ''};
         },
       );
 
       _selectedProductId = selectedProduct['id'];
+      _selectedProductTotal = selectedProduct['total'];
+      totalQuantityController.text = _selectedProductTotal ?? '';
+
       print('Selected Product ID: $_selectedProductId');
       print('Selected Product: $selectedProduct');
 
@@ -366,6 +389,9 @@ class PackingProvider with ChangeNotifier {
     } else {
       _selectedProductId = null;
       _bundleSize = null;
+      _selectedProductTotal = null;
+      totalQuantityController.clear();
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (formKey.currentState != null) {
           try {
@@ -393,5 +419,24 @@ class PackingProvider with ChangeNotifier {
       return message;
     }
     return 'An unexpected error occurred. Please try again.';
+  }
+
+  List<TextEditingController> _qrControllers = [];
+  List<TextEditingController> get qrControllers => _qrControllers;
+
+  void generateQrControllers(int numberOfBundles) {
+    _qrControllers = List.generate(
+      numberOfBundles,
+      (_) => TextEditingController(),
+    );
+    notifyListeners();
+  }
+
+  void clearQrControllers() {
+    for (var c in _qrControllers) {
+      c.dispose();
+    }
+    _qrControllers.clear();
+    notifyListeners();
   }
 }

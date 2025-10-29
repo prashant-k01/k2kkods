@@ -2,7 +2,7 @@ class QcCheckModel {
   final String id;
   final String? workOrder;
   final String? jobOrder;
-  final String? productId;
+  final ProductId? productId;
   final int rejectedQuantity;
   final int recycledQuantity;
   final String? remarks;
@@ -36,7 +36,9 @@ class QcCheckModel {
       id: json['_id']?.toString() ?? '',
       workOrder: _extractStringValue(json['work_order']),
       jobOrder: _extractStringValue(json['job_order']),
-      productId: json['product_id']?.toString(),
+      productId: json['product_id'] != null
+          ? ProductId.fromJson(json['product_id'])
+          : null,
       rejectedQuantity: _parseIntValue(json['rejected_quantity']) ?? 0,
       recycledQuantity: _parseIntValue(json['recycled_quantity']) ?? 0,
       remarks: json['remarks']?.toString(),
@@ -119,7 +121,8 @@ class QcCheckModel {
   String get displayWorkOrder => workOrderNumber ?? workOrder ?? 'N/A';
   String get displayJobOrder => jobOrderNumber ?? jobOrder ?? 'N/A';
   String get displayRemarks => remarks ?? 'No Remarks';
-  String get displayCreatedBy => createdBy.username.isNotEmpty ? createdBy.username : createdBy.id;
+  String get displayCreatedBy =>
+      createdBy.username.isNotEmpty ? createdBy.username : createdBy.id;
   String get displayStatus => status ?? 'Unknown';
 
   String get displayCreatedAt {
@@ -133,11 +136,7 @@ class CreatedBy {
   final String email;
   final String username;
 
-  CreatedBy({
-    required this.id,
-    required this.email,
-    required this.username,
-  });
+  CreatedBy({required this.id, required this.email, required this.username});
 
   factory CreatedBy.fromJson(Map<String, dynamic> json) {
     try {
@@ -152,10 +151,26 @@ class CreatedBy {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      '_id': id,
-      'email': email,
-      'username': username,
-    };
+    return {'_id': id, 'email': email, 'username': username};
+  }
+}
+
+class ProductId {
+  final String id;
+  final String description;
+
+  ProductId({required this.id, required this.description});
+
+  factory ProductId.fromJson(Map<String, dynamic> json) {
+    try {
+      final id = json['_id']?.toString() ?? json['id']?.toString() ?? '';
+      final description = json['description']?.toString() ?? '';
+      return ProductId(id: id, description: description);
+    } catch (e) {
+      return ProductId(id: '', description: '');
+    }
+  }
+  Map<String, dynamic> toJson() {
+    return {'_id': id, 'description': description};
   }
 }

@@ -3,18 +3,15 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class CustomPopupItem extends PopupMenuItem<String> {
   CustomPopupItem({
-    Key? key,
-    required String value,
+    super.key,
+    required String super.value,
     required IconData icon,
     required String label,
     Color? iconColor,
     String? subtitle,
     bool dangerous = false, // red styling for destructive actions
-    VoidCallback? onTap,
+    super.onTap,
   }) : super(
-         key: key,
-         value: value,
-         onTap: onTap,
          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
          child: _MenuItemContent(
            icon: icon,

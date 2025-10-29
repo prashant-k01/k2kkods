@@ -4,7 +4,7 @@ import 'package:k2k/Iron_smith/master_data/machines/repo/machine_repo.dart';
 
 class IsMachinesProvider with ChangeNotifier {
   final MachinesRepository _repository = MachinesRepository();
-  List<Machines> _machines = [];
+  final List<Machines> _machines = [];
   bool _isLoading = false;
   String? _error;
   Machines? _selectedMachine;

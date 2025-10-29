@@ -53,7 +53,10 @@ class PackingDeleteHandler {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(dialogContext);
-              final provider = Provider.of<PackingProvider>(context, listen: false);
+              final provider = Provider.of<PackingProvider>(
+                context,
+                listen: false,
+              );
               final success = await provider.deletePacking(packingId);
               if (success) {
                 context.showSuccessSnackbar('Packing deleted successfully!');

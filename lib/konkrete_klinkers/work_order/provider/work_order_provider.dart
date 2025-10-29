@@ -15,7 +15,7 @@ import 'package:k2k/app/routes_name.dart';
 class WorkOrderProvider with ChangeNotifier {
   final WorkOrderRepository _repository = WorkOrderRepository();
 
-  final List<Datum> _workOrders = [];
+  final List<WorkOrder> _workOrders = [];
   WODData? _workOrderDetails;
   List<TId> _projects = [];
   bool _isLoading = false;
@@ -43,16 +43,19 @@ class WorkOrderProvider with ChangeNotifier {
     },
   ];
   bool _isBufferStockEnabled = false;
-  List<FileElement> _uploadedFiles = [];
+  final List<FileElement> _uploadedFiles = [];
+
+  List<WODFileElement> _uploadedEditFiles = [];
+  List<WODFileElement> get uploadedEditFiles => _uploadedEditFiles;
   String? _uploadError;
 
-  List<ClientModel> _clients = [];
+  final List<ClientModel> _clients = [];
   bool _isClientsLoading = false;
   bool _hasMoreClients = true;
   int _clientSkip = 0;
   final int _clientLimit = 10;
 
-  List<ProductModel> _allProducts = [];
+  final List<ProductModel> _allProducts = [];
   bool _isProductsLoading = false;
   bool _hasMoreProducts = true;
   int _productSkip = 0;
@@ -69,7 +72,7 @@ class WorkOrderProvider with ChangeNotifier {
   WODData? get workOrderById => _workOrderById;
   bool get isWorkOrderByIdLoading => _isWorkOrderByIdLoading;
   String? get workOrderByIdError => _workOrderByIdError;
-  List<Datum> get workOrders => _workOrders;
+  List<WorkOrder> get workOrders => _workOrders;
   List<TId> get projects => _projects;
   bool get isLoading => _isLoading;
   bool get isProjectsLoading => _isProjectsLoading;
@@ -90,12 +93,22 @@ class WorkOrderProvider with ChangeNotifier {
   GlobalKey<FormBuilderState> get editFormKey => _editFormKey;
   bool get isEditScreenLoading => _isEditScreenLoading;
   String? get editScreenError => _editScreenError;
+  bool get areAllProductsValid {
+    for (var i = 0; i < products.length; i++) {
+      final product = products[i];
+      final formKey = product['formKey'] as GlobalKey<FormBuilderState>;
+      final isValid = formKey.currentState?.saveAndValidate() ?? false;
+      print('🔹 Product ${i + 1} form valid: $isValid');
+      if (!isValid) return false;
+    }
+    return true;
+  }
 
   String getClientName(String? clientId) {
     if (clientId == null || clientId.isEmpty) return 'Unknown Client';
     final workOrder = _workOrders.firstWhere(
       (wo) => wo.clientId == clientId,
-      orElse: () => Datum(
+      orElse: () => WorkOrder(
         id: '',
         clientId: '',
         clientName: 'Unknown Client',
@@ -126,7 +139,7 @@ class WorkOrderProvider with ChangeNotifier {
     if (projectId == null || projectId.isEmpty) return 'Unknown Project';
     final workOrder = _workOrders.firstWhere(
       (wo) => wo.projectId == projectId,
-      orElse: () => Datum(
+      orElse: () => WorkOrder(
         id: '',
         clientId: '',
         clientName: 'Unknown Client',
@@ -185,7 +198,13 @@ class WorkOrderProvider with ChangeNotifier {
     return true;
   }
 
-  void setWorkOrders(List<Datum> newWorkOrders) {
+  void resetUploadState() {
+    _uploadedFiles.clear();
+    _uploadError = null;
+    notifyListeners();
+  }
+
+  void setWorkOrders(List<WorkOrder> newWorkOrders) {
     _workOrders.clear();
     _workOrders.addAll(newWorkOrders);
     if (kDebugMode) {
@@ -198,15 +217,15 @@ class WorkOrderProvider with ChangeNotifier {
 
   void addProduct() {
     _products.add({
-      // 'formKey': GlobalKey<FormBuilderState>(),
+      'formKey': GlobalKey<FormBuilderState>(),
       'product_id': {'id': '', 'name': ''},
       'uom': 'nos',
       'po_quantity': '',
       'qty_in_nos': '0',
+
       'qtyController': TextEditingController(text: '0'),
       'qtyNotifier': ValueNotifier<int>(0),
       'delivery_date': null,
-      'plant_code': '',
     });
     notifyListeners();
   }
@@ -236,13 +255,24 @@ class WorkOrderProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  void addUploadedEditFiles(List<WODFileElement> files) {
+    _uploadedEditFiles.addAll(files);
+    _uploadError = null;
+    notifyListeners();
+  }
+
   void removeUploadedFile(FileElement file) {
     _uploadedFiles.remove(file);
     notifyListeners();
   }
 
-  void setUploadedFiles(List<WODFileElement>? files) {
-    _uploadedFiles = files != null ? List.from(files) : [];
+  void removeUploadedEditFile(WODFileElement file) {
+    _uploadedEditFiles.remove(file);
+    notifyListeners();
+  }
+
+  void setUploadedEditFiles(List<WODFileElement>? files) {
+    _uploadedEditFiles = files != null ? List.from(files) : [];
     notifyListeners();
   }
 
@@ -424,28 +454,39 @@ class WorkOrderProvider with ChangeNotifier {
       _hasMoreData = true;
     }
     if (!_hasMoreData || _isLoading) return;
+
     _isLoading = true;
     _error = null;
     notifyListeners();
+
     try {
       if (kDebugMode) {
         print(
           'Loading Work Orders - Skip: $_skip, Limit: $_limit, Search: $_searchQuery',
         );
       }
-      final response = await _repository.getAllWorkOrders(
+
+      // Call repository that now returns WorkOrderModel
+      final workOrderResponse = await _repository.getAllWorkOrders(
         skip: _skip,
         limit: _limit,
         search: _searchQuery.isNotEmpty ? _searchQuery : null,
       );
-      if (response.isEmpty) {
+
+      // Extract the list of work orders from response.data
+      final List<WorkOrder> fetchedOrders = workOrderResponse.data;
+
+      if (fetchedOrders.isEmpty) {
         _hasMoreData = false;
       } else {
-        _workOrders.addAll(response);
-        _skip += response.length;
-        _hasMoreData = response.length == _limit;
+        _workOrders.addAll(fetchedOrders);
+        _skip += fetchedOrders.length;
+        _hasMoreData = fetchedOrders.length == _limit;
+
+        // Sort by createdAt descending
         _workOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       }
+
       _error = null;
       if (kDebugMode) {
         print('✅ [WorkOrderProvider] Loaded ${_workOrders.length} work orders');
@@ -483,38 +524,41 @@ class WorkOrderProvider with ChangeNotifier {
     String? projectId,
     DateTime? date,
     required bool bufferStock,
-    required List<Product> products,
-    required List<FileElement> files,
+    int? bufferStockQuantity,
+    required List<Map<String, dynamic>> products,
+    required List<File> files,
     required Status status,
   }) async {
     _isAddWorkOrderLoading = true;
     _error = null;
     notifyListeners();
+
     try {
-      final newWorkOrder = await _repository.createWorkOrder(
-        workOrderNumber: workOrderNumber,
-        clientId: clientId,
-        projectId: projectId,
-        date: date,
-        bufferStock: bufferStock,
-        products: products,
-        files: files,
-        status: status,
-      );
-      if (kDebugMode) {
-        print('✅ [WorkOrderProvider] Created work order: ${newWorkOrder.id}');
-      }
-      _resetFormState();
-      _workOrders.insert(0, newWorkOrder);
-      _workOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      notifyListeners();
-      return true;
-    } catch (e, stackTrace) {
-      _error = _getErrorMessage(e);
-      if (kDebugMode) {
-        print('❌ [WorkOrderProvider] Error creating work order: $_error');
-        print(stackTrace);
-      }
+      // Build payload map
+      final Map<String, dynamic> payload = {
+        'work_order_number': workOrderNumber,
+        if (clientId != null) 'client_id': clientId,
+        if (projectId != null) 'project_id': projectId,
+        if (date != null) 'date': date.toIso8601String().split('T')[0],
+        'buffer_stock': bufferStock ? 'true' : 'false',
+        if (bufferStock && bufferStockQuantity != null)
+          'buffer_stock_quantity': bufferStockQuantity.toString(),
+        'status': statusValues.reverse[status]!,
+        'products': products,
+        'files': files,
+      };
+
+      print('📤 [Provider] Final payload keys: ${payload.keys.toList()}');
+      return await _repository.createWorkOrder(payload).then((wo) {
+        print('✅ [Provider] Work order created successfully: ${wo.id}');
+        _workOrders.insert(0, wo);
+        _workOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        resetFormState();
+        notifyListeners();
+        return true;
+      });
+    } catch (e) {
+      _error = _getErrorMessage(e); // can keep user-friendly message
       return false;
     } finally {
       _isAddWorkOrderLoading = false;
@@ -522,7 +566,7 @@ class WorkOrderProvider with ChangeNotifier {
     }
   }
 
-  void _resetFormState() {
+  void resetFormState() {
     for (var product in _products) {
       product['qtyController']?.dispose();
       product['qtyNotifier']?.dispose();
@@ -553,8 +597,8 @@ class WorkOrderProvider with ChangeNotifier {
     DateTime? date,
     required bool bufferStock,
     int? bufferStockQuantity,
-    required List<Product> products,
-    required List<FileElement> files,
+    required List<Map<String, dynamic>> products,
+    required List<File> files,
     required Status status,
   }) async {
     _isUpdateWorkOrderLoading = true;
@@ -580,7 +624,7 @@ class WorkOrderProvider with ChangeNotifier {
         throw Exception('Server returned false for update operation');
       }
       await _refreshWorkOrdersList();
-      _resetFormState();
+      resetFormState();
       return true;
     } catch (e) {
       _error = _getErrorMessage(e);
@@ -637,7 +681,7 @@ class WorkOrderProvider with ChangeNotifier {
     }
   }
 
-  Future<Datum?> getWorkOrder(String id) async {
+  Future<WorkOrder?> getWorkOrder(String id) async {
     try {
       _error = null;
       final workOrder = await _repository.getWorkOrder(id);
@@ -743,12 +787,10 @@ class WorkOrderProvider with ChangeNotifier {
           (area == null || area == 0) ? 0.0 : poQuantity / area;
     } else if (selectedUom.contains("No")) {
       area = 1.0;
-      calculatedQuantities['${product.id}-$selectedUom'] =
-          poQuantity * (area ?? 1.0);
+      calculatedQuantities['${product.id}-$selectedUom'] = poQuantity * (area);
     } else {
       area = product.areas[selectedUom] ?? 1.0;
-      calculatedQuantities['${product.id}-$selectedUom'] =
-          poQuantity * (area ?? 1.0);
+      calculatedQuantities['${product.id}-$selectedUom'] = poQuantity * (area);
     }
     notifyListeners();
   }
@@ -847,11 +889,11 @@ class WorkOrderProvider with ChangeNotifier {
       return poQuantity.ceil();
     } else {
       area = product.areas[uom] ?? 1.0;
-      return (poQuantity * (area ?? 1.0)).ceil();
+      return (poQuantity * (area)).ceil();
     }
   }
 
-  Datum? getWorkOrderByIndex(int index) {
+  WorkOrder? getWorkOrderByIndex(int index) {
     if (index >= 0 && index < _workOrders.length) {
       return _workOrders[index];
     }
@@ -965,7 +1007,7 @@ class WorkOrderProvider with ChangeNotifier {
       workOrderDetails.clear();
       workOrderDetails.add(workOrderDetails);
       setBufferStockEnabled(workOrderDetails.bufferStock);
-      setUploadedFiles(List.from(workOrderDetails.files));
+      setUploadedEditFiles(List.from(workOrderDetails.files));
       final products = workOrderDetails.products.asMap().entries.map((entry) {
         final index = entry.key;
         final product = entry.value;
@@ -989,7 +1031,7 @@ class WorkOrderProvider with ChangeNotifier {
               updatedAt: DateTime.now(),
               version: 0,
             ),
-            uom: ['Square Meter', 'Nos', 'Meter'],
+            uom: ['Square Meter', 'Meter'],
             areas: {},
             noOfPiecesPerPunch: 0,
             qtyInBundle: 0,
@@ -1048,7 +1090,7 @@ class WorkOrderProvider with ChangeNotifier {
   void _preFillMainForm() {
     final workOrder = _workOrders.firstWhere(
       (wo) => wo.id == _workOrderById?.id,
-      orElse: () => Datum(
+      orElse: () => WorkOrder(
         id: '',
         workOrderNumber: '',
         products: [],
@@ -1227,7 +1269,7 @@ class WorkOrderProvider with ChangeNotifier {
       return;
     }
     bool allFormsValid = true;
-    List<Product> validatedProducts = [];
+    List<Map<String, dynamic>> validatedProducts = [];
     for (var index = 0; index < _products.length; index++) {
       final product = _products[index];
       final formKey = product['formKey'] as GlobalKey<FormBuilderState>;
@@ -1288,20 +1330,14 @@ class WorkOrderProvider with ChangeNotifier {
           notifyListeners();
           continue;
         }
-        final qtyInNosInt = getCalculatedQtyInNos(
-          formKey: formKey,
-          index: index,
-        );
-        validatedProducts.add(
-          Product(
-            id: product['id'] ?? '',
-            productId: selectedProduct.id,
-            uom: uomValues.map[selectedUom] ?? Uom.nos,
-            poQuantity: poQuantityDouble.toInt(),
-            qtyInNos: qtyInNosInt,
-            deliveryDate: deliveryDate,
-          ),
-        );
+
+        validatedProducts.add({
+          'product_id': selectedProduct.id,
+          'uom': uomValues.map[selectedUom] ?? Uom.nos,
+          'po_quantity': poQuantityDouble.toInt(),
+          'delivery_date': deliveryDate.toIso8601String().split('T')[0],
+          'plant_code': formData['plant_code_$index'] ?? '',
+        });
       } else {
         allFormsValid = false;
         _editScreenError =
@@ -1332,14 +1368,10 @@ class WorkOrderProvider with ChangeNotifier {
       notifyListeners();
       return;
     }
-    final filesForBackend = _uploadedFiles.map((file) {
-      return FileElement(
-        fileName: file.fileName,
-        fileUrl: file.fileUrl,
-        id: file.id,
-        uploadedAt: file.uploadedAt,
-      );
-    }).toList();
+    final filesForBackend = uploadedEditFiles
+        .map((file) => File(file.fileUrl)) // ✅ local file path
+        .toList();
+
     _isUpdateWorkOrderLoading = true;
     notifyListeners();
     try {

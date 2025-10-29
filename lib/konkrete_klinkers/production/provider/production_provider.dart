@@ -29,6 +29,34 @@ class ProductionProvider with ChangeNotifier {
   bool get showTimer => _showTimer;
   String get selectedFilter => _selectedFilter;
 
+  Description? selectedDescription;
+  TimeOfDay? startTime;
+  int? minutes;
+  TextEditingController remarksController = TextEditingController();
+
+  void setSelectedDescription(Description? desc) {
+    selectedDescription = desc;
+    notifyListeners();
+  }
+
+  void setStartTime(TimeOfDay? time) {
+    startTime = time;
+    notifyListeners();
+  }
+
+  void setMinutes(int? m) {
+    minutes = m;
+    notifyListeners();
+  }
+
+  void resetForm() {
+    selectedDescription = null;
+    startTime = null;
+    minutes = null;
+    remarksController.clear();
+    notifyListeners();
+  }
+
   List<PastDpr> getFilteredPastDpr() {
     final list = _productionData?.data.pastDpr ?? [];
     return list;
@@ -44,7 +72,7 @@ class ProductionProvider with ChangeNotifier {
     return list;
   }
 
-  // NEW: Method to apply filter logic
+  //NEW: Method to apply filter logic
   List<PastDpr> _applyFilter(List<PastDpr> dprList) {
     print(
       'Filtering DPR list, selectedFilter: $_selectedFilter, total items: ${dprList.length}',
@@ -169,13 +197,14 @@ class ProductionProvider with ChangeNotifier {
   }
 
   Future<void> performProductionAction({
+    required String prodId,
     required String jobOrder,
     required String productId,
     required String action,
   }) async {
     try {
       print(
-        'Performing action: $action for jobOrder: $jobOrder, productId: $productId',
+        'Performing action: $action for jobOrder: $jobOrder, productId: $productId prodId:$prodId',
       );
 
       // Set loading state
@@ -183,6 +212,7 @@ class ProductionProvider with ChangeNotifier {
 
       // Perform the action
       final result = await _repository.performAction(
+        prodId: prodId,
         jobOrder: jobOrder,
         productId: productId,
         action: action,
@@ -225,13 +255,19 @@ class ProductionProvider with ChangeNotifier {
   Future<void> addDownTime(
     String productId,
     String jobOrder,
+    String prodId,
     Map<String, dynamic> downtimeData,
   ) async {
     _isLoading = true;
     notifyListeners();
     try {
-      if (await _repository.addDownTime(productId, jobOrder, downtimeData)) {
-        await fetchDownTimeLogs(productId, jobOrder);
+      if (await _repository.addDownTime(
+        productId,
+        jobOrder,
+        prodId,
+        downtimeData,
+      )) {
+        await fetchDownTimeLogs(productId, jobOrder, prodId);
         // Refresh main production data after downtime changes
         await fetchProductionJobOrderByDate();
       }
@@ -243,11 +279,19 @@ class ProductionProvider with ChangeNotifier {
     }
   }
 
-  Future<void> fetchDownTimeLogs(String productId, String jobOrder) async {
+  Future<void> fetchDownTimeLogs(
+    String productId,
+    String jobOrder,
+    String? prodId,
+  ) async {
     _isLoading = true;
     notifyListeners();
     try {
-      _downTimeLogs = await _repository.fetchDownTimeLogs(productId, jobOrder);
+      _downTimeLogs = await _repository.fetchDownTimeLogs(
+        productId,
+        jobOrder,
+        prodId!,
+      );
     } catch (e) {
       _error = 'Error fetching downtime logs: $e';
     } finally {
@@ -272,11 +316,15 @@ class ProductionProvider with ChangeNotifier {
     }
   }
 
-  Future<void> updateProduction(String productId, String jobOrder) async {
+  Future<void> updateProduction(
+    String productId,
+    String jobOrder,
+    String prodId,
+  ) async {
     _isLoading = true;
     notifyListeners();
     try {
-      if (await _repository.updateProduction(productId, jobOrder)) {
+      if (await _repository.updateProduction(productId, jobOrder, prodId)) {
         await fetchProductionJobOrderByDate();
         print('Production updated and data refreshed successfully');
       }

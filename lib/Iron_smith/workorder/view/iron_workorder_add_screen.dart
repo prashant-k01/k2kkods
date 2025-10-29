@@ -11,7 +11,7 @@ import 'package:k2k/Iron_smith/workorder/provider/iron_workorder_provider.dart';
 import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/title.dart';
-import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/app_bar.dart';
 import 'package:k2k/common/widgets/gradient_loader.dart';
 import 'package:k2k/common/widgets/textfield.dart';
 import 'package:k2k/common/widgets/searchable_dropdown.dart';
@@ -369,7 +369,7 @@ class _IronWorkorderAddScreenState extends State<IronWorkorderAddScreen> {
   }
 
   Widget _buildProductForms(IronWorkorderProvider provider) {
-    Timer? _debounce;
+    Timer? debounce;
 
     return SingleChildScrollView(
       child: Column(
@@ -559,10 +559,11 @@ class _IronWorkorderAddScreenState extends State<IronWorkorderAddScreen> {
                               ),
 
                               onChanged: (value) {
-                                if (_debounce?.isActive ?? false)
-                                  _debounce!.cancel();
+                                if (debounce?.isActive ?? false) {
+                                  debounce!.cancel();
+                                }
 
-                                _debounce = Timer(
+                                debounce = Timer(
                                   const Duration(milliseconds: 800),
                                   () {
                                     final updatedDimensions =
@@ -613,8 +614,8 @@ class _IronWorkorderAddScreenState extends State<IronWorkorderAddScreen> {
                         initialValue: product['memberDetail'],
                         focusNode: _getFocusNode('member_detail_$index'),
                         onChanged: (value) {
-                          if (_debounce?.isActive ?? false) _debounce!.cancel();
-                          _debounce = Timer(const Duration(seconds: 2), () {
+                          if (debounce?.isActive ?? false) debounce!.cancel();
+                          debounce = Timer(const Duration(seconds: 2), () {
                             provider.updateProduct(index, {
                               'memberDetail': value,
                             });
@@ -647,8 +648,8 @@ class _IronWorkorderAddScreenState extends State<IronWorkorderAddScreen> {
                         initialValue: product['barMark'],
                         focusNode: _getFocusNode('bar_mark_$index'),
                         onChanged: (value) {
-                          if (_debounce?.isActive ?? false) _debounce!.cancel();
-                          _debounce = Timer(const Duration(seconds: 2), () {
+                          if (debounce?.isActive ?? false) debounce!.cancel();
+                          debounce = Timer(const Duration(seconds: 2), () {
                             provider.updateProduct(index, {'barMark': value});
                           });
                         },
@@ -716,9 +717,9 @@ class _IronWorkorderAddScreenState extends State<IronWorkorderAddScreen> {
                         keyboardType: TextInputType.number,
                         focusNode: _getFocusNode('member_quantity_$index'),
                         onChanged: (value) {
-                          if (_debounce?.isActive ?? false) _debounce!.cancel();
+                          if (debounce?.isActive ?? false) debounce!.cancel();
 
-                          _debounce = Timer(
+                          debounce = Timer(
                             const Duration(milliseconds: 1000),
                             () {
                               provider.updateProduct(index, {
@@ -785,9 +786,9 @@ class _IronWorkorderAddScreenState extends State<IronWorkorderAddScreen> {
                         keyboardType: TextInputType.number,
                         focusNode: _getFocusNode('po_quantity_$index'),
                         onChanged: (value) {
-                          if (_debounce?.isActive ?? false) _debounce!.cancel();
+                          if (debounce?.isActive ?? false) debounce!.cancel();
 
-                          _debounce = Timer(
+                          debounce = Timer(
                             const Duration(milliseconds: 1000),
                             () {
                               provider.updateProduct(index, {
@@ -922,8 +923,8 @@ class _IronWorkorderAddScreenState extends State<IronWorkorderAddScreen> {
                         keyboardType: TextInputType.number,
                         focusNode: _getFocusNode('weight_$index'),
                         onChanged: (value) {
-                          if (_debounce?.isActive ?? false) _debounce!.cancel();
-                          _debounce = Timer(
+                          if (debounce?.isActive ?? false) debounce!.cancel();
+                          debounce = Timer(
                             const Duration(milliseconds: 1000),
                             () {
                               provider.updateProduct(index, {

@@ -47,7 +47,7 @@ class AppUrl {
 
   //inventory
   static const String getinventory =
-      'http://3.6.6.231/api/konkreteKlinkers/inventories';
+      '$baseUrl/api/konkreteKlinkers/inventories';
 
   //Products's Urls
   static const String createproductUrl =
@@ -108,13 +108,19 @@ class AppUrl {
       "$baseUrl/api/konkreteKlinkers/qc-check";
   static const String getProductByjobOrder =
       "$baseUrl/api/konkreteKlinkers/qc-check/products?id=";
-  static const String getDropdownJobOrder =
-      "https://k2k.kods.work/api/dropdown/joborders";
+  static const String getDropdownJobOrder = "$baseUrl/api/dropdown/joborders";
+  static const String getWorkOrderAndProducts =
+      "$baseUrl/api/konkreteKlinkers/qc-check/products?id=";
   static const String deleteQcCheck =
       "$baseUrl/api/konkreteKlinkers/qc-check/delete";
 
   //Packing
   static const String getpacking = "$baseUrl/api/konkreteKlinkers/packing";
+
+  static String getPackingDetails(String workOrderId, String productId) {
+    return "$baseUrl/api/konkreteKlinkers/packing/get?work_order_id=$workOrderId&product_id=$productId";
+  }
+
   static const String getpackingqr =
       "$baseUrl/api/konkreteKlinkers/packing/create";
   static const String kkpackingByID =
@@ -125,10 +131,9 @@ class AppUrl {
       "$baseUrl/api/konkreteKlinkers/packing/delete";
 
   static const String getpackingbundlesizeurl =
-      "$baseUrl/api/konkreteKlinkers/packing/bundlesize";
+      "$baseUrl/api/konkreteKlinkers/packing/bundlesize?product_id=";
 
-  static const String fetchProductDetailsUrl =
-      'https://k2k.kods.work/api/dropdown/products';
+  static const String fetchProductDetailsUrl = '$baseUrl/api/dropdown/products';
 
   //Dispatch
   static const String kkdispatch = "$baseUrl/api/konkreteKlinkers/dispatch";
@@ -145,7 +150,7 @@ class AppUrl {
   static const String createinventories =
       "$baseUrl/api/konkreteKlinkers/inventories/create";
   static const String getinventoriesbyid =
-      "$baseUrl/api/konkreteKlinkers/inventory";
+      "$baseUrl/api/konkreteKlinkers/inventory/product?product_id=";
 
   //Stock Managment
   //Stock Managment

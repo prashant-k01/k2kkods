@@ -4,7 +4,7 @@ import 'package:k2k/app/routes_name.dart';
 import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/shimmer.dart';
 import 'package:k2k/common/list_helper/title.dart';
-import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/app_bar.dart';
 import 'package:k2k/konkrete_klinkers/packing/provider/packing_provider.dart';
 import 'package:k2k/utils/sreen_util.dart';
 import 'package:k2k/utils/theme.dart';
@@ -63,15 +63,16 @@ class _PackingDetailsViewState extends State<PackingDetailsView>
 
   Widget _buildTabBar(List<Map<String, dynamic>> packingDetails) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+      margin: EdgeInsets.only(right: 16.w, top: 12.h, bottom: 12.h),
+      padding: EdgeInsets.all(4.w),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(20.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -80,14 +81,21 @@ class _PackingDetailsViewState extends State<PackingDetailsView>
         isScrollable: packingDetails.length > 3,
         indicator: BoxDecoration(
           gradient: AppTheme.primaryGradient,
-          borderRadius: BorderRadius.circular(12.r),
+          borderRadius: BorderRadius.circular(16.r),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.primaryGradient.colors.last.withOpacity(0.4),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         indicatorSize: TabBarIndicatorSize.tab,
         indicatorPadding: EdgeInsets.all(4.w),
         dividerColor: Colors.transparent,
         labelColor: Colors.white,
         unselectedLabelColor: AppTheme.mediumGray,
-        labelStyle: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w600),
+        labelStyle: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600),
         unselectedLabelStyle: TextStyle(
           fontSize: 12.sp,
           fontWeight: FontWeight.w500,
@@ -95,12 +103,25 @@ class _PackingDetailsViewState extends State<PackingDetailsView>
         tabs: packingDetails.asMap().entries.map((entry) {
           final index = entry.key;
           return Tab(
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+              decoration: BoxDecoration(
+                color: _tabController?.index == index
+                    ? AppTheme.primaryGradient.colors.first.withOpacity(0.2)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(16.r),
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('Pack ${index + 1}', style: TextStyle(fontSize: 11.sp)),
+                  Text(
+                    'Pack ${index + 1}',
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   SizedBox(height: 2.h),
                 ],
               ),
@@ -297,8 +318,9 @@ class _PackingDetailsViewState extends State<PackingDetailsView>
                                       height: 120.w,
                                       fit: BoxFit.contain,
                                       loadingBuilder: (context, child, loadingProgress) {
-                                        if (loadingProgress == null)
+                                        if (loadingProgress == null) {
                                           return child;
+                                        }
                                         return Container(
                                           width: 120.w,
                                           height: 120.w,

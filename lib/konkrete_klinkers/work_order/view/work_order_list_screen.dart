@@ -7,7 +7,7 @@ import 'package:k2k/common/list_helper/custom_back_button.dart';
 import 'package:k2k/common/list_helper/refresh.dart';
 import 'package:k2k/common/list_helper/shimmer.dart';
 import 'package:k2k/common/list_helper/title.dart';
-import 'package:k2k/common/widgets/appbar/app_bar.dart';
+import 'package:k2k/common/widgets/app_bar.dart';
 import 'package:k2k/common/widgets/custom_card.dart';
 import 'package:k2k/common/widgets/gradient_icon_button.dart';
 import 'package:k2k/common/widgets/gradient_loader.dart';
@@ -99,7 +99,7 @@ class _WorkOrderListViewState extends State<WorkOrderListView> {
     return 'Unknown';
   }
 
-  Widget _buildWorkOrderCard(Datum workOrder) {
+  Widget _buildWorkOrderCard(WorkOrder workOrder) {
     final workOrderId = workOrder.id;
     final workOrderNumber = workOrder.workOrderNumber;
     final clientName = _getClientName(workOrder.clientId);

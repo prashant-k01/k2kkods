@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:k2k/api_services/api_services.dart';
-import 'package:k2k/api_services/shared_preference/shared_preference.dart';
+import 'package:k2k/common/constant/app_url.dart';
+import 'package:k2k/core/shared_preference/shared_preference.dart';
 import 'package:k2k/konkrete_klinkers/stock_management/model/stock.dart';
 
 class StockManagementRepository {
   Future<Map<String, String>> get headers async {
-    final token = await fetchAccessToken();
+    final token = await SessionManager.getAccessToken();
     return {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
@@ -16,11 +16,6 @@ class StockManagementRepository {
 
   Future<List<StockManagement>> getStockManagements() async {
     try {
-      final token = await fetchAccessToken();
-      if (token == null || token.isEmpty) {
-        throw Exception('Authentication token not found.');
-      }
-
       final authHeaders = await headers;
       final uri = Uri.parse(AppUrl.kkStockManagement);
 
@@ -156,12 +151,6 @@ class StockManagementRepository {
 
   Future<Stock> getStockById(String id) async {
     try {
-      final token = await fetchAccessToken();
-
-      if (token == null || token.isEmpty) {
-        throw Exception('Authentication token not found.');
-      }
-
       final authHeaders = await headers;
 
       final uri = Uri.parse('${AppUrl.kkStockManagement}/$id');
@@ -206,11 +195,6 @@ class StockManagementRepository {
     bool isBuffer,
   ) async {
     try {
-      final token = await fetchAccessToken();
-      if (token == null || token.isEmpty) {
-        throw Exception('Authentication token not found.');
-      }
-
       final authHeaders = await headers;
       final uri = Uri.parse(AppUrl.getwobyproduct).replace(
         queryParameters: {'prId': productId, 'isBuffer': isBuffer.toString()},
@@ -256,11 +240,6 @@ class StockManagementRepository {
     required bool isBuffer,
   }) async {
     try {
-      final token = await fetchAccessToken();
-      if (token == null || token.isEmpty) {
-        throw Exception('Authentication token not found.');
-      }
-
       final authHeaders = await headers;
       final uri = Uri.parse(AppUrl.getAchievedQuantity).replace(
         queryParameters: {

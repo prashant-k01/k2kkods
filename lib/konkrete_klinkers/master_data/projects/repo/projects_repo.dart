@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:k2k/api_services/api_services.dart';
+import 'package:k2k/common/constant/app_url.dart';
 import 'package:k2k/konkrete_klinkers/master_data/projects/model/projects.dart';
-import 'package:k2k/api_services/shared_preference/shared_preference.dart';
+import 'package:k2k/core/shared_preference/shared_preference.dart';
 
 class ProjectRepository {
   Future<Map<String, String>> get headers async {
-    final token = await fetchAccessToken();
+    final token = await SessionManager.getAccessToken();
     return {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
@@ -91,7 +91,11 @@ class ProjectRepository {
     }
   }
 
-  Future<ProjectModel> createProject(String name, String address, String clientId) async {
+  Future<ProjectModel> createProject(
+    String name,
+    String address,
+    String clientId,
+  ) async {
     isAddProjectsLoading = true;
     try {
       final authHeaders = await headers;
@@ -103,32 +107,38 @@ class ProjectRepository {
       };
 
       final response = await http
-          .post(
-            Uri.parse(url),
-            headers: authHeaders,
-            body: json.encode(body),
-          )
+          .post(Uri.parse(url), headers: authHeaders, body: json.encode(body))
           .timeout(const Duration(seconds: 30));
 
-      print('Create Project Response: ${response.statusCode} - ${response.body}');
+      print(
+        'Create Project Response: ${response.statusCode} - ${response.body}',
+      );
 
       if (response.statusCode == 201) {
         final responseData = json.decode(response.body);
         if (responseData is! Map<String, dynamic>) {
-          throw Exception('Invalid response format: Expected JSON object, got ${responseData.runtimeType}');
+          throw Exception(
+            'Invalid response format: Expected JSON object, got ${responseData.runtimeType}',
+          );
         }
 
         final projectData = responseData['data'];
         if (projectData is! Map<String, dynamic>) {
-          throw Exception('Invalid project data format: Expected JSON object, got ${projectData.runtimeType}');
+          throw Exception(
+            'Invalid project data format: Expected JSON object, got ${projectData.runtimeType}',
+          );
         }
 
         final createdProject = ProjectModel.fromJson(projectData);
         _lastCreatedProject = createdProject;
         return createdProject;
       } else {
-        print('Create Project API Error: ${response.statusCode} - ${response.body}');
-        throw Exception('Failed to create Project: ${response.statusCode} - ${response.body}');
+        print(
+          'Create Project API Error: ${response.statusCode} - ${response.body}',
+        );
+        throw Exception(
+          'Failed to create Project: ${response.statusCode} - ${response.body}',
+        );
       }
     } on SocketException catch (e) {
       throw Exception('No internet connection: $e');

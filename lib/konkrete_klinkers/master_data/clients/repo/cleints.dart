@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:k2k/api_services/api_services.dart';
+import 'package:k2k/common/constant/app_url.dart';
+import 'package:k2k/core/shared_preference/shared_preference.dart';
 import 'package:k2k/konkrete_klinkers/master_data/clients/model/clients_model.dart';
-import 'package:k2k/api_services/shared_preference/shared_preference.dart';
 
 class ClientRepository {
   Future<Map<String, String>> get headers async {
-    final token = await fetchAccessToken();
+    final token = await SessionManager.getAccessToken();
     return {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
@@ -38,7 +38,9 @@ class ClientRepository {
       final response = await http
           .get(uri, headers: authHeaders)
           .timeout(const Duration(seconds: 30));
-      print('Response status: ${response.statusCode}, body: ${response.body}'); // Debug
+      print(
+        'Response status: ${response.statusCode}, body: ${response.body}',
+      ); // Debug
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
@@ -68,7 +70,7 @@ class ClientRepository {
         }
 
         final clients = clientsJson
-            .where((item) => item is Map<String, dynamic>)
+            .whereType<Map<String, dynamic>>()
             .cast<Map<String, dynamic>>()
             .map((clientJson) {
               print('Parsing client: $clientJson'); // Debug
@@ -84,7 +86,9 @@ class ClientRepository {
         print('Parsed clients: ${clients.length}'); // Debug
         return clients;
       } else {
-        throw Exception('Failed to load clients: ${response.statusCode} - ${response.body}');
+        throw Exception(
+          'Failed to load clients: ${response.statusCode} - ${response.body}',
+        );
       }
     } on SocketException catch (e) {
       throw Exception('No internet connection: $e');
@@ -134,11 +138,7 @@ class ClientRepository {
       final Map<String, dynamic> body = {"name": name, "address": address};
 
       final response = await http
-          .post(
-            Uri.parse(url),
-            headers: authHeaders,
-            body: json.encode(body),
-          )
+          .post(Uri.parse(url), headers: authHeaders, body: json.encode(body))
           .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 201) {

@@ -5,7 +5,7 @@ import 'package:k2k/konkrete_klinkers/master_data/products/repo/product_repo.dar
 class ProductProvider with ChangeNotifier {
   final ProductRepository _repository = ProductRepository();
 
-  List<ProductModel> _products = [];
+  final List<ProductModel> _products = [];
   bool _isLoading = false;
   String? _error;
   bool _hasMore = true;
@@ -135,12 +135,34 @@ class ProductProvider with ChangeNotifier {
     }
   }
 
+  double? calculateMeterPerNo(String description) {
+    try {
+      final RegExp dimensionRegex = RegExp(
+        r'(\d+)X(\d+)X(\d+)MM',
+        caseSensitive: false,
+      );
+      final match = dimensionRegex.firstMatch(description);
+
+      if (match != null) {
+        final length = double.parse(match.group(1)!);
+        return (length / 1000);
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  int _currentPage = 1;
+  final int _pageSize = 10;
+
   Future<void> loadAllProducts({bool refresh = false}) async {
     if (_isLoading || (!_hasMore && !refresh)) return;
 
     _isLoading = true;
     if (refresh) {
       _products.clear();
+      _currentPage = 1;
       _hasMore = true;
       _error = null;
     }
@@ -156,8 +178,14 @@ class ProductProvider with ChangeNotifier {
       }
 
       if (response.success && response.data.isNotEmpty) {
-        _products.addAll(response.data);
-        _hasMore = response.data.length == 10;
+        final start = (_currentPage - 1) * _pageSize;
+        final end = (_currentPage * _pageSize).clamp(0, response.data.length);
+
+        final pageData = response.data.sublist(start, end);
+        if (_hasMore) _currentPage++; // prepare for next load
+
+        _products.addAll(pageData);
+        _hasMore = end < response.data.length;
         _error = null;
       } else {
         _hasMore = false;

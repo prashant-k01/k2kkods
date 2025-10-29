@@ -26,9 +26,9 @@ class RouteNames {
   static const String jobOrderedit = '/joborder/edit/:mongoId';
   static const jobOrderView = 'job-order-view';
   //qc check
-  static const qcCheck = '/qc-check';
+  static const String qcCheck = '/qc-check';
   static const String qcCheckAdd = '/qcadd';
-  static const String qcCheckEdit = 'qcCheckEdit';
+
   //machines
   static const String machines = '/machines';
   static const String machinesadd = '/machinesadd';
@@ -55,6 +55,7 @@ class RouteNames {
   static const String dispatch = "/dispatch";
   static const String dispatchAdd = "/dispatchAdd";
   static const String dispatchEdit = "/dispatchEdit";
+  static const String dispatchView = "/dispatchView";
 
   //IRON SMITH//
 

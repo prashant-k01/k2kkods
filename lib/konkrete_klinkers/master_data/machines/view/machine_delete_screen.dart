@@ -60,7 +60,7 @@ class MachineDeleteScreen {
                 scaffoldContext,
                 listen: false,
               );
-              final success = await provider.deleteMachines(machineId);
+              final success = await provider.deleteMachine(machineId);
 
               context.showSuccessSnackbar(
                 success
